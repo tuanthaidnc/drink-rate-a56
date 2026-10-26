@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+:root {
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+  box-sizing: border-box;
+}
+
+html, body {
+  font-family: var(--font-sans);
+  background-color: #09090b;
+  color: #fafafa;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+.font-mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Custom Precision Range Slider for Samsung A56 Touch Target */
+input[type="range"].precision-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  background: #27272a;
+  border-radius: 999px;
+  outline: none;
+  cursor: pointer;
+}
+
+input[type="range"].precision-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #f59e0b;
+  border: 3px solid #09090b;
+  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.5), 0 4px 10px rgba(0, 0, 0, 0.5);
+  transition: transform 0.15s cubic-bezier(0.2, 0, 0, 1);
+}
+
+input[type="range"].precision-slider::-webkit-slider-thumb:active {
+  transform: scale(1.18);
+  background: #fbbf24;
+}
+
+/* Hide horizontal scrollbar on filter pill rails */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
