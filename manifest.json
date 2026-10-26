@@ -1,22 +1,38 @@
 {
-  "name": "NỐT • Drink Index",
-  "short_name": "NỐT Index",
-  "description": "Hệ thống định lượng và xếp hạng trải nghiệm quán nước theo Tỉnh/Thành - Phường - Đường",
-  "start_url": "./index.html",
+  "id": "/drink-rate-a56/",
+  "name": "NỐT • Food & Drink",
+  "short_name": "NỐT",
+  "description": "Hệ thống chấm điểm và bản đồ sao Quán ăn & Quán nước (34 Tỉnh/Thành - Phường - Đường)",
+  "start_url": "/drink-rate-a56/",
+  "scope": "/drink-rate-a56/",
   "display": "standalone",
-  "background_color": "#09090b",
-  "theme_color": "#09090b",
+  "background_color": "#0b111d",
+  "theme_color": "#0b111d",
   "orientation": "portrait",
   "icons": [
     {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='24' fill='%2318181b'/><path d='M32 36h36l-4 44a6 6 0 0 1-6 5H42a6 6 0 0 1-6-5l-4-44z' fill='none' stroke='%23f59e0b' stroke-width='5'/><path d='M26 36h48M56 18l-6 18' stroke='%23f59e0b' stroke-width='5' stroke-linecap='round'/></svg>",
+      "src": "/drink-rate-a56/icon-192.png",
       "sizes": "192x192",
-      "type": "image/svg+xml"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='24' fill='%2318181b'/><path d='M32 36h36l-4 44a6 6 0 0 1-6 5H42a6 6 0 0 1-6-5l-4-44z' fill='none' stroke='%23f59e0b' stroke-width='5'/><path d='M26 36h48M56 18l-6 18' stroke='%23f59e0b' stroke-width='5' stroke-linecap='round'/></svg>",
+      "src": "/drink-rate-a56/icon-512.png",
       "sizes": "512x512",
-      "type": "image/svg+xml"
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/drink-rate-a56/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/drink-rate-a56/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
     }
   ]
 }
