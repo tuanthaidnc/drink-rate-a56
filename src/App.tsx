@@ -1,1088 +1,2035 @@
-import React, { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
-  Coffee,
   MapPin,
   Plus,
-  SlidersHorizontal,
-  Download,
-  Calculator,
-  ShoppingBag,
-  Armchair,
-  Search,
-  RotateCcw,
   Trash2,
-  Pencil,
-  CheckCircle2,
+  Edit3,
+  BarChart3,
   Sparkles,
-  AlertCircle,
-  Ban,
+  Search,
   ChevronRight,
-  CupSoda,
-  Layers,
-  Banknote,
-  Scale,
+  Download,
+  Upload,
+  Calculator,
   X,
-  ArrowUpDown,
+  Check,
+  SlidersHorizontal,
+  Sun,
+  Moon,
+  Flame,
+  Navigation,
+  Map as MapIcon,
+  Utensils,
+  CupSoda,
+  RefreshCw,
 } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
 import {
+  cn,
+  type AppTheme,
+  syncStatusBarThemeColor,
+  applyThemeWithTransition,
+  Shine,
+  MotionEffect,
   CountingNumber,
-  LiquidButton,
   RippleButton,
   MotionSegmented,
   AnimatedProgress,
   AutoHeight,
   AmbientGlowBackground,
-  cn,
+  CategoryScoreBadge,
+  StarRatingBadge,
+  scoreToStars,
 } from './components/animate-ui/primitives';
+import {
+  VIETNAM_34_PROVINCES_DATA,
+  VIETNAM_34_PROVINCE_NAMES,
+  getProvinceInfo,
+  getWardsForCity,
+  getStreetsForCityAndWard,
+  resolveCoordinates,
+  fetchLiveOsmStreetsAndWards,
+  geocodeAddressOsm,
+} from './data/vietnamLocations2025';
+import { MapExplorer } from './components/MapExplorer';
 
-/* ============================================================================
- * DATA TYPES & SCORING FORMULA ENGINE
- * ========================================================================== */
-export type ExperienceMode = 'takeaway' | 'dinein';
-export type VolumeKey = 'very_little' | 'little' | 'medium' | 'much' | 'full';
+// ============================================================================
+// 1. MÔ HÌNH DỮ LIỆU ĐỒNG BỘ: QUÁN NƯỚC (DRINK) & QUÁN ĂN (FOOD) + TỌA ĐỘ BẢN ĐỒ
+// ============================================================================
 
-export interface DrinkReview {
+export type PlaceCategory = 'drink' | 'food';
+export type DrinkMode = 'takeaway' | 'dinein';
+export type FoodVenueType = 'streetfood' | 'restaurant';
+export type VolumeKey = 'very_low' | 'low' | 'medium' | 'high' | 'overflow';
+
+export interface ReviewItem {
   id: string;
+  category: PlaceCategory;
   name: string;
   city: string;
   ward: string;
   street: string;
-  drink: string;
-  mode: ExperienceMode;
+  // Thuộc tính chung
   priceK: number;
-  priceBracket: string;
-  taste: number;
-  packaging: number;
-  volumeKey: VolumeKey;
-  volumeScore: number;
-  space: number | null;
-  totalScore: number;
-  verdict: string;
+  taste: number; // 1 - 10 (Độ ngon / Hương vị)
+  space: number; // 1 - 10 (Không gian quán / chỗ ngồi)
+  totalScore: number; // Thang 10
   note: string;
   createdAt: string;
+  lat: number;
+  lng: number;
+  // Thuộc tính riêng Quán nước
+  mode: DrinkMode;
+  volumeKey: VolumeKey;
+  packaging: number; // 1 - 10 (Chất liệu vỏ ly)
+  // Thuộc tính riêng Quán ăn
+  foodType?: FoodVenueType; // 'streetfood' (Vỉa hè) | 'restaurant' (Quán ngồi)
+  cleanliness?: number; // 1 - 10 (Độ sạch sẽ / Vệ sinh)
+  foodQuality?: number; // 1 - 10 (Chất lượng đồ ăn & Khẩu phần)
 }
 
-const STORAGE_KEY = 'drink_reviews_a56_v1';
-
-const VOLUME_OPTIONS: {
+export const VOLUME_OPTIONS: {
   key: VolumeKey;
   label: string;
-  sub: string;
+  shortDesc: string;
   score: number;
 }[] = [
-  { key: 'very_little', label: 'Rất ít', sub: '2.0đ', score: 2 },
-  { key: 'little', label: 'Ít', sub: '4.0đ', score: 4 },
-  { key: 'medium', label: 'Vừa', sub: '7.0đ', score: 7 },
-  { key: 'much', label: 'Nhiều', sub: '9.0đ', score: 9 },
-  { key: 'full', label: 'Đầy ắp', sub: '10đ', score: 10 },
+  { key: 'very_low', label: 'Rất ít', shortDesc: 'Hụt nhiều', score: 2.0 },
+  { key: 'low', label: 'Ít', shortDesc: 'Hơi thiếu', score: 4.0 },
+  { key: 'medium', label: 'Vừa', shortDesc: 'Tiêu chuẩn', score: 7.0 },
+  { key: 'high', label: 'Nhiều', shortDesc: 'Đầy đặn', score: 9.0 },
+  { key: 'overflow', label: 'Đầy ắp', shortDesc: 'Siêu nhiều', score: 10.0 },
 ];
 
-const PRICE_PRESETS = [
+export const TAKEAWAY_PRICE_PRESETS = [
   { label: '< 20k', value: 18 },
-  { label: '20–29k', value: 25 },
-  { label: '30–39k', value: 31 },
-  { label: '40–49k', value: 45 },
-  { label: '50–65k', value: 55 },
-  { label: '> 65k', value: 75 },
+  { label: '20-29k', value: 25 },
+  { label: '30-39k', value: 31 },
+  { label: '40-49k', value: 45 },
+  { label: '50-65k', value: 55 },
+  { label: '> 65k', value: 70 },
 ];
 
-const INITIAL_REVIEWS: DrinkReview[] = [
-  {
-    id: 'not-phan-thanh-dn',
-    name: 'Nốt',
-    city: 'Đà Nẵng',
-    ward: 'Thạc Gián',
-    street: 'Phan Thanh',
-    drink: 'Đồ uống mang đi (Khung 30k – 39k)',
-    mode: 'takeaway',
-    priceK: 31,
-    priceBracket: '30k – 39k',
-    taste: 7,
-    packaging: 9,
-    volumeKey: 'little',
-    volumeScore: 4,
-    space: null,
-    totalScore: 6.5,
-    verdict: 'Uống cho biết - Không ưu tiên',
-    note: 'Chất liệu vỏ ly rất xịn (9/10), hương vị khá (7/10) nhưng lượng đồ uống ít so với mức giá 31k.',
-    createdAt: '2026-10-26',
-  },
+export const DINEIN_PRICE_PRESETS = [
+  { label: '< 30k', value: 25 },
+  { label: '30-39k', value: 35 },
+  { label: '40-49k', value: 45 },
+  { label: '50-65k', value: 55 },
+  { label: '66-85k', value: 75 },
+  { label: '> 85k', value: 95 },
 ];
 
-export function getPriceScore(priceK: number, mode: ExperienceMode) {
+export const STREETFOOD_PRICE_PRESETS = [
+  { label: '≤ 25k', value: 25 },
+  { label: '26-35k', value: 30 },
+  { label: '36-50k', value: 40 },
+  { label: '51-70k', value: 60 },
+  { label: '71-100k', value: 85 },
+  { label: '> 100k', value: 120 },
+];
+
+export const RESTAURANT_PRICE_PRESETS = [
+  { label: '≤ 35k', value: 35 },
+  { label: '36-55k', value: 45 },
+  { label: '56-85k', value: 70 },
+  { label: '86-130k', value: 100 },
+  { label: '131-200k', value: 160 },
+  { label: '> 200k', value: 250 },
+];
+
+// ============================================================================
+// 2. CÔNG THỨC TÍNH ĐIỂM QUÁN NƯỚC & QUÁN ĂN
+// ============================================================================
+
+export function getDrinkPriceScore(
+  priceK: number,
+  mode: DrinkMode
+): { score: number; bracket: string } {
   if (mode === 'takeaway') {
-    if (priceK < 20) return { score: 10.0, bracket: 'Dưới 20k' };
-    if (priceK < 30) return { score: 8.5, bracket: '20k – 29k' };
-    if (priceK < 40) return { score: 7.0, bracket: '30k – 39k' };
-    if (priceK < 50) return { score: 5.0, bracket: '40k – 49k' };
-    if (priceK <= 65) return { score: 3.0, bracket: '50k – 65k' };
-    return { score: 1.5, bracket: 'Trên 65k' };
+    if (priceK < 20) return { score: 10.0, bracket: '< 20k' };
+    if (priceK <= 29) return { score: 8.5, bracket: '20k - 29k' };
+    if (priceK <= 39) return { score: 7.0, bracket: '30k - 39k' };
+    if (priceK <= 49) return { score: 5.0, bracket: '40k - 49k' };
+    if (priceK <= 65) return { score: 3.0, bracket: '50k - 65k' };
+    return { score: 1.5, bracket: '> 65k' };
   } else {
-    if (priceK < 20) return { score: 10.0, bracket: 'Dưới 20k' };
-    if (priceK < 30) return { score: 9.5, bracket: '20k – 29k' };
-    if (priceK < 40) return { score: 8.5, bracket: '30k – 39k' };
-    if (priceK < 50) return { score: 7.5, bracket: '40k – 49k' };
-    if (priceK <= 65) return { score: 6.0, bracket: '50k – 65k' };
-    return { score: 4.0, bracket: 'Trên 65k' };
+    if (priceK < 30) return { score: 10.0, bracket: '< 30k' };
+    if (priceK <= 39) return { score: 9.0, bracket: '30k - 39k' };
+    if (priceK <= 49) return { score: 7.5, bracket: '40k - 49k' };
+    if (priceK <= 65) return { score: 6.0, bracket: '50k - 65k' };
+    if (priceK <= 85) return { score: 4.0, bracket: '66k - 85k' };
+    return { score: 2.0, bracket: '> 85k' };
   }
 }
 
-export function getTierMeta(score: number) {
+export function getFoodPriceScore(
+  priceK: number,
+  foodType: FoodVenueType
+): { score: number; bracket: string } {
+  if (foodType === 'streetfood') {
+    if (priceK <= 25) return { score: 10.0, bracket: '≤ 25k' };
+    if (priceK <= 35) return { score: 8.5, bracket: '26k - 35k' };
+    if (priceK <= 50) return { score: 7.0, bracket: '36k - 50k' };
+    if (priceK <= 70) return { score: 5.5, bracket: '51k - 70k' };
+    if (priceK <= 100) return { score: 4.0, bracket: '71k - 100k' };
+    return { score: 2.5, bracket: '> 100k' };
+  } else {
+    if (priceK <= 35) return { score: 10.0, bracket: '≤ 35k' };
+    if (priceK <= 55) return { score: 8.5, bracket: '36k - 55k' };
+    if (priceK <= 85) return { score: 7.0, bracket: '56k - 85k' };
+    if (priceK <= 130) return { score: 5.5, bracket: '86k - 130k' };
+    if (priceK <= 200) return { score: 4.0, bracket: '131k - 200k' };
+    return { score: 2.5, bracket: '> 200k' };
+  }
+}
+
+export function calculateDrinkScore(params: {
+  mode: DrinkMode;
+  taste: number;
+  priceK: number;
+  volumeKey: VolumeKey;
+  packaging: number;
+  space: number;
+}) {
+  const { score: priceScore, bracket: priceBracket } = getDrinkPriceScore(
+    params.priceK,
+    params.mode
+  );
+  const volumeObj =
+    VOLUME_OPTIONS.find((v) => v.key === params.volumeKey) || VOLUME_OPTIONS[1];
+  const volumeScore = volumeObj.score;
+
+  if (params.mode === 'takeaway') {
+    // Take-away: Vị 50% + Giá 25% + Thể tích 20% + Vỏ ly 5% = 100%
+    // Quán Nốt: 7*0.5 + 7*0.25 + 4*0.2 + 9*0.05 = 6.50 / 10
+    const total =
+      params.taste * 0.5 +
+      priceScore * 0.25 +
+      volumeScore * 0.2 +
+      params.packaging * 0.05;
+    return {
+      total: Math.round(total * 100) / 100,
+      priceScore,
+      priceBracket,
+      volumeScore,
+    };
+  } else {
+    // Ngồi lại: Vị 35% + Không gian 20% + Giá 20% + Thể tích 20% + Vỏ ly 5% = 100%
+    const total =
+      params.taste * 0.35 +
+      params.space * 0.2 +
+      priceScore * 0.2 +
+      volumeScore * 0.2 +
+      params.packaging * 0.05;
+    return {
+      total: Math.round(total * 100) / 100,
+      priceScore,
+      priceBracket,
+      volumeScore,
+    };
+  }
+}
+
+export function calculateFoodScore(params: {
+  foodType: FoodVenueType;
+  taste: number;
+  foodQuality: number;
+  cleanliness: number;
+  space: number;
+  priceK: number;
+}) {
+  const { score: priceScore, bracket: priceBracket } = getFoodPriceScore(
+    params.priceK,
+    params.foodType
+  );
+
+  if (params.foodType === 'streetfood') {
+    // Quán ăn Vỉa hè: Độ ngon 40% + Chất lượng đồ ăn 25% + Sạch sẽ 15% + Giá 15% + Không gian 5% = 100%
+    const total =
+      params.taste * 0.4 +
+      params.foodQuality * 0.25 +
+      params.cleanliness * 0.15 +
+      priceScore * 0.15 +
+      params.space * 0.05;
+    return {
+      total: Math.round(total * 100) / 100,
+      priceScore,
+      priceBracket,
+    };
+  } else {
+    // Quán ăn Ngồi quán / Nhà hàng: Độ ngon 35% + Chất lượng đồ ăn 25% + Sạch sẽ 15% + Không gian 15% + Giá 10% = 100%
+    const total =
+      params.taste * 0.35 +
+      params.foodQuality * 0.25 +
+      params.cleanliness * 0.15 +
+      params.space * 0.15 +
+      priceScore * 0.1;
+    return {
+      total: Math.round(total * 100) / 100,
+      priceScore,
+      priceBracket,
+    };
+  }
+}
+
+export function getTierStyle(
+  score: number,
+  category: PlaceCategory = 'drink'
+) {
+  const actionVerb = category === 'food' ? 'Ăn' : 'Uống';
   if (score >= 8.5) {
     return {
-      tier: 'TIER S',
-      text: 'Quán Ruột • Ưu tiên số 1',
-      colorClass: 'text-emerald-400',
-      badgeClass: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/25',
-      barClass: 'bg-emerald-400',
-      Icon: Sparkles,
+      rankLabel: 'Quán ruột • Ưu tiên #1',
+      shortLabel: 'Quán ruột',
+      verdict: `Đỉnh chóp! Chắc chắn quay lại ${actionVerb.toLowerCase()}`,
+      isTop: true,
     };
   }
   if (score >= 7.5) {
     return {
-      tier: 'TIER A',
-      text: 'Đáng uống lại thường xuyên',
-      colorClass: 'text-sky-400',
-      badgeClass: 'bg-sky-500/10 text-sky-300 border-sky-500/25',
-      barClass: 'bg-sky-400',
-      Icon: CheckCircle2,
+      rankLabel: `Đáng ${actionVerb.toLowerCase()} lại • Ưu tiên cao`,
+      shortLabel: `Đáng ${actionVerb.toLowerCase()} lại`,
+      verdict: 'Chất lượng tốt, đáng quay lại',
+      isTop: true,
     };
   }
   if (score >= 6.8) {
     return {
-      tier: 'TIER B',
-      text: 'Ổn • Tiện đường thì ghé',
-      colorClass: 'text-amber-400',
-      badgeClass: 'bg-amber-500/10 text-amber-300 border-amber-500/25',
-      barClass: 'bg-amber-400',
-      Icon: Coffee,
+      rankLabel: 'Khá ổn • Tiện đường ghé',
+      shortLabel: 'Khá ổn',
+      verdict: 'Trải nghiệm ổn, tiện đường sẽ ghé',
+      isTop: false,
     };
   }
-  if (score >= 5.5) {
+  if (score >= 6.0) {
     return {
-      tier: 'TIER C',
-      text: 'Uống cho biết • Không ưu tiên',
-      colorClass: 'text-orange-400',
-      badgeClass: 'bg-orange-500/10 text-orange-300 border-orange-500/25',
-      barClass: 'bg-orange-400',
-      Icon: AlertCircle,
+      rankLabel: `${actionVerb} cho biết • Không ưu tiên`,
+      shortLabel: 'Không ưu tiên',
+      verdict: `${actionVerb} cho biết, không ưu tiên quay lại`,
+      isTop: false,
     };
   }
   return {
-    tier: 'TIER D',
-    text: 'Không quay lại',
-    colorClass: 'text-rose-400',
-    badgeClass: 'bg-rose-500/10 text-rose-300 border-rose-500/25',
-    barClass: 'bg-rose-400',
-    Icon: Ban,
+    rankLabel: 'Không quay lại • Né gấp',
+    shortLabel: 'Né gấp',
+    verdict: 'Trải nghiệm kém so với giá tiền',
+    isTop: false,
   };
 }
 
-export function calculateScore(params: {
-  mode: ExperienceMode;
-  taste: number;
-  priceK: number;
-  volumeScore: number;
-  packaging: number;
-  space: number;
-}) {
-  const { mode, taste, priceK, volumeScore, packaging, space } = params;
-  const priceInfo = getPriceScore(priceK, mode);
-
-  if (mode === 'takeaway') {
-    const wTaste = taste * 0.5;
-    const wPrice = priceInfo.score * 0.25;
-    const wVol = volumeScore * 0.2;
-    const wPack = packaging * 0.05;
-    const total = Math.round((wTaste + wPrice + wVol + wPack) * 100) / 100;
-    return {
-      total,
-      priceScore: priceInfo.score,
-      priceBracket: priceInfo.bracket,
-      parts: [
-        { label: 'Hương vị', weight: '50%', raw: taste, weighted: wTaste },
-        { label: `Giá (${priceK}k)`, weight: '25%', raw: priceInfo.score, weighted: wPrice },
-        { label: 'Thể tích', weight: '20%', raw: volumeScore, weighted: wVol },
-        { label: 'Vỏ ly', weight: '5%', raw: packaging, weighted: wPack },
-      ],
-    };
-  } else {
-    const wTaste = taste * 0.35;
-    const wPrice = priceInfo.score * 0.2;
-    const wVol = volumeScore * 0.2;
-    const wSpace = space * 0.2;
-    const wPack = packaging * 0.05;
-    const total = Math.round((wTaste + wPrice + wVol + wSpace + wPack) * 100) / 100;
-    return {
-      total,
-      priceScore: priceInfo.score,
-      priceBracket: priceInfo.bracket,
-      parts: [
-        { label: 'Hương vị', weight: '35%', raw: taste, weighted: wTaste },
-        { label: `Giá (${priceK}k)`, weight: '20%', raw: priceInfo.score, weighted: wPrice },
-        { label: 'Thể tích', weight: '20%', raw: volumeScore, weighted: wVol },
-        { label: 'Không gian', weight: '20%', raw: space, weighted: wSpace },
-        { label: 'Vỏ ly', weight: '5%', raw: packaging, weighted: wPack },
-      ],
-    };
-  }
+export function getSliderReaction(val: number) {
+  if (val >= 9) return 'Xuất sắc';
+  if (val >= 7.5) return 'Rất tốt';
+  if (val >= 6) return 'Khá ổn';
+  if (val >= 4.5) return 'Tạm ổn';
+  return 'Kém';
 }
 
-/* ============================================================================
- * MAIN APPLICATION COMPONENT
- * ========================================================================== */
-export default function App() {
-  const [reviews, setReviews] = useState<DrinkReview[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+// ============================================================================
+// 3. DỮ LIỆU MẪU CHUẨN HÓA (QUÁN NƯỚC NỐT + QUÁN ĂN ĐÀ NẴNG)
+// ============================================================================
+
+const INITIAL_REVIEWS: ReviewItem[] = [
+  {
+    id: 'seed-not-phan-thanh-dn',
+    category: 'drink',
+    name: 'Nốt',
+    city: 'Đà Nẵng',
+    ward: 'Thanh Khê',
+    street: 'Phan Thanh',
+    mode: 'takeaway',
+    priceK: 31,
+    taste: 7,
+    packaging: 9,
+    volumeKey: 'low',
+    space: 6,
+    totalScore: 6.5,
+    note: 'Chất liệu vỏ ly xịn (9/10), vị ổn (7/10) nhưng lượng đồ uống ít so với mức giá 31k.',
+    createdAt: '2026-10-26',
+    lat: 16.0618,
+    lng: 108.2088,
+  },
+  {
+    id: 'seed-food-banh-canh-phan-thanh',
+    category: 'food',
+    name: 'Bánh Canh Cá Lóc Thanh Hương',
+    city: 'Đà Nẵng',
+    ward: 'Thanh Khê',
+    street: 'Phan Thanh',
+    mode: 'dinein',
+    foodType: 'streetfood',
+    priceK: 25,
+    taste: 8.5,
+    foodQuality: 8.5,
+    cleanliness: 8.0,
+    space: 7.5,
+    volumeKey: 'high',
+    packaging: 8,
+    totalScore: 8.6,
+    note: 'Nước dùng đậm đà, cá lóc tươi chắc thịt, tô đầy đặn 25k ngay đường Phan Thanh.',
+    createdAt: '2026-10-26',
+    lat: 16.0641,
+    lng: 108.2095,
+  },
+  {
+    id: 'seed-food-mi-quang-hai-chau',
+    category: 'food',
+    name: 'Mì Quảng Bếp Trang',
+    city: 'Đà Nẵng',
+    ward: 'Hải Châu',
+    street: 'Lê Duẩn',
+    mode: 'dinein',
+    foodType: 'restaurant',
+    priceK: 45,
+    taste: 8.5,
+    foodQuality: 9.0,
+    cleanliness: 9.0,
+    space: 8.5,
+    volumeKey: 'high',
+    packaging: 9,
+    totalScore: 8.7,
+    note: 'Không gian quán sạch đẹp, rau sống tươi sạch, tô mì đầy ắp tôm thịt trứng.',
+    createdAt: '2026-10-26',
+    lat: 16.0688,
+    lng: 108.2145,
+  },
+];
+
+const STORAGE_KEY_REVIEWS = 'not_drink_food_reviews_v9';
+const LEGACY_STORAGE_KEYS = [
+  'not_drink_reviews_v5_34tinh',
+  'not_drink_reviews_v4_34provinces',
+];
+
+function migrateAndLoadReviews(): ReviewItem[] {
+  try {
+    const savedV9 = localStorage.getItem(STORAGE_KEY_REVIEWS);
+    if (savedV9) {
+      const parsed = JSON.parse(savedV9);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.map((item: ReviewItem) => {
+          const coords =
+            item.lat && item.lng
+              ? { lat: item.lat, lng: item.lng }
+              : resolveCoordinates(item.city, item.ward, item.street, item.name);
+          return {
+            ...item,
+            category: item.category || 'drink',
+            foodType: item.foodType || 'streetfood',
+            cleanliness: item.cleanliness ?? 8,
+            foodQuality: item.foodQuality ?? 8,
+            lat: coords.lat,
+            lng: coords.lng,
+          };
+        });
       }
+    }
+
+    // Migrate from previous v5/v4 storage if present
+    for (const key of LEGACY_STORAGE_KEYS) {
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const migrated: ReviewItem[] = parsed.map((item: ReviewItem) => {
+            const coords = resolveCoordinates(
+              item.city || 'Đà Nẵng',
+              item.ward || 'Thanh Khê',
+              item.street || 'Phan Thanh',
+              item.name
+            );
+            return {
+              ...item,
+              category: item.category || 'drink',
+              foodType: item.foodType || 'streetfood',
+              cleanliness: item.cleanliness ?? 8,
+              foodQuality: item.foodQuality ?? 8,
+              lat: item.lat || coords.lat,
+              lng: item.lng || coords.lng,
+            };
+          });
+          // Bổ sung 2 quán ăn mẫu nếu dữ liệu cũ chỉ mới có quán nước
+          const hasFood = migrated.some((x) => x.category === 'food');
+          if (!hasFood) {
+            return [
+              ...migrated,
+              ...INITIAL_REVIEWS.filter((x) => x.category === 'food'),
+            ];
+          }
+          return migrated;
+        }
+      }
+    }
+  } catch {
+    // ignore parse errors
+  }
+  return INITIAL_REVIEWS;
+}
+
+export function App() {
+  // --- Theme State (Dark & Light) ---
+  const [theme, setTheme] = useState<AppTheme>(() => {
+    try {
+      const saved = localStorage.getItem('not_app_theme_v8') as AppTheme | null;
+      if (saved === 'dark' || saved === 'light') return saved;
     } catch {
       // ignore
     }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_REVIEWS));
-    return INITIAL_REVIEWS;
+    return 'dark';
   });
 
-  const [activeTab, setActiveTab] = useState<'directory' | 'evaluate'>('directory');
-  const [isFormulaOpen, setIsFormulaOpen] = useState(false);
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    syncStatusBarThemeColor(theme);
+  }, [theme]);
 
-  // 3-Tier Geo Filters (Tỉnh/Thành -> Phường -> Đường)
-  const [selectedCity, setSelectedCity] = useState<string>('ALL');
+  // --- Virtual Keyboard & Input Focus Sync (Hỗ trợ interactive-widget=resizes-content trên Android) ---
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+  const [isInputFocused, setIsInputFocused] = useState(false);
+  const maxViewportHeightRef = React.useRef<number>(
+    typeof window !== 'undefined' ? window.innerHeight : 800
+  );
+
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+
+    const handleViewportChange = () => {
+      document.documentElement.style.setProperty('--vvh', `${vv.height}px`);
+      document.documentElement.style.setProperty('--vvo', `${vv.offsetTop}px`);
+      if (vv.height > maxViewportHeightRef.current) {
+        maxViewportHeightRef.current = vv.height;
+      }
+      const baselineHeight = Math.max(
+        window.innerHeight,
+        maxViewportHeightRef.current
+      );
+      const keyboardVisible = baselineHeight - vv.height > 110;
+      setIsKeyboardOpen(keyboardVisible);
+    };
+
+    handleViewportChange();
+    vv.addEventListener('resize', handleViewportChange);
+    vv.addEventListener('scroll', handleViewportChange);
+    window.addEventListener('resize', handleViewportChange);
+    return () => {
+      vv.removeEventListener('resize', handleViewportChange);
+      vv.removeEventListener('scroll', handleViewportChange);
+      window.removeEventListener('resize', handleViewportChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    const isTextEntryElement = (el: HTMLElement | null) => {
+      if (!el) return false;
+      if (el.tagName === 'TEXTAREA') return true;
+      if (el.tagName === 'INPUT') {
+        const type = ((el as HTMLInputElement).type || 'text').toLowerCase();
+        return !['range', 'checkbox', 'radio', 'file', 'button', 'submit'].includes(
+          type
+        );
+      }
+      return false;
+    };
+
+    const handleFocusIn = (e: FocusEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (isTextEntryElement(target)) {
+        setIsInputFocused(true);
+        setTimeout(() => {
+          target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 180);
+      }
+    };
+
+    const handleFocusOut = () => {
+      setTimeout(() => {
+        const active = document.activeElement as HTMLElement | null;
+        if (!isTextEntryElement(active)) {
+          setIsInputFocused(false);
+        }
+      }, 100);
+    };
+
+    window.addEventListener('focusin', handleFocusIn);
+    window.addEventListener('focusout', handleFocusOut);
+    return () => {
+      window.removeEventListener('focusin', handleFocusIn);
+      window.removeEventListener('focusout', handleFocusOut);
+    };
+  }, []);
+
+  const isTyping = isInputFocused || isKeyboardOpen;
+
+  // --- Reviews Data ---
+  const [reviews, setReviews] = useState<ReviewItem[]>(migrateAndLoadReviews);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_REVIEWS, JSON.stringify(reviews));
+    } catch {
+      // ignore
+    }
+  }, [reviews]);
+
+  // --- Navigation & Modals ---
+  const [activeTab, setActiveTab] = useState<
+    'list' | 'map' | 'form' | 'insights'
+  >('list');
+  const [mapFocusId, setMapFocusId] = useState<string | null>(null);
+  const [showFormulaModal, setShowFormulaModal] = useState(false);
+  const [expandedCardId, setExpandedCardId] = useState<string | null>(
+    'seed-not-phan-thanh-dn'
+  );
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(null), 2600);
+  };
+
+  // --- Filters (List Tab) ---
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<
+    'ALL' | PlaceCategory
+  >('ALL');
+  const [selectedCity, setSelectedCity] = useState<string>('Đà Nẵng');
   const [selectedWard, setSelectedWard] = useState<string>('ALL');
   const [selectedStreet, setSelectedStreet] = useState<string>('ALL');
-  const [selectedModeFilter, setSelectedModeFilter] = useState<'ALL' | ExperienceMode>('ALL');
+  const [sortBy, setSortBy] = useState<
+    'score_desc' | 'taste_desc' | 'price_asc'
+  >('score_desc');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
 
-  // Evaluation Form State
-  const [editingId, setEditingId] = useState<string | null>(null);
+  // --- Evaluation Form State (Quán nước & Quán ăn) ---
+  const [formCategory, setFormCategory] = useState<PlaceCategory>('drink');
   const [name, setName] = useState('');
   const [city, setCity] = useState('Đà Nẵng');
-  const [ward, setWard] = useState('Thạc Gián');
+  const [ward, setWard] = useState('Thanh Khê');
   const [street, setStreet] = useState('Phan Thanh');
-  const [drink, setDrink] = useState('');
-  const [mode, setMode] = useState<ExperienceMode>('takeaway');
-  const [taste, setTaste] = useState<number>(7.0);
+  // Drink specific
+  const [mode, setMode] = useState<DrinkMode>('takeaway');
+  const [volumeKey, setVolumeKey] = useState<VolumeKey>('low');
+  const [packaging, setPackaging] = useState<number>(9);
+  // Food specific
+  const [foodType, setFoodType] = useState<FoodVenueType>('streetfood');
+  const [foodQuality, setFoodQuality] = useState<number>(8.5);
+  const [cleanliness, setCleanliness] = useState<number>(8.0);
+  // Shared
   const [priceK, setPriceK] = useState<number>(31);
-  const [volumeKey, setVolumeKey] = useState<VolumeKey>('little');
-  const [packaging, setPackaging] = useState<number>(9.0);
+  const [taste, setTaste] = useState<number>(7);
   const [space, setSpace] = useState<number>(7.5);
   const [note, setNote] = useState('');
 
-  const saveToStorage = (nextList: DrinkReview[]) => {
-    setReviews(nextList);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(nextList));
-  };
+  // --- Official Location Picker Modal State (34 Tỉnh/Thành -> Phường/Xã -> Đường) ---
+  const [isLocPickerOpen, setIsLocPickerOpen] = useState(false);
+  const [locStep, setLocStep] = useState<'city' | 'ward' | 'street'>('ward');
+  const [locSearch, setLocSearch] = useState('');
+  const [customInput, setCustomInput] = useState('');
+  const [liveOsmStreets, setLiveOsmStreets] = useState<string[]>([]);
+  const [isSyncingOsm, setIsSyncingOsm] = useState(false);
 
-  // Cascading Geo Options
-  const cities = useMemo(() => {
-    return ['ALL', ...Array.from(new Set(reviews.map((r) => r.city))).sort()];
+  // Tự động đồng bộ thêm đường/phố từ OpenStreetMap khi mở chọn Đường
+  useEffect(() => {
+    if (!isLocPickerOpen) return;
+    let cancelled = false;
+    setIsSyncingOsm(true);
+    fetchLiveOsmStreetsAndWards(city, ward)
+      .then((res) => {
+        if (!cancelled && res.streets.length > 0) {
+          setLiveOsmStreets(res.streets);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsSyncingOsm(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isLocPickerOpen, city, ward]);
+
+  const wardOptionsForCurrentCity = useMemo(() => {
+    const base = getWardsForCity(city);
+    const fromReviews = reviews
+      .filter((r) => r.city === city)
+      .map((r) => r.ward);
+    return Array.from(new Set([...base, ...fromReviews]));
+  }, [city, reviews]);
+
+  const streetOptionsForCurrentCityAndWard = useMemo(() => {
+    const base = getStreetsForCityAndWard(city, ward);
+    const fromReviews = reviews
+      .filter((r) => r.city === city && (!ward || r.ward === ward))
+      .map((r) => r.street);
+    return Array.from(new Set([...base, ...liveOsmStreets, ...fromReviews]));
+  }, [city, ward, liveOsmStreets, reviews]);
+
+  // --- Live Calculation ---
+  const liveCalc = useMemo(() => {
+    if (formCategory === 'food') {
+      const res = calculateFoodScore({
+        foodType,
+        taste,
+        foodQuality,
+        cleanliness,
+        space,
+        priceK: Number(priceK) || 0,
+      });
+      return {
+        total: res.total,
+        priceScore: res.priceScore,
+        priceBracket: res.priceBracket,
+        volumeScore: foodQuality,
+      };
+    }
+    return calculateDrinkScore({
+      mode,
+      taste,
+      priceK: Number(priceK) || 0,
+      volumeKey,
+      packaging,
+      space,
+    });
+  }, [
+    formCategory,
+    mode,
+    foodType,
+    taste,
+    foodQuality,
+    cleanliness,
+    priceK,
+    volumeKey,
+    packaging,
+    space,
+  ]);
+
+  const liveTier = useMemo(
+    () => getTierStyle(liveCalc.total, formCategory),
+    [liveCalc.total, formCategory]
+  );
+
+  // --- Hierarchical Filter Options ---
+  const filterCities = useMemo(() => {
+    const set = new Set<string>(['Đà Nẵng']);
+    reviews.forEach((r) => set.add(r.city));
+    return ['ALL', ...Array.from(set)];
   }, [reviews]);
 
-  const wards = useMemo(() => {
-    const base = selectedCity === 'ALL' ? reviews : reviews.filter((r) => r.city === selectedCity);
-    return ['ALL', ...Array.from(new Set(base.map((r) => r.ward))).sort()];
+  const filterWards = useMemo(() => {
+    const set = new Set<string>();
+    reviews
+      .filter((r) => selectedCity === 'ALL' || r.city === selectedCity)
+      .forEach((r) => set.add(r.ward));
+    return ['ALL', ...Array.from(set)];
   }, [reviews, selectedCity]);
 
-  const streets = useMemo(() => {
-    let base = reviews;
-    if (selectedCity !== 'ALL') base = base.filter((r) => r.city === selectedCity);
-    if (selectedWard !== 'ALL') base = base.filter((r) => r.ward === selectedWard);
-    return ['ALL', ...Array.from(new Set(base.map((r) => r.street))).sort()];
+  const filterStreets = useMemo(() => {
+    const set = new Set<string>();
+    reviews
+      .filter(
+        (r) =>
+          (selectedCity === 'ALL' || r.city === selectedCity) &&
+          (selectedWard === 'ALL' || r.ward === selectedWard)
+      )
+      .forEach((r) => set.add(r.street));
+    return ['ALL', ...Array.from(set)];
   }, [reviews, selectedCity, selectedWard]);
 
   const filteredReviews = useMemo(() => {
     return reviews
       .filter((r) => {
+        if (
+          selectedCategoryFilter !== 'ALL' &&
+          r.category !== selectedCategoryFilter
+        )
+          return false;
         if (selectedCity !== 'ALL' && r.city !== selectedCity) return false;
         if (selectedWard !== 'ALL' && r.ward !== selectedWard) return false;
-        if (selectedStreet !== 'ALL' && r.street !== selectedStreet) return false;
-        if (selectedModeFilter !== 'ALL' && r.mode !== selectedModeFilter) return false;
-        if (searchQuery.trim()) {
+        if (selectedStreet !== 'ALL' && r.street !== selectedStreet)
+          return false;
+        if (searchQuery.trim() !== '') {
           const q = searchQuery.toLowerCase();
-          const hay = `${r.name} ${r.street} ${r.ward} ${r.city} ${r.drink} ${r.note}`.toLowerCase();
-          if (!hay.includes(q)) return false;
+          const matchName = r.name.toLowerCase().includes(q);
+          const matchStreet = r.street.toLowerCase().includes(q);
+          const matchWard = r.ward.toLowerCase().includes(q);
+          const matchNote = r.note.toLowerCase().includes(q);
+          if (!matchName && !matchStreet && !matchWard && !matchNote)
+            return false;
         }
         return true;
       })
-      .sort((a, b) => b.totalScore - a.totalScore);
-  }, [reviews, selectedCity, selectedWard, selectedStreet, selectedModeFilter, searchQuery]);
+      .sort((a, b) => {
+        if (sortBy === 'score_desc') return b.totalScore - a.totalScore;
+        if (sortBy === 'taste_desc') return b.taste - a.taste;
+        if (sortBy === 'price_asc') return a.priceK - b.priceK;
+        return 0;
+      });
+  }, [
+    reviews,
+    selectedCategoryFilter,
+    selectedCity,
+    selectedWard,
+    selectedStreet,
+    sortBy,
+    searchQuery,
+  ]);
 
-  // Live Score Calculation for Form
-  const volumeObj = VOLUME_OPTIONS.find((v) => v.key === volumeKey) ?? VOLUME_OPTIONS[1];
-  const liveCalc = useMemo(
-    () =>
-      calculateScore({
-        mode,
-        taste,
-        priceK,
-        volumeScore: volumeObj.score,
-        packaging,
-        space,
-      }),
-    [mode, taste, priceK, volumeObj.score, packaging, space]
-  );
-  const liveTier = getTierMeta(liveCalc.total);
-
-  // Handlers
-  const handleSelectCity = (c: string) => {
-    setSelectedCity(c);
-    setSelectedWard('ALL');
-    setSelectedStreet('ALL');
-  };
-
-  const handleSelectWard = (w: string) => {
-    setSelectedWard(w);
-    setSelectedStreet('ALL');
-  };
-
-  const resetForm = () => {
+  // --- Handlers ---
+  const resetForm = (nextCat?: PlaceCategory) => {
+    const targetCat = nextCat || formCategory;
     setEditingId(null);
+    setFormCategory(targetCat);
     setName('');
-    setCity('Đà Nẵng');
-    setWard('Thạc Gián');
-    setStreet('Phan Thanh');
-    setDrink('');
     setMode('takeaway');
-    setTaste(7.0);
-    setPriceK(31);
-    setVolumeKey('little');
-    setPackaging(9.0);
+    setFoodType('streetfood');
+    setPriceK(targetCat === 'food' ? 30 : 31);
+    setTaste(7.5);
+    setPackaging(8);
+    setVolumeKey('medium');
+    setFoodQuality(8.0);
+    setCleanliness(8.0);
     setSpace(7.5);
     setNote('');
   };
 
-  const handleSaveReview = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim() || !city.trim() || !ward.trim() || !street.trim()) return;
+  const handleSaveReview = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const cleanName = name.trim();
+    if (!cleanName) {
+      showToast('Vui lòng nhập tên quán trước khi lưu');
+      const el = document.getElementById('shop-name-input');
+      el?.focus();
+      return;
+    }
 
-    const item: DrinkReview = {
-      id: editingId || `shop-${Date.now()}`,
-      name: name.trim(),
-      city: city.trim(),
-      ward: ward.trim(),
-      street: street.trim(),
-      drink: drink.trim() || `Đồ uống (${liveCalc.priceBracket})`,
+    const cleanCity = city.trim() || 'Đà Nẵng';
+    const cleanWard =
+      ward.trim().replace(/^Phường\s+/i, '') || 'Thanh Khê';
+    const cleanStreet =
+      street.trim().replace(/^Đường\s+/i, '') || 'Phan Thanh';
+
+    // Tính toán tọa độ tức thì + nâng cấp bằng OSM Nominatim nếu có mạng
+    const fallbackCoords = resolveCoordinates(
+      cleanCity,
+      cleanWard,
+      cleanStreet,
+      cleanName
+    );
+
+    const newItemId = editingId || `place-${Date.now()}`;
+    const newItem: ReviewItem = {
+      id: newItemId,
+      category: formCategory,
+      name: cleanName,
+      city: cleanCity,
+      ward: cleanWard,
+      street: cleanStreet,
       mode,
-      priceK,
-      priceBracket: liveCalc.priceBracket,
+      foodType,
+      priceK: Number(priceK) || 0,
       taste,
       packaging,
       volumeKey,
-      volumeScore: volumeObj.score,
-      space: mode === 'dinein' ? space : null,
+      foodQuality,
+      cleanliness,
+      space,
       totalScore: liveCalc.total,
-      verdict: liveTier.text.replace(' • ', ' - '),
       note: note.trim(),
-      createdAt: new Date().toISOString().slice(0, 10),
+      createdAt: new Date().toISOString().split('T')[0],
+      lat: fallbackCoords.lat,
+      lng: fallbackCoords.lng,
     };
 
     if (editingId) {
-      saveToStorage(reviews.map((r) => (r.id === editingId ? item : r)));
+      setReviews((prev) =>
+        prev.map((r) => (r.id === editingId ? newItem : r))
+      );
+      showToast(`Đã cập nhật "${cleanName}" (${liveCalc.total}đ)`);
     } else {
-      saveToStorage([item, ...reviews]);
+      setReviews((prev) => [newItem, ...prev]);
+      showToast(`Đã lưu "${cleanName}" (${liveCalc.total}đ)`);
     }
 
+    // Geocode bất đồng bộ bằng OpenStreetMap để ghim chính xác hơn trên Bản đồ
+    geocodeAddressOsm(cleanName, cleanStreet, cleanWard, cleanCity).then(
+      (osmCoords) => {
+        if (osmCoords) {
+          setReviews((prev) =>
+            prev.map((r) =>
+              r.id === newItemId
+                ? { ...r, lat: osmCoords.lat, lng: osmCoords.lng }
+                : r
+            )
+          );
+        }
+      }
+    );
+
+    setSelectedCity(cleanCity);
+    setSelectedWard('ALL');
+    setSelectedStreet('ALL');
+    setExpandedCardId(newItem.id);
     resetForm();
-    setActiveTab('directory');
+    setActiveTab('list');
   };
 
-  const handleEdit = (r: DrinkReview) => {
-    setEditingId(r.id);
-    setName(r.name);
-    setCity(r.city);
-    setWard(r.ward);
-    setStreet(r.street);
-    setDrink(r.drink);
-    setMode(r.mode);
-    setTaste(r.taste);
-    setPriceK(r.priceK);
-    setVolumeKey(r.volumeKey || 'little');
-    setPackaging(r.packaging);
-    setSpace(r.space ?? 7.5);
-    setNote(r.note || '');
-    setActiveTab('evaluate');
+  const handleEdit = (item: ReviewItem) => {
+    setEditingId(item.id);
+    setFormCategory(item.category || 'drink');
+    setName(item.name);
+    setCity(item.city);
+    setWard(item.ward);
+    setStreet(item.street);
+    setMode(item.mode);
+    setFoodType(item.foodType || 'streetfood');
+    setPriceK(item.priceK);
+    setTaste(item.taste);
+    setPackaging(item.packaging ?? 8);
+    setVolumeKey(item.volumeKey || 'medium');
+    setFoodQuality(item.foodQuality ?? 8);
+    setCleanliness(item.cleanliness ?? 8);
+    setSpace(item.space ?? 7.5);
+    setNote(item.note);
+    setActiveTab('form');
   };
 
-  const handleDelete = (id: string) => {
-    if (!window.confirm('Xác nhận xóa đánh giá quán nước này?')) return;
-    saveToStorage(reviews.filter((r) => r.id !== id));
+  const handleDelete = (id: string, shopName: string) => {
+    setReviews((prev) => prev.filter((r) => r.id !== id));
+    showToast(`Đã xóa "${shopName}"`);
   };
 
-  const handleExport = () => {
+  const handleOpenDirectionsExternal = (item: {
+    name: string;
+    street: string;
+    ward: string;
+    city: string;
+    lat: number;
+    lng: number;
+  }) => {
+    const query = encodeURIComponent(
+      `${item.name}, Đường ${item.street}, Phường ${item.ward}, ${item.city}, Việt Nam`
+    );
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${query}&travelmode=two-wheeler`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleViewOnMap = (item: ReviewItem) => {
+    setMapFocusId(item.id);
+    setActiveTab('map');
+  };
+
+  const handleExportJson = () => {
     const blob = new Blob([JSON.stringify(reviews, null, 2)], {
       type: 'application/json',
     });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `not-drink-reviews-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `not-food-drink-index-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
+    URL.revokeObjectURL(url);
+    showToast('Đã tải file sao lưu JSON');
   };
 
-  const avgScore = useMemo(() => {
-    if (!filteredReviews.length) return 0;
-    return (
-      filteredReviews.reduce((acc, item) => acc + item.totalScore, 0) /
-      filteredReviews.length
-    );
-  }, [filteredReviews]);
+  const handleImportJson = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const parsed = JSON.parse(String(ev.target?.result));
+        if (Array.isArray(parsed)) {
+          setReviews(parsed);
+          showToast(`Đã khôi phục ${parsed.length} quán`);
+        }
+      } catch {
+        showToast('File JSON không hợp lệ');
+      }
+    };
+    reader.readAsText(file);
+  };
 
-  const priorityCount = useMemo(
-    () => filteredReviews.filter((r) => r.totalScore >= 7.5).length,
-    [filteredReviews]
-  );
+  const activeFilterSummary = useMemo(() => {
+    const parts: string[] = [];
+    parts.push(selectedCity === 'ALL' ? '34 Tỉnh/Thành' : selectedCity);
+    if (selectedWard !== 'ALL') parts.push(`P. ${selectedWard}`);
+    if (selectedStreet !== 'ALL') parts.push(`Đ. ${selectedStreet}`);
+    return parts.join(' • ');
+  }, [selectedCity, selectedWard, selectedStreet]);
+
+  const currentProvinceInfo = useMemo(() => getProvinceInfo(city), [city]);
 
   return (
-    <div className="min-h-screen bg-[#09090b] text-zinc-50 pb-24 relative selection:bg-amber-500 selection:text-zinc-950">
-      <AmbientGlowBackground />
+    <div className="pwa-app-shell">
+      <AmbientGlowBackground theme={theme} />
 
-      {/* TOP BAR */}
-      <header className="sticky top-0 z-30 bg-[#09090b]/85 backdrop-blur-xl border-b border-white/[0.07]">
-        <div className="max-w-[430px] mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-zinc-900 border border-white/10 flex items-center justify-center shadow-inner">
-              <CupSoda className="w-5 h-5 text-amber-400" strokeWidth={1.75} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-[15px] font-bold tracking-tight text-zinc-50">
-                  NỐT • Drink Index
+      {/* ====================================================================
+       * 1. LOCKED STICKY HEADER (KHÔNG BAO GIỜ TRÔI KHI CUỘN HOẶC MỞ BÀN PHÍM)
+       * ================================================================== */}
+      <header className="shrink-0 z-30 theme-header">
+        <div className="max-w-[440px] mx-auto px-3.5 py-2.5 space-y-2">
+          {/* Top Brand + Theme Switcher (Tối / Sáng) + Formula Modal */}
+          <div className="flex items-center justify-between gap-1.5">
+            <div className="flex items-center gap-2 min-w-0">
+              <motion.div
+                whileTap={{ rotate: -15, scale: 0.9 }}
+                className="w-8.5 h-8.5 rounded-xl theme-surface-elevated flex items-center justify-center shrink-0 border border-[var(--border-active)]"
+              >
+                <svg className="w-4.5 h-4.5" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M7 9H17L15.8 19.2C15.69 20.22 14.82 21 13.8 21H10.2C9.18 21 8.31 20.22 8.2 19.2L7 9Z"
+                    stroke="var(--accent)"
+                    strokeWidth="2"
+                  />
+                  <path
+                    d="M5.5 9H18.5"
+                    stroke="var(--text-primary)"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M12 9V4L15 2.5"
+                    stroke="var(--accent-bright)"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <circle cx="10.5" cy="16.5" r="1.1" fill="var(--accent)" />
+                  <circle cx="13.5" cy="17" r="1.1" fill="var(--accent)" />
+                </svg>
+              </motion.div>
+
+              <div className="min-w-0">
+                <h1 className="text-sm font-extrabold tracking-tight text-[var(--text-primary)] leading-none">
+                  NỐT
                 </h1>
-                <span className="font-mono text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                  A56
-                </span>
+                <p className="text-[9.5px] font-mono font-bold text-[var(--accent)] tracking-wider uppercase mt-1 leading-none whitespace-nowrap">
+                  FOOD & DRINK
+                </p>
               </div>
-              <p className="text-[11px] text-zinc-400 font-medium">
-                Hệ thống định lượng & xếp hạng quán nước
-              </p>
+            </div>
+
+            <div className="flex items-center gap-1 shrink-0">
+              {/* 2-Mode Theme Switcher: Tối / Sáng */}
+              <div
+                role="group"
+                aria-label="Chế độ giao diện"
+                className="flex items-center p-0.5 rounded-xl theme-surface-elevated"
+              >
+                {(
+                  [
+                    {
+                      id: 'dark',
+                      label: 'Tối',
+                      icon: <Moon className="w-3 h-3" />,
+                    },
+                    {
+                      id: 'light',
+                      label: 'Sáng',
+                      icon: <Sun className="w-3 h-3" />,
+                    },
+                  ] as const
+                ).map((t) => {
+                  const active = theme === t.id;
+                  return (
+                    <motion.button
+                      key={t.id}
+                      type="button"
+                      whileTap={{ scale: 0.9 }}
+                      onClick={(e) =>
+                        applyThemeWithTransition(t.id, setTheme, e)
+                      }
+                      className={cn(
+                        'flex items-center gap-1 px-2 py-1.5 rounded-lg text-[11px] font-semibold transition-all cursor-pointer select-none whitespace-nowrap',
+                        active
+                          ? 'bg-[var(--accent)] text-[var(--accent-fg)] font-extrabold shadow-xs'
+                          : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                      )}
+                    >
+                      {t.icon}
+                      <span>{t.label}</span>
+                    </motion.button>
+                  );
+                })}
+              </div>
+
+              {/* Formula Reference Button */}
+              <RippleButton
+                type="button"
+                onClick={() => setShowFormulaModal(true)}
+                className="h-8 px-2 rounded-xl theme-surface-elevated flex items-center gap-1 text-[11px] font-bold text-[var(--text-primary)] whitespace-nowrap"
+              >
+                <Calculator className="w-3.5 h-3.5 text-[var(--accent)] shrink-0" />
+                <span>Công thức</span>
+              </RippleButton>
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5">
-            <LiquidButton
-              onClick={handleExport}
-              title="Sao lưu dữ liệu JSON"
-              className="h-9 px-2.5 rounded-xl bg-zinc-900 border border-white/[0.08] text-zinc-300 hover:text-white flex items-center gap-1.5 text-xs font-medium"
-            >
-              <Download className="w-3.5 h-3.5 text-zinc-400" strokeWidth={1.75} />
-              <span>Lưu</span>
-            </LiquidButton>
-
-            <LiquidButton
-              onClick={() => setIsFormulaOpen(true)}
-              className="h-9 px-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-300 flex items-center gap-1.5 text-xs font-semibold"
-            >
-              <Calculator className="w-3.5 h-3.5 text-amber-400" strokeWidth={1.75} />
-              <span>Công thức</span>
-            </LiquidButton>
-          </div>
-        </div>
-      </header>
-
-      {/* MAIN VIEWPORT (412px–430px optimized for Samsung A56) */}
-      <main className="max-w-[430px] mx-auto px-4 pt-4 space-y-4">
-        {/* ANIMATE-UI TABS SWITCHER */}
-        <MotionSegmented
-          layoutId="main-nav-tabs"
-          value={activeTab}
-          onChange={(v) => {
-            if (v === 'directory') resetForm();
-            setActiveTab(v);
-          }}
-          activeHighlightClassName="bg-zinc-800/95 border border-white/[0.1] shadow-md"
-          options={[
-            {
-              value: 'directory',
-              label: 'Sổ Tay & Xếp Hạng',
-              icon: <Layers className="w-4 h-4 text-amber-400" strokeWidth={1.75} />,
-              badge: (
-                <span className="font-mono text-[10px] px-1.5 py-0.5 rounded-md bg-zinc-950/70 text-zinc-300">
-                  {reviews.length}
-                </span>
-              ),
-            },
-            {
-              value: 'evaluate',
-              label: editingId ? 'Cập Nhật Điểm' : 'Chấm Điểm Quán',
-              icon: <Plus className="w-4 h-4 text-amber-400" strokeWidth={1.75} />,
-            },
-          ]}
-        />
-
-        <AnimatePresence mode="wait">
-          {activeTab === 'directory' ? (
-            <motion.section
-              key="tab-directory"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ type: 'spring', stiffness: 320, damping: 28 }}
-              className="space-y-4"
-            >
-              {/* SUMMARY METRICS (CountingNumber from animate-ui) */}
-              <div className="grid grid-cols-3 gap-2.5">
-                <div className="rounded-[18px] bg-[#121215] border border-white/[0.07] p-3.5 flex flex-col justify-between">
-                  <span className="text-[11px] font-medium text-zinc-400">Tổng số quán</span>
-                  <div className="mt-1.5 flex items-baseline justify-between">
-                    <CountingNumber
-                      number={filteredReviews.length}
-                      decimalPlaces={0}
-                      className="font-mono text-2xl font-bold text-zinc-50"
-                    />
-                    <span className="text-[10px] font-mono text-zinc-500 uppercase">Quán</span>
-                  </div>
-                </div>
-
-                <div className="rounded-[18px] bg-[#121215] border border-white/[0.07] p-3.5 flex flex-col justify-between">
-                  <span className="text-[11px] font-medium text-zinc-400">Điểm trung bình</span>
-                  <div className="mt-1.5 flex items-baseline justify-between">
-                    <CountingNumber
-                      number={avgScore}
-                      decimalPlaces={1}
-                      className="font-mono text-2xl font-bold text-amber-400"
-                    />
-                    <span className="text-[10px] font-mono text-zinc-500">/10</span>
-                  </div>
-                </div>
-
-                <div className="rounded-[18px] bg-[#121215] border border-white/[0.07] p-3.5 flex flex-col justify-between">
-                  <span className="text-[11px] font-medium text-zinc-400">Ưu tiên uống lại</span>
-                  <div className="mt-1.5 flex items-baseline justify-between">
-                    <CountingNumber
-                      number={priorityCount}
-                      decimalPlaces={0}
-                      className="font-mono text-2xl font-bold text-emerald-400"
-                    />
-                    <span className="text-[10px] font-mono text-zinc-500">≥ 7.5đ</span>
-                  </div>
-                </div>
+          {/* Locked Sub-bar for List Tab: Category Switch + Search + Area Filter */}
+          {activeTab === 'list' && (
+            <div className="space-y-1.5 pt-0.5">
+              {/* Quick Category Pills: Tất cả | Quán nước | Quán ăn */}
+              <div className="flex items-center gap-1.5">
+                {(
+                  [
+                    {
+                      k: 'ALL',
+                      label: `Tất cả (${reviews.length})`,
+                      icon: null,
+                    },
+                    {
+                      k: 'drink',
+                      label: `Quán nước (${reviews.filter((x) => x.category === 'drink').length})`,
+                      icon: <CupSoda className="w-3.5 h-3.5" />,
+                    },
+                    {
+                      k: 'food',
+                      label: `Quán ăn (${reviews.filter((x) => x.category === 'food').length})`,
+                      icon: <Utensils className="w-3.5 h-3.5" />,
+                    },
+                  ] as const
+                ).map((cat) => {
+                  const active = selectedCategoryFilter === cat.k;
+                  return (
+                    <button
+                      key={cat.k}
+                      type="button"
+                      onClick={() => setSelectedCategoryFilter(cat.k)}
+                      className={cn(
+                        'flex-1 h-8 px-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 border transition-all cursor-pointer whitespace-nowrap',
+                        active
+                          ? cat.k === 'food'
+                            ? 'bg-orange-500 text-white border-orange-400 shadow-xs'
+                            : 'bg-[var(--accent)] text-[var(--accent-fg)] border-[var(--border-active)] shadow-xs'
+                          : 'theme-surface-elevated text-[var(--text-secondary)]'
+                      )}
+                    >
+                      {cat.icon}
+                      <span>{cat.label}</span>
+                    </button>
+                  );
+                })}
               </div>
 
-              {/* 3-TIER CASCADING GEO FILTER (NO NATIVE <SELECT> TRUNCATION) */}
-              <div className="rounded-[20px] bg-[#121215] border border-white/[0.07] p-4 space-y-3.5">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <SlidersHorizontal className="w-3.5 h-3.5 text-amber-400" strokeWidth={1.75} />
-                    <span className="text-xs font-semibold tracking-tight text-zinc-200">
-                      Phân cấp Địa lý (Tỉnh/Thành → Phường → Đường)
-                    </span>
-                  </div>
-                  {(selectedCity !== 'ALL' ||
-                    selectedWard !== 'ALL' ||
-                    selectedStreet !== 'ALL' ||
-                    selectedModeFilter !== 'ALL' ||
-                    searchQuery) && (
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1 min-w-0">
+                  <Search className="w-3.5 h-3.5 text-[var(--text-muted)] absolute left-3 top-1/2 -translate-y-1/2 z-10 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Tìm tên quán ăn/nước, đường, phường..."
+                    className="w-full h-9 pl-8 pr-7 rounded-xl theme-surface-elevated text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--border-active)] transition-colors"
+                  />
+                  {searchQuery && (
                     <button
                       type="button"
-                      onClick={() => {
-                        setSelectedCity('ALL');
-                        setSelectedWard('ALL');
-                        setSelectedStreet('ALL');
-                        setSelectedModeFilter('ALL');
-                        setSearchQuery('');
-                      }}
-                      className="flex items-center gap-1 text-[11px] font-medium text-amber-400 hover:text-amber-300 cursor-pointer"
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 z-10 p-0.5 rounded-full text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer"
                     >
-                      <RotateCcw className="w-3 h-3" />
-                      <span>Đặt lại</span>
+                      <X className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </div>
 
-                {/* Tier 1: Tỉnh / Thành phố */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-1.5 text-[11px] font-medium text-zinc-400">
-                    <span className="font-mono text-[10px] text-amber-400/90">01</span>
-                    <span>Tỉnh / Thành phố</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
-                    {cities.map((c) => {
-                      const active = selectedCity === c;
-                      return (
-                        <button
-                          key={c}
-                          type="button"
-                          onClick={() => handleSelectCity(c)}
-                          className={cn(
-                            'relative px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-colors cursor-pointer',
-                            active
-                              ? 'text-zinc-950 font-semibold'
-                              : 'bg-zinc-900 text-zinc-400 hover:text-zinc-200 border border-white/[0.05]'
-                          )}
-                        >
-                          {active && (
-                            <motion.div
-                              layoutId="geo-city-pill"
-                              transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-                              className="absolute inset-0 rounded-xl bg-amber-400 -z-0"
-                            />
-                          )}
-                          <span className="relative z-10">
-                            {c === 'ALL' ? 'Tất cả Tỉnh/Thành' : c}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
+                <RippleButton
+                  type="button"
+                  onClick={() => setIsFilterDrawerOpen((v) => !v)}
+                  className={cn(
+                    'h-9 px-3 rounded-xl flex items-center gap-1.5 text-xs font-bold shrink-0 border transition-colors',
+                    isFilterDrawerOpen ||
+                      selectedWard !== 'ALL' ||
+                      selectedStreet !== 'ALL'
+                      ? 'bg-[var(--accent-soft)] border-[var(--border-active)] text-[var(--accent)]'
+                      : 'theme-surface-elevated text-[var(--text-secondary)]'
+                  )}
+                >
+                  <SlidersHorizontal className="w-3.5 h-3.5" />
+                  <span>Khu vực</span>
+                </RippleButton>
+              </div>
+            </div>
+          )}
 
-                {/* Tier 2: Phường */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-1.5 text-[11px] font-medium text-zinc-400">
-                    <span className="font-mono text-[10px] text-amber-400/90">02</span>
-                    <span>Phường</span>
-                    {selectedCity !== 'ALL' && (
-                      <span className="text-zinc-500">({selectedCity})</span>
-                    )}
+          {/* Locked Live Score Bar on Form Tab (Tự động ẩn khi đang gõ tên quán/ghi chú để mở rộng vùng nhìn) */}
+          {activeTab === 'form' && !isTyping && (
+            <div className="flex items-center justify-between gap-2 pt-0.5 px-3 py-2 rounded-xl theme-surface-elevated border border-[var(--border-active)]">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <CategoryScoreBadge
+                  category={formCategory}
+                  score={liveCalc.total}
+                  size="sm"
+                />
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <div className="flex items-baseline gap-0.5">
+                      <CountingNumber
+                        number={liveCalc.total}
+                        decimalPlaces={2}
+                        className="font-mono text-lg font-extrabold text-[var(--accent)] leading-none"
+                      />
+                      <span className="font-mono text-[10px] text-[var(--text-muted)]">
+                        /10
+                      </span>
+                    </div>
+                    <StarRatingBadge score10={liveCalc.total} />
                   </div>
-                  <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
-                    {wards.map((w) => {
-                      const active = selectedWard === w;
-                      return (
-                        <button
-                          key={w}
-                          type="button"
-                          onClick={() => handleSelectWard(w)}
-                          className={cn(
-                            'relative px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-colors cursor-pointer',
-                            active
-                              ? 'text-zinc-50 font-semibold'
-                              : 'bg-zinc-900 text-zinc-400 hover:text-zinc-200 border border-white/[0.05]'
-                          )}
-                        >
-                          {active && (
-                            <motion.div
-                              layoutId="geo-ward-pill"
-                              transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-                              className="absolute inset-0 rounded-xl bg-zinc-700 border border-white/15 -z-0"
-                            />
-                          )}
-                          <span className="relative z-10">
-                            {w === 'ALL' ? 'Tất cả Phường' : `P. ${w}`}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Tier 3: Đường */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-1.5 text-[11px] font-medium text-zinc-400">
-                    <span className="font-mono text-[10px] text-amber-400/90">03</span>
-                    <span>Tuyến đường</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
-                    {streets.map((s) => {
-                      const active = selectedStreet === s;
-                      return (
-                        <button
-                          key={s}
-                          type="button"
-                          onClick={() => setSelectedStreet(s)}
-                          className={cn(
-                            'relative px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-colors cursor-pointer',
-                            active
-                              ? 'text-amber-300 font-semibold'
-                              : 'bg-zinc-900 text-zinc-400 hover:text-zinc-200 border border-white/[0.05]'
-                          )}
-                        >
-                          {active && (
-                            <motion.div
-                              layoutId="geo-street-pill"
-                              transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-                              className="absolute inset-0 rounded-xl bg-amber-500/15 border border-amber-500/35 -z-0"
-                            />
-                          )}
-                          <span className="relative z-10">
-                            {s === 'ALL' ? 'Tất cả Đường' : `Đường ${s}`}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Search & Experience Mode Filter */}
-                <div className="pt-1 flex items-center gap-2">
-                  <div className="relative flex-1">
-                    <Search
-                      className="w-3.5 h-3.5 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2"
-                      strokeWidth={1.75}
-                    />
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Tìm tên quán, đường, ghi chú..."
-                      className="w-full h-9 pl-8 pr-3 rounded-xl bg-zinc-900 border border-white/[0.07] text-xs text-zinc-100 placeholder:text-zinc-500 focus:border-amber-500/50 outline-none transition-colors"
-                    />
-                  </div>
-                  <div className="flex p-0.5 rounded-xl bg-zinc-900 border border-white/[0.07]">
-                    {(['ALL', 'takeaway', 'dinein'] as const).map((m) => (
-                      <button
-                        key={m}
-                        type="button"
-                        onClick={() => setSelectedModeFilter(m)}
-                        className={cn(
-                          'px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-colors cursor-pointer',
-                          selectedModeFilter === m
-                            ? 'bg-zinc-800 text-zinc-100 font-semibold'
-                            : 'text-zinc-400 hover:text-zinc-200'
-                        )}
-                      >
-                        {m === 'ALL' ? 'Tất cả' : m === 'takeaway' ? 'Take-away' : 'Ngồi lại'}
-                      </button>
-                    ))}
-                  </div>
+                  <p className="text-[11px] font-bold text-[var(--text-primary)] leading-tight mt-0.5">
+                    {liveTier.verdict}
+                  </p>
                 </div>
               </div>
 
-              {/* RANKED SHOP CARDS */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between px-1">
-                  <span className="text-xs font-semibold text-zinc-400 flex items-center gap-1.5">
-                    <ArrowUpDown className="w-3.5 h-3.5 text-amber-400" strokeWidth={1.75} />
-                    <span>Xếp hạng ưu tiên uống lại (Cao → Thấp)</span>
-                  </span>
-                </div>
+              <RippleButton
+                type="button"
+                onClick={() => handleSaveReview()}
+                className="h-8.5 px-3.5 rounded-xl bg-[var(--accent)] text-[var(--accent-fg)] font-extrabold text-xs flex items-center gap-1 shrink-0 shadow-sm"
+              >
+                <Check className="w-3.5 h-3.5" strokeWidth={2.5} />
+                <span>{editingId ? 'Cập nhật' : 'Lưu quán'}</span>
+              </RippleButton>
+            </div>
+          )}
+        </div>
+      </header>
 
+      {/* ====================================================================
+       * 2. SCROLLABLE MAIN CONTENT AREA (pb-32 ensures zero overlap with dock)
+       * ================================================================== */}
+      <main className="pwa-scroll-main">
+        <div
+          className={cn(
+            'max-w-[440px] mx-auto px-3.5 pt-3 space-y-3.5 transition-all',
+            isTyping ? 'pb-6' : 'pb-32'
+          )}
+        >
+          {/* ================================================================
+           * TAB 1: DANH SÁCH QUÁN NƯỚC & QUÁN ĂN
+           * ============================================================== */}
+          {activeTab === 'list' && (
+            <MotionEffect key="tab-list" className="space-y-3">
+              {/* Active Location Summary Bar */}
+              <div className="flex items-center justify-between gap-2 px-1">
+                <button
+                  type="button"
+                  onClick={() => setIsFilterDrawerOpen((v) => !v)}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer text-left"
+                >
+                  <MapPin className="w-3.5 h-3.5 text-[var(--accent)] shrink-0" />
+                  <span>{activeFilterSummary}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('map')}
+                  className="inline-flex items-center gap-1 font-mono text-[11px] font-bold text-[var(--accent)] hover:underline cursor-pointer shrink-0"
+                >
+                  <MapIcon className="w-3.5 h-3.5" />
+                  <span>Mở Bản đồ ({filteredReviews.length})</span>
+                </button>
+              </div>
+
+              {/* Collapsible 3-Tier Administrative Filter (Tỉnh/Thành -> Phường -> Đường) */}
+              <AutoHeight isOpen={isFilterDrawerOpen}>
+                <div className="rounded-2xl theme-surface-card p-3.5 space-y-3 mb-1">
+                  {/* 1. Tỉnh / Thành phố (34) */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-[var(--text-secondary)]">
+                        1. Tỉnh / Thành phố (34 đơn vị mới)
+                      </span>
+                      {(selectedWard !== 'ALL' || selectedStreet !== 'ALL') && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedWard('ALL');
+                            setSelectedStreet('ALL');
+                          }}
+                          className="text-[11px] font-semibold text-[var(--accent)] cursor-pointer"
+                        >
+                          Đặt lại
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+                      {filterCities.map((c) => {
+                        const active = selectedCity === c;
+                        return (
+                          <motion.button
+                            key={c}
+                            type="button"
+                            whileTap={{ scale: 0.94 }}
+                            onClick={() => {
+                              setSelectedCity(c);
+                              setSelectedWard('ALL');
+                              setSelectedStreet('ALL');
+                            }}
+                            className={cn(
+                              'px-3 py-1.5 rounded-lg text-xs whitespace-nowrap transition-all cursor-pointer border',
+                              active
+                                ? 'bg-[var(--accent)] text-[var(--accent-fg)] border-[var(--accent)] font-extrabold'
+                                : 'theme-surface-elevated text-[var(--text-secondary)]'
+                            )}
+                          >
+                            {c === 'ALL' ? 'Tất cả Tỉnh/TP' : c}
+                          </motion.button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* 2. Phường / Xã */}
+                  <div className="space-y-1">
+                    <span className="text-[11px] font-bold text-[var(--text-secondary)]">
+                      2. Phường / Xã trực thuộc
+                    </span>
+                    <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+                      {filterWards.map((w) => {
+                        const active = selectedWard === w;
+                        return (
+                          <motion.button
+                            key={w}
+                            type="button"
+                            whileTap={{ scale: 0.94 }}
+                            onClick={() => {
+                              setSelectedWard(w);
+                              setSelectedStreet('ALL');
+                            }}
+                            className={cn(
+                              'px-3 py-1.5 rounded-lg text-xs whitespace-nowrap transition-all cursor-pointer border',
+                              active
+                                ? 'bg-[var(--text-primary)] text-[var(--bg-canvas)] border-[var(--text-primary)] font-bold'
+                                : 'theme-surface-elevated text-[var(--text-secondary)]'
+                            )}
+                          >
+                            {w === 'ALL' ? 'Tất cả Phường' : `P. ${w}`}
+                          </motion.button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* 3. Đường */}
+                  <div className="space-y-1">
+                    <span className="text-[11px] font-bold text-[var(--text-secondary)]">
+                      3. Tuyến Đường
+                    </span>
+                    <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+                      {filterStreets.map((s) => {
+                        const active = selectedStreet === s;
+                        return (
+                          <motion.button
+                            key={s}
+                            type="button"
+                            whileTap={{ scale: 0.94 }}
+                            onClick={() => setSelectedStreet(s)}
+                            className={cn(
+                              'px-3 py-1.5 rounded-lg text-xs whitespace-nowrap transition-all cursor-pointer border',
+                              active
+                                ? 'bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--border-active)] font-bold'
+                                : 'theme-surface-elevated text-[var(--text-secondary)]'
+                            )}
+                          >
+                            {s === 'ALL' ? 'Tất cả Đường' : s}
+                          </motion.button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Sort Strip */}
+                  <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-[var(--border-card)]">
+                    <span className="text-[11px] font-semibold text-[var(--text-muted)]">
+                      Sắp xếp theo:
+                    </span>
+                    <div className="flex p-0.5 rounded-lg theme-surface-elevated flex-1 max-w-[240px]">
+                      {(
+                        [
+                          { k: 'score_desc', l: 'Điểm ↓' },
+                          { k: 'taste_desc', l: 'Độ ngon ↓' },
+                          { k: 'price_asc', l: 'Giá ↑' },
+                        ] as const
+                      ).map((s) => (
+                        <button
+                          key={s.k}
+                          type="button"
+                          onClick={() => setSortBy(s.k)}
+                          className={cn(
+                            'flex-1 py-1 rounded-md text-[11px] transition-colors cursor-pointer',
+                            sortBy === s.k
+                              ? 'bg-[var(--bg-pill)] text-[var(--accent)] font-bold'
+                              : 'text-[var(--text-muted)]'
+                          )}
+                        >
+                          {s.l}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </AutoHeight>
+
+              {/* SHOP CARDS LIST (BOTH DRINK & FOOD) */}
+              <div className="space-y-3">
                 {filteredReviews.length === 0 ? (
-                  <div className="rounded-[20px] bg-[#121215] border border-white/[0.07] p-8 text-center space-y-3">
-                    <div className="w-11 h-11 rounded-2xl bg-zinc-900 border border-white/10 mx-auto flex items-center justify-center">
-                      <Coffee className="w-5 h-5 text-zinc-400" strokeWidth={1.75} />
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-sm font-semibold text-zinc-200">
-                        Không tìm thấy quán phù hợp
-                      </p>
-                      <p className="text-xs text-zinc-500">
-                        Thử đổi bộ lọc Phường/Đường hoặc chấm điểm quán mới.
-                      </p>
-                    </div>
+                  <div className="rounded-2xl theme-surface-card py-10 px-5 text-center space-y-3">
+                    <p className="text-xs text-[var(--text-secondary)]">
+                      Chưa có quán nào trong bộ lọc hiện tại.
+                    </p>
+                    <RippleButton
+                      type="button"
+                      onClick={() => {
+                        if (selectedCity !== 'ALL') setCity(selectedCity);
+                        if (selectedWard !== 'ALL') setWard(selectedWard);
+                        if (selectedStreet !== 'ALL') setStreet(selectedStreet);
+                        if (selectedCategoryFilter !== 'ALL')
+                          setFormCategory(selectedCategoryFilter);
+                        setActiveTab('form');
+                      }}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[var(--accent)] text-[var(--accent-fg)] text-xs font-bold"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Chấm điểm quán đầu tiên</span>
+                    </RippleButton>
                   </div>
                 ) : (
                   filteredReviews.map((item, idx) => {
-                    const tier = getTierMeta(item.totalScore);
-                    const TierIcon = tier.Icon;
-                    const priceInfo = getPriceScore(item.priceK, item.mode);
+                    const isFood = item.category === 'food';
+                    const tier = getTierStyle(item.totalScore, item.category);
+                    const priceInfo = isFood
+                      ? getFoodPriceScore(
+                          item.priceK,
+                          item.foodType || 'streetfood'
+                        )
+                      : getDrinkPriceScore(item.priceK, item.mode);
                     const volLabel =
-                      VOLUME_OPTIONS.find((v) => v.key === item.volumeKey)?.label || 'Ít';
+                      VOLUME_OPTIONS.find((v) => v.key === item.volumeKey)
+                        ?.label || 'Ít';
+                    const isExpanded = expandedCardId === item.id;
 
                     return (
-                      <motion.article
-                        key={item.id}
-                        layout
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ type: 'spring', stiffness: 300, damping: 28 }}
-                        className="rounded-[20px] bg-[#121215] border border-white/[0.07] p-5 space-y-4 shadow-lg"
-                      >
-                        {/* Card Header: Rank + Shop Name + Breadcrumb + Total Score */}
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="space-y-1.5 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded-md bg-zinc-900 text-zinc-300 border border-white/[0.07]">
-                                #{idx + 1}
-                              </span>
-                              <h3 className="text-lg font-bold tracking-tight text-zinc-50 truncate">
-                                {item.name}
-                              </h3>
-                              <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-md bg-zinc-900 text-zinc-300 border border-white/[0.06]">
-                                {item.mode === 'takeaway' ? (
-                                  <>
-                                    <ShoppingBag className="w-3 h-3 text-amber-400" />
-                                    <span>Take-away</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <Armchair className="w-3 h-3 text-sky-400" />
-                                    <span>Ngồi lại</span>
-                                  </>
-                                )}
-                              </span>
-                            </div>
-
-                            {/* 3-Tier Location Breadcrumb */}
-                            <div className="flex items-center gap-1 text-xs text-zinc-400 flex-wrap">
-                              <MapPin className="w-3.5 h-3.5 text-zinc-500 shrink-0" strokeWidth={1.75} />
-                              <span>{item.city}</span>
-                              <ChevronRight className="w-3 h-3 text-zinc-600" />
-                              <span>P. {item.ward}</span>
-                              <ChevronRight className="w-3 h-3 text-zinc-600" />
-                              <span className="text-zinc-200 font-medium">
-                                Đường {item.street}
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* Display Score with CountingNumber */}
-                          <div className="text-right shrink-0 bg-zinc-900/90 border border-white/[0.07] rounded-2xl px-3.5 py-2">
-                            <div className="flex items-baseline justify-end gap-0.5">
-                              <CountingNumber
-                                number={item.totalScore}
-                                decimalPlaces={1}
-                                className={cn('font-mono text-2xl font-extrabold', tier.colorClass)}
-                              />
-                              <span className="font-mono text-xs text-zinc-500">/10</span>
-                            </div>
-                            <span className="block font-mono text-[9px] tracking-wider uppercase text-zinc-500 mt-0.5">
-                              {tier.tier}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Semantic Verdict Pill & Price Tag */}
-                        <div className="flex items-center justify-between gap-2 pt-0.5 flex-wrap">
-                          <div
-                            className={cn(
-                              'inline-flex items-center gap-1.5 px-3 py-1 rounded-xl border text-xs font-semibold',
-                              tier.badgeClass
-                            )}
-                          >
-                            <TierIcon className="w-3.5 h-3.5 shrink-0" strokeWidth={2} />
-                            <span>{tier.text}</span>
-                          </div>
-
-                          <div className="inline-flex items-center gap-1.5 font-mono text-xs font-semibold text-zinc-200 bg-zinc-900 px-3 py-1 rounded-xl border border-white/[0.06]">
-                            <Banknote className="w-3.5 h-3.5 text-amber-400" strokeWidth={1.75} />
-                            <span>{item.priceK}k</span>
-                            <span className="text-zinc-500 font-normal">({item.priceBracket})</span>
-                          </div>
-                        </div>
-
-                        {/* Animated Progress Bars Breakdown (animate-ui) */}
-                        <div className="rounded-2xl bg-zinc-900/60 border border-white/[0.05] p-3.5 space-y-2.5">
-                          <AnimatedProgress
-                            label="Hương vị"
-                            weightLabel={item.mode === 'takeaway' ? '50%' : '35%'}
-                            value={item.taste}
-                            displayValue={`${item.taste.toFixed(1)} / 10`}
-                            accentClass="bg-amber-400"
-                          />
-                          <AnimatedProgress
-                            label={`Quy đổi Giá (${item.priceK}k)`}
-                            weightLabel={item.mode === 'takeaway' ? '25%' : '20%'}
-                            value={priceInfo.score}
-                            displayValue={`${priceInfo.score.toFixed(1)} / 10`}
-                            accentClass="bg-emerald-400"
-                          />
-                          <AnimatedProgress
-                            label={`Thể tích (${volLabel})`}
-                            weightLabel="20%"
-                            value={item.volumeScore}
-                            displayValue={`${item.volumeScore.toFixed(1)} / 10`}
-                            accentClass={
-                              item.volumeScore <= 4 ? 'bg-orange-400' : 'bg-sky-400'
-                            }
-                          />
-                          {item.mode === 'dinein' && item.space !== null && (
-                            <AnimatedProgress
-                              label="Không gian quán"
-                              weightLabel="20%"
-                              value={item.space}
-                              displayValue={`${item.space.toFixed(1)} / 10`}
-                              accentClass="bg-indigo-400"
-                            />
+                      <MotionEffect key={item.id} delay={idx * 0.04}>
+                        <Shine
+                          enableOnTap
+                          enableOnHover
+                          className={cn(
+                            'rounded-2xl theme-surface-card transition-all duration-200',
+                            isExpanded && 'border-[var(--border-active)]'
                           )}
-                          <AnimatedProgress
-                            label="Chất liệu vỏ ly"
-                            weightLabel="5%"
-                            value={item.packaging}
-                            displayValue={`${item.packaging.toFixed(1)} / 10`}
-                            accentClass="bg-zinc-300"
-                          />
-                        </div>
+                        >
+                          {/* Scannable Header */}
+                          <div
+                            onClick={() =>
+                              setExpandedCardId(isExpanded ? null : item.id)
+                            }
+                            className="p-4 cursor-pointer select-none space-y-3"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex items-start gap-3 min-w-0 flex-1">
+                                <CategoryScoreBadge
+                                  category={item.category}
+                                  score={item.totalScore}
+                                  size="sm"
+                                />
+                                <div className="min-w-0 flex-1 space-y-1">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="font-mono text-xs font-bold text-[var(--accent)]">
+                                      #{idx + 1}
+                                    </span>
+                                    <h3 className="text-base font-extrabold tracking-tight text-[var(--text-primary)] leading-snug">
+                                      {item.name}
+                                    </h3>
+                                  </div>
 
-                        {/* Review Note & Actions */}
-                        {item.note && (
-                          <p className="text-xs text-zinc-300 leading-relaxed bg-zinc-900/40 rounded-xl px-3.5 py-2.5 border-l-2 border-amber-500/60">
-                            {item.note}
-                          </p>
-                        )}
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span
+                                      className={cn(
+                                        'text-[10px] font-bold px-2 py-0.5 rounded-md',
+                                        isFood
+                                          ? 'bg-orange-500/15 text-orange-400 border border-orange-500/30'
+                                          : 'theme-surface-elevated text-[var(--text-secondary)]'
+                                      )}
+                                    >
+                                      {isFood
+                                        ? item.foodType === 'streetfood'
+                                          ? '🍜 Vỉa hè'
+                                          : '🍜 Quán ngồi'
+                                        : item.mode === 'takeaway'
+                                          ? '🥤 Take-away'
+                                          : '🥤 Ngồi lại'}
+                                    </span>
+                                    <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded-md bg-[var(--accent-soft)] text-[var(--accent)]">
+                                      {item.priceK}k
+                                    </span>
+                                    <StarRatingBadge
+                                      score10={item.totalScore}
+                                    />
+                                  </div>
 
-                        <div className="flex items-center justify-between pt-1 border-t border-white/[0.05]">
-                          <span className="font-mono text-[11px] text-zinc-500">
-                            Cập nhật: {item.createdAt}
-                          </span>
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => handleEdit(item)}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-xs font-medium text-zinc-300 border border-white/[0.07] transition-colors cursor-pointer"
-                            >
-                              <Pencil className="w-3.5 h-3.5" strokeWidth={1.75} />
-                              <span>Chỉnh sửa</span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDelete(item.id)}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-xs font-medium text-rose-300 border border-rose-500/20 transition-colors cursor-pointer"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" strokeWidth={1.75} />
-                              <span>Xóa</span>
-                            </button>
+                                  <div className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)] flex-wrap leading-snug pt-0.5">
+                                    <span>Đường {item.street}</span>
+                                    <span className="text-[var(--text-muted)]">
+                                      •
+                                    </span>
+                                    <span>P. {item.ward}</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Score + Rank Tag */}
+                              <div className="text-right shrink-0">
+                                <div className="flex items-baseline justify-end gap-0.5">
+                                  <CountingNumber
+                                    number={item.totalScore}
+                                    decimalPlaces={1}
+                                    className="font-mono text-2xl font-extrabold leading-none text-[var(--accent)]"
+                                  />
+                                  <span className="font-mono text-[11px] text-[var(--text-muted)]">
+                                    /10
+                                  </span>
+                                </div>
+                                <span
+                                  className={cn(
+                                    'inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-md border',
+                                    tier.isTop
+                                      ? 'bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--border-active)]'
+                                      : 'theme-surface-elevated text-[var(--text-secondary)]'
+                                  )}
+                                >
+                                  {tier.shortLabel}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Minimal Metric Strip */}
+                            <div className="flex items-center justify-between pt-2.5 border-t border-[var(--border-card)] text-xs">
+                              {isFood ? (
+                                <div className="flex items-center gap-2 font-mono text-[11px] text-[var(--text-secondary)] flex-wrap">
+                                  <span>
+                                    Ngon{' '}
+                                    <b className="text-[var(--text-primary)]">
+                                      {item.taste}
+                                    </b>
+                                  </span>
+                                  <span className="text-[var(--text-muted)]">
+                                    •
+                                  </span>
+                                  <span>
+                                    Chất lượng{' '}
+                                    <b className="text-[var(--text-primary)]">
+                                      {item.foodQuality ?? 8}
+                                    </b>
+                                  </span>
+                                  <span className="text-[var(--text-muted)]">
+                                    •
+                                  </span>
+                                  <span>
+                                    Sạch{' '}
+                                    <b className="text-[var(--text-primary)]">
+                                      {item.cleanliness ?? 8}
+                                    </b>
+                                  </span>
+                                  <span className="text-[var(--text-muted)]">
+                                    •
+                                  </span>
+                                  <span>
+                                    K.Gian{' '}
+                                    <b className="text-[var(--text-primary)]">
+                                      {item.space}
+                                    </b>
+                                  </span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2.5 font-mono text-[11px] text-[var(--text-secondary)] flex-wrap">
+                                  <span>
+                                    Vị{' '}
+                                    <b className="text-[var(--text-primary)]">
+                                      {item.taste}
+                                    </b>
+                                  </span>
+                                  <span className="text-[var(--text-muted)]">
+                                    •
+                                  </span>
+                                  <span>
+                                    Giá{' '}
+                                    <b className="text-[var(--text-primary)]">
+                                      {priceInfo.score}
+                                    </b>
+                                  </span>
+                                  <span className="text-[var(--text-muted)]">
+                                    •
+                                  </span>
+                                  <span>
+                                    Lượng{' '}
+                                    <b className="text-[var(--text-primary)]">
+                                      {volLabel}
+                                    </b>
+                                  </span>
+                                  <span className="text-[var(--text-muted)]">
+                                    •
+                                  </span>
+                                  <span>
+                                    Ly{' '}
+                                    <b className="text-[var(--text-primary)]">
+                                      {item.packaging}
+                                    </b>
+                                  </span>
+                                </div>
+                              )}
+                              <ChevronRight
+                                className={cn(
+                                  'w-4 h-4 text-[var(--text-muted)] transition-transform duration-200 shrink-0',
+                                  isExpanded ? '-rotate-90' : 'rotate-90'
+                                )}
+                              />
+                            </div>
                           </div>
-                        </div>
-                      </motion.article>
+
+                          {/* Smooth Zero-Shift Expanded Detail + Direct Navigation Buttons */}
+                          <AutoHeight isOpen={isExpanded}>
+                            <div
+                              className="px-4 pb-4 pt-3 border-t border-[var(--border-card)] space-y-3"
+                              style={{ background: 'var(--bg-card-expanded)' }}
+                            >
+                              <div className="flex items-center justify-between text-[11px]">
+                                <span className="font-bold text-[var(--accent)]">
+                                  {tier.rankLabel}
+                                </span>
+                                <span className="font-mono text-[var(--text-muted)]">
+                                  Khung giá {priceInfo.bracket}
+                                </span>
+                              </div>
+
+                              {isFood ? (
+                                <div className="space-y-2.5">
+                                  <AnimatedProgress
+                                    label="Độ ngon (Hương vị)"
+                                    weightLabel={
+                                      item.foodType === 'streetfood'
+                                        ? '40%'
+                                        : '35%'
+                                    }
+                                    value={item.taste}
+                                    displayValue={`${item.taste.toFixed(1)}/10`}
+                                    isHighlight
+                                  />
+                                  <AnimatedProgress
+                                    label="Chất lượng & Khẩu phần đồ ăn"
+                                    weightLabel="25%"
+                                    value={item.foodQuality ?? 8}
+                                    displayValue={`${(item.foodQuality ?? 8).toFixed(1)}/10`}
+                                    isHighlight
+                                  />
+                                  <AnimatedProgress
+                                    label="Độ sạch sẽ / Vệ sinh"
+                                    weightLabel="15%"
+                                    value={item.cleanliness ?? 8}
+                                    displayValue={`${(item.cleanliness ?? 8).toFixed(1)}/10`}
+                                  />
+                                  <AnimatedProgress
+                                    label={
+                                      item.foodType === 'streetfood'
+                                        ? 'Không gian chỗ ngồi vỉa hè'
+                                        : 'Không gian quán / Nhà hàng'
+                                    }
+                                    weightLabel={
+                                      item.foodType === 'streetfood'
+                                        ? '5%'
+                                        : '15%'
+                                    }
+                                    value={item.space}
+                                    displayValue={`${item.space.toFixed(1)}/10`}
+                                  />
+                                  <AnimatedProgress
+                                    label={`Quy đổi Giá (${item.priceK}k)`}
+                                    weightLabel={
+                                      item.foodType === 'streetfood'
+                                        ? '15%'
+                                        : '10%'
+                                    }
+                                    value={priceInfo.score}
+                                    displayValue={`${priceInfo.score.toFixed(1)}/10`}
+                                  />
+                                </div>
+                              ) : (
+                                <div className="space-y-2.5">
+                                  <AnimatedProgress
+                                    label="Hương vị"
+                                    weightLabel={
+                                      item.mode === 'takeaway' ? '50%' : '35%'
+                                    }
+                                    value={item.taste}
+                                    displayValue={`${item.taste.toFixed(1)}/10`}
+                                    isHighlight
+                                  />
+                                  <AnimatedProgress
+                                    label={`Quy đổi Giá (${item.priceK}k)`}
+                                    weightLabel={
+                                      item.mode === 'takeaway' ? '25%' : '20%'
+                                    }
+                                    value={priceInfo.score}
+                                    displayValue={`${priceInfo.score.toFixed(1)}/10`}
+                                  />
+                                  <AnimatedProgress
+                                    label={`Thể tích (${volLabel})`}
+                                    weightLabel="20%"
+                                    value={
+                                      VOLUME_OPTIONS.find(
+                                        (v) => v.key === item.volumeKey
+                                      )?.score || 4
+                                    }
+                                    displayValue={`${(
+                                      VOLUME_OPTIONS.find(
+                                        (v) => v.key === item.volumeKey
+                                      )?.score || 4
+                                    ).toFixed(1)}/10`}
+                                  />
+                                  {item.mode === 'dinein' && (
+                                    <AnimatedProgress
+                                      label="Không gian ngồi lại"
+                                      weightLabel="20%"
+                                      value={item.space}
+                                      displayValue={`${item.space.toFixed(1)}/10`}
+                                    />
+                                  )}
+                                  <AnimatedProgress
+                                    label="Chất liệu vỏ ly"
+                                    weightLabel="5%"
+                                    value={item.packaging}
+                                    displayValue={`${item.packaging.toFixed(1)}/10`}
+                                  />
+                                </div>
+                              )}
+
+                              {item.note && (
+                                <p className="text-xs text-[var(--text-secondary)] leading-relaxed p-3 rounded-xl theme-surface-elevated">
+                                  {item.note}
+                                </p>
+                              )}
+
+                              {/* Action Bar: Chỉ đường ăn/uống lại + Xem bản đồ + Sửa + Xóa */}
+                              <div className="flex items-center justify-between gap-2 pt-1 flex-wrap">
+                                <div className="flex items-center gap-1.5">
+                                  <RippleButton
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleOpenDirectionsExternal(item);
+                                    }}
+                                    className="px-3 py-1.5 rounded-xl bg-[var(--accent)] text-[var(--accent-fg)] text-xs font-extrabold flex items-center gap-1 shadow-xs"
+                                  >
+                                    <Navigation className="w-3.5 h-3.5" />
+                                    <span>Chỉ đường</span>
+                                  </RippleButton>
+
+                                  <RippleButton
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleViewOnMap(item);
+                                    }}
+                                    className="px-2.5 py-1.5 rounded-xl theme-surface-elevated text-xs font-bold text-[var(--text-primary)] flex items-center gap-1"
+                                  >
+                                    <MapIcon className="w-3.5 h-3.5 text-[var(--accent)]" />
+                                    <span>Bản đồ</span>
+                                  </RippleButton>
+                                </div>
+
+                                <div className="flex items-center gap-1.5">
+                                  <RippleButton
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleEdit(item);
+                                    }}
+                                    className="px-2.5 py-1.5 rounded-xl theme-surface-elevated text-xs font-bold text-[var(--text-primary)] flex items-center gap-1"
+                                  >
+                                    <Edit3 className="w-3.5 h-3.5 text-[var(--accent)]" />
+                                    <span>Sửa</span>
+                                  </RippleButton>
+                                  <RippleButton
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDelete(item.id, item.name);
+                                    }}
+                                    className="px-2.5 py-1.5 rounded-xl theme-surface-elevated text-xs font-semibold text-[var(--text-secondary)] hover:text-rose-400 flex items-center gap-1"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                    <span>Xóa</span>
+                                  </RippleButton>
+                                </div>
+                              </div>
+                            </div>
+                          </AutoHeight>
+                        </Shine>
+                      </MotionEffect>
                     );
                   })
                 )}
               </div>
-            </motion.section>
-          ) : (
-            /* ================================================================
-             * TAB 2: INTERACTIVE EVALUATION ENGINE
-             * ============================================================== */
-            <motion.section
-              key="tab-evaluate"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ type: 'spring', stiffness: 320, damping: 28 }}
-            >
-              <form onSubmit={handleSaveReview} className="space-y-4">
-                {/* Block 1: Location Hierarchy */}
-                <div className="rounded-[20px] bg-[#121215] border border-white/[0.07] p-5 space-y-4">
+            </MotionEffect>
+          )}
+
+          {/* ================================================================
+           * TAB 2: GIAO DIỆN BẢN ĐỒ RIÊNG (ĐÁNH DẤU QUÁN, SỐ SAO & CHỈ ĐƯỜNG)
+           * ============================================================== */}
+          {activeTab === 'map' && (
+            <MotionEffect key="tab-map">
+              <MapExplorer
+                items={reviews}
+                theme={theme}
+                selectedCity={selectedCity}
+                initialFocusId={mapFocusId}
+                onEditItem={(it) => {
+                  const full = reviews.find((r) => r.id === it.id);
+                  if (full) handleEdit(full);
+                }}
+                onOpenDirectionsExternal={handleOpenDirectionsExternal}
+              />
+            </MotionEffect>
+          )}
+
+          {/* ================================================================
+           * TAB 3: CHẤM ĐIỂM (ĐỒNG BỘ QUÁN NƯỚC & QUÁN ĂN)
+           * ============================================================== */}
+          {activeTab === 'form' && (
+            <MotionEffect key="tab-form">
+              <form onSubmit={handleSaveReview} className="space-y-3.5">
+                {/* 1. CHỌN MẢNG ĐÁNH GIÁ: QUÁN NƯỚC HAY QUÁN ĂN */}
+                <Shine className="rounded-2xl theme-surface-card p-3.5 space-y-2.5">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-amber-400" strokeWidth={1.75} />
-                      <h2 className="text-sm font-bold text-zinc-100">
-                        Định danh Quán & Tọa độ 3 Cấp
-                      </h2>
-                    </div>
+                    <span className="text-xs font-extrabold text-[var(--text-primary)]">
+                      Phân loại địa điểm đánh giá
+                    </span>
                     {editingId && (
-                      <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-amber-500/15 text-amber-300">
-                        Đang sửa
-                      </span>
+                      <button
+                        type="button"
+                        onClick={() => resetForm()}
+                        className="text-[11px] font-bold text-[var(--accent)] cursor-pointer"
+                      >
+                        Hủy sửa • Tạo mới
+                      </button>
                     )}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="col-span-2 space-y-1.5">
-                      <label className="block text-xs font-medium text-zinc-300">
-                        Tên quán nước *
-                      </label>
-                      <input
-                        required
-                        type="text"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder="VD: Nốt"
-                        className="w-full h-11 px-3.5 rounded-xl bg-zinc-900 border border-white/[0.08] text-sm text-zinc-50 placeholder:text-zinc-500 focus:border-amber-500 outline-none"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="block text-xs font-medium text-zinc-300">
-                        1. Tỉnh / Thành phố *
-                      </label>
-                      <input
-                        required
-                        type="text"
-                        value={city}
-                        onChange={(e) => setCity(e.target.value)}
-                        placeholder="Đà Nẵng"
-                        className="w-full h-10 px-3 rounded-xl bg-zinc-900 border border-white/[0.08] text-xs font-medium text-zinc-100 focus:border-amber-500 outline-none"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="block text-xs font-medium text-zinc-300">
-                        2. Phường *
-                      </label>
-                      <input
-                        required
-                        type="text"
-                        value={ward}
-                        onChange={(e) => setWard(e.target.value)}
-                        placeholder="VD: Thạc Gián"
-                        className="w-full h-10 px-3 rounded-xl bg-zinc-900 border border-white/[0.08] text-xs font-medium text-zinc-100 focus:border-amber-500 outline-none"
-                      />
-                    </div>
-
-                    <div className="col-span-2 space-y-1.5">
-                      <label className="block text-xs font-medium text-zinc-300">
-                        3. Tên Đường *
-                      </label>
-                      <input
-                        required
-                        type="text"
-                        value={street}
-                        onChange={(e) => setStreet(e.target.value)}
-                        placeholder="VD: Phan Thanh"
-                        className="w-full h-10 px-3.5 rounded-xl bg-zinc-900 border border-white/[0.08] text-xs font-medium text-zinc-100 focus:border-amber-500 outline-none"
-                      />
-                    </div>
-
-                    <div className="col-span-2 space-y-1.5">
-                      <label className="block text-xs font-medium text-zinc-400">
-                        Món nước đã gọi (Tùy chọn)
-                      </label>
-                      <input
-                        type="text"
-                        value={drink}
-                        onChange={(e) => setDrink(e.target.value)}
-                        placeholder="VD: Trà sữa Ô long / Cà phê muối..."
-                        className="w-full h-10 px-3.5 rounded-xl bg-zinc-900 border border-white/[0.08] text-xs text-zinc-100 placeholder:text-zinc-500 focus:border-amber-500 outline-none"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Block 2: Experience Mode Switcher (MotionSegmented) */}
-                <div className="rounded-[20px] bg-[#121215] border border-white/[0.07] p-5 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-sm font-bold text-zinc-100">
-                      Hình thức Trải nghiệm
-                    </h2>
-                    <span className="font-mono text-[11px] text-zinc-400">
-                      Tự động đổi trọng số
-                    </span>
-                  </div>
-
                   <MotionSegmented
-                    layoutId="experience-mode-switch"
-                    value={mode}
-                    onChange={setMode}
-                    activeHighlightClassName="bg-amber-500/15 border border-amber-500/40"
+                    value={formCategory}
+                    onChange={(val) => {
+                      setFormCategory(val);
+                      if (!editingId) {
+                        setPriceK(val === 'food' ? 30 : 31);
+                      }
+                    }}
                     options={[
                       {
-                        value: 'takeaway',
-                        label: 'Take-away (Mang đi)',
-                        sublabel: 'Vị 50% • Giá 25% • Lượng 20% • Ly 5%',
-                        icon: <ShoppingBag className="w-4 h-4 text-amber-400" strokeWidth={1.75} />,
+                        value: 'drink',
+                        label: '🥤 Quán nước',
+                        badge: (
+                          <span className="text-[10px] font-mono opacity-75">
+                            Take-away / Ngồi
+                          </span>
+                        ),
                       },
                       {
-                        value: 'dinein',
-                        label: 'Ngồi lại quán',
-                        sublabel: 'Vị 35% • Giá 20% • Lượng 20% • K.Gian 20%',
-                        icon: <Armchair className="w-4 h-4 text-sky-400" strokeWidth={1.75} />,
+                        value: 'food',
+                        label: '🍜 Quán ăn',
+                        badge: (
+                          <span className="text-[10px] font-mono opacity-75">
+                            Vỉa hè / Quán
+                          </span>
+                        ),
                       },
                     ]}
                   />
-                </div>
+                </Shine>
 
-                {/* Block 3: Precision Sliders & Segmented Metrics */}
-                <div className="rounded-[20px] bg-[#121215] border border-white/[0.07] p-5 space-y-5">
-                  {/* Metric 1: Taste */}
-                  <div className="space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-zinc-100">
-                          1. Hương vị đồ uống
-                        </span>
-                        <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                          {mode === 'takeaway' ? '50%' : '35%'}
-                        </span>
-                      </div>
-                      <span className="font-mono text-sm font-bold text-amber-400 tabular-nums">
-                        {taste.toFixed(1)} / 10
+                {/* 2. TÊN QUÁN & ĐỊA ĐIỂM HÀNH CHÍNH CHÍNH THỨC (34 TỈNH/THÀNH) */}
+                <Shine className="rounded-2xl theme-surface-card p-4 space-y-3.5">
+                  <div className="space-y-1.5">
+                    <label
+                      htmlFor="shop-name-input"
+                      className="text-xs font-bold text-[var(--text-primary)] block"
+                    >
+                      {formCategory === 'food'
+                        ? 'Tên quán ăn / món đặc trưng'
+                        : 'Tên quán nước'}
+                    </label>
+                    <input
+                      id="shop-name-input"
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder={
+                        formCategory === 'food'
+                          ? 'VD: Bánh Canh Cá Lóc, Bún Chả Cá, Mì Quảng...'
+                          : 'VD: Nốt, Phê La, Highlands...'
+                      }
+                      className="w-full h-11 px-3.5 rounded-xl theme-surface-elevated text-sm font-semibold text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--border-active)] transition-colors"
+                    />
+                  </div>
+
+                  {/* Official 3-Step Location Selector */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-bold text-[var(--text-primary)]">
+                        Địa điểm (34 Tỉnh/TP • Phường • Đường)
                       </span>
+                      <span className="text-[10px] font-mono font-bold text-[var(--accent)] shrink-0">
+                        Chọn sẵn
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2">
+                      <RippleButton
+                        type="button"
+                        onClick={() => {
+                          setLocStep('city');
+                          setLocSearch('');
+                          setIsLocPickerOpen(true);
+                        }}
+                        className="p-2.5 rounded-xl theme-surface-elevated text-left space-y-0.5"
+                      >
+                        <span className="text-[10px] font-medium text-[var(--text-muted)] block">
+                          1. Tỉnh/Thành
+                        </span>
+                        <span className="text-xs font-bold text-[var(--text-primary)] block leading-snug">
+                          {city}
+                        </span>
+                      </RippleButton>
+
+                      <RippleButton
+                        type="button"
+                        onClick={() => {
+                          setLocStep('ward');
+                          setLocSearch('');
+                          setIsLocPickerOpen(true);
+                        }}
+                        className="p-2.5 rounded-xl theme-surface-elevated text-left space-y-0.5"
+                      >
+                        <span className="text-[10px] font-medium text-[var(--text-muted)] block">
+                          2. Phường/Xã
+                        </span>
+                        <span className="text-xs font-bold text-[var(--text-primary)] block leading-snug">
+                          {ward}
+                        </span>
+                      </RippleButton>
+
+                      <RippleButton
+                        type="button"
+                        onClick={() => {
+                          setLocStep('street');
+                          setLocSearch('');
+                          setIsLocPickerOpen(true);
+                        }}
+                        className="p-2.5 rounded-xl theme-surface-elevated text-left space-y-0.5 border-[var(--border-active)]"
+                      >
+                        <span className="text-[10px] font-medium text-[var(--accent)] block">
+                          3. Đường/Phố
+                        </span>
+                        <span className="text-xs font-bold text-[var(--text-primary)] block leading-snug">
+                          {street}
+                        </span>
+                      </RippleButton>
+                    </div>
+                  </div>
+                </Shine>
+
+                {/* 3. LOẠI HÌNH PHỤC VỤ (THEO QUÁN NƯỚC HOẶC QUÁN ĂN) */}
+                <Shine className="rounded-2xl theme-surface-card p-3.5 space-y-2">
+                  <span className="text-xs font-bold text-[var(--text-primary)] block">
+                    {formCategory === 'food'
+                      ? 'Hình thức quán ăn (Vỉa hè hay Quán ngồi)'
+                      : 'Hình thức thưởng thức đồ uống'}
+                  </span>
+
+                  {formCategory === 'food' ? (
+                    <MotionSegmented
+                      value={foodType}
+                      onChange={setFoodType}
+                      options={[
+                        {
+                          value: 'streetfood',
+                          label: 'Vỉa hè / Bình dân',
+                          badge: (
+                            <span className="text-[10px] font-mono opacity-75">
+                              Ngon 40%
+                            </span>
+                          ),
+                        },
+                        {
+                          value: 'restaurant',
+                          label: 'Quán / Nhà hàng',
+                          badge: (
+                            <span className="text-[10px] font-mono opacity-75">
+                              K.Gian 15%
+                            </span>
+                          ),
+                        },
+                      ]}
+                    />
+                  ) : (
+                    <MotionSegmented
+                      value={mode}
+                      onChange={setMode}
+                      options={[
+                        {
+                          value: 'takeaway',
+                          label: 'Take-away (Mang đi)',
+                          badge: (
+                            <span className="text-[10px] font-mono opacity-75">
+                              Vị 50%
+                            </span>
+                          ),
+                        },
+                        {
+                          value: 'dinein',
+                          label: 'Ngồi lại quán',
+                          badge: (
+                            <span className="text-[10px] font-mono opacity-75">
+                              K.Gian 20%
+                            </span>
+                          ),
+                        },
+                      ]}
+                    />
+                  )}
+                </Shine>
+
+                {/* 4. HẠNG MỤC CHẤM ĐIỂM CHI TIẾT (KHÔNG BAO GIỜ RỚT DÒNG ĐÈ NÚT SLIDER) */}
+                <Shine className="rounded-2xl theme-surface-card p-4 space-y-4">
+                  {/* 4A. Độ ngon / Hương vị */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-bold text-[var(--text-primary)] min-w-0 leading-snug">
+                        {formCategory === 'food'
+                          ? 'Độ ngon món ăn'
+                          : 'Hương vị đồ uống'}{' '}
+                        <span className="font-mono text-[10px] font-medium text-[var(--text-muted)]">
+                          (
+                          {formCategory === 'food'
+                            ? foodType === 'streetfood'
+                              ? '40%'
+                              : '35%'
+                            : mode === 'takeaway'
+                              ? '50%'
+                              : '35%'}
+                          )
+                        </span>
+                      </span>
+                      <div className="flex items-center gap-1.5 shrink-0 whitespace-nowrap">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[var(--accent-soft)] text-[var(--accent)] whitespace-nowrap">
+                          {getSliderReaction(taste)}
+                        </span>
+                        <motion.span
+                          key={taste}
+                          initial={{ scale: 1.35 }}
+                          animate={{ scale: 1 }}
+                          className="font-mono text-base font-extrabold text-[var(--accent)]"
+                        >
+                          {taste.toFixed(1)}
+                        </motion.span>
+                      </div>
                     </div>
                     <input
                       type="range"
@@ -1093,340 +2040,970 @@ export default function App() {
                       onChange={(e) => setTaste(parseFloat(e.target.value))}
                       className="precision-slider"
                     />
-                    <div className="flex justify-between font-mono text-[10px] text-zinc-500">
-                      <span>1.0 (Tệ)</span>
-                      <span>5.0 (Tạm)</span>
-                      <span>7.0 (Khá ngon)</span>
-                      <span>10.0 (Đỉnh)</span>
-                    </div>
                   </div>
 
-                  {/* Metric 2: Price */}
-                  <div className="space-y-3 pt-4 border-t border-white/[0.06]">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-zinc-100">
-                          2. Giá tiền thực tế
+                  {/* 4B. Giá tiền */}
+                  <div className="space-y-2 pt-3.5 border-t border-[var(--border-card)]">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-bold text-[var(--text-primary)]">
+                        Giá trung bình 1 phần{' '}
+                        <span className="font-mono text-[10px] font-medium text-[var(--text-muted)]">
+                          (
+                          {formCategory === 'food'
+                            ? foodType === 'streetfood'
+                              ? '15%'
+                              : '10%'
+                            : mode === 'takeaway'
+                              ? '25%'
+                              : '20%'}
+                          )
                         </span>
-                        <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                          {mode === 'takeaway' ? '25%' : '20%'}
-                        </span>
-                      </div>
-                      <span className="font-mono text-xs font-semibold text-emerald-400">
-                        Quy đổi: {liveCalc.priceScore.toFixed(1)} / 10đ
+                      </span>
+                      <span className="font-mono text-xs text-[var(--text-secondary)] shrink-0 whitespace-nowrap">
+                        {priceK}k →{' '}
+                        <b className="text-[var(--accent)]">
+                          {liveCalc.priceScore.toFixed(1)}đ
+                        </b>
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-2.5">
-                      <div className="relative w-28 shrink-0">
+                    <div className="flex items-center gap-2">
+                      <div className="relative w-24 shrink-0">
                         <input
                           type="number"
-                          min="5"
-                          max="250"
+                          inputMode="numeric"
+                          min="1"
+                          max="2000"
                           value={priceK}
-                          onChange={(e) => setPriceK(Number(e.target.value) || 0)}
-                          className="w-full h-10 pl-3 pr-9 rounded-xl bg-zinc-900 border border-white/[0.1] font-mono text-sm font-bold text-amber-400 outline-none focus:border-amber-500"
+                          onChange={(e) =>
+                            setPriceK(parseInt(e.target.value, 10) || 0)
+                          }
+                          className="w-full h-10 pl-3 pr-7 rounded-xl theme-surface-elevated font-mono text-sm font-bold text-[var(--accent)] outline-none focus:border-[var(--border-active)]"
                         />
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 font-mono text-xs text-zinc-500">
-                          .000đ
+                        <span className="absolute right-2.5 top-1/2 -translate-y-1/2 font-mono text-xs text-[var(--text-muted)]">
+                          k
                         </span>
                       </div>
 
                       <div className="grid grid-cols-3 gap-1.5 flex-1">
-                        {PRICE_PRESETS.map((p) => {
-                          const isSelected = liveCalc.priceBracket.includes(
-                            p.label.replace('–', ' – ').replace('< ', 'Dưới ').replace('> ', 'Trên ')
-                          ) || priceK === p.value;
+                        {(formCategory === 'food'
+                          ? foodType === 'streetfood'
+                            ? STREETFOOD_PRICE_PRESETS
+                            : RESTAURANT_PRICE_PRESETS
+                          : mode === 'takeaway'
+                            ? TAKEAWAY_PRICE_PRESETS
+                            : DINEIN_PRICE_PRESETS
+                        ).map((p) => {
+                          const active = priceK === p.value;
                           return (
-                            <button
+                            <motion.button
                               key={p.label}
                               type="button"
+                              whileTap={{ scale: 0.92 }}
                               onClick={() => setPriceK(p.value)}
                               className={cn(
-                                'py-1.5 px-2 rounded-lg font-mono text-[11px] font-medium border transition-colors cursor-pointer',
-                                isSelected
-                                  ? 'bg-zinc-800 text-amber-300 border-amber-500/40 font-semibold'
-                                  : 'bg-zinc-900 text-zinc-400 border-white/[0.05] hover:text-zinc-200'
+                                'h-8 rounded-lg font-mono text-[11px] transition-all cursor-pointer border',
+                                active
+                                  ? 'bg-[var(--accent-soft)] border-[var(--border-active)] text-[var(--accent)] font-extrabold'
+                                  : 'theme-surface-elevated text-[var(--text-secondary)]'
                               )}
                             >
                               {p.label}
-                            </button>
+                            </motion.button>
                           );
                         })}
                       </div>
                     </div>
                   </div>
 
-                  {/* Metric 3: Volume (20%) */}
-                  <div className="space-y-3 pt-4 border-t border-white/[0.06]">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-zinc-100">
-                          3. Thể tích / Lượng đồ uống
-                        </span>
-                        <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                          20%
-                        </span>
-                      </div>
-                      <span className="font-mono text-xs font-semibold text-zinc-200">
-                        {volumeObj.label} ({volumeObj.score.toFixed(1)}/10)
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-5 gap-1.5">
-                      {VOLUME_OPTIONS.map((v) => {
-                        const active = volumeKey === v.key;
-                        return (
-                          <button
-                            key={v.key}
-                            type="button"
-                            onClick={() => setVolumeKey(v.key)}
-                            className={cn(
-                              'relative py-2.5 px-1 rounded-xl border text-center transition-colors cursor-pointer',
-                              active
-                                ? 'border-amber-500/50 text-zinc-50 font-semibold'
-                                : 'bg-zinc-900 border-white/[0.05] text-zinc-400 hover:text-zinc-200'
-                            )}
-                          >
-                            {active && (
-                              <motion.div
-                                layoutId="volume-selector-pill"
-                                transition={{ type: 'spring', stiffness: 360, damping: 28 }}
-                                className="absolute inset-0 rounded-xl bg-amber-500/15 -z-0"
-                              />
-                            )}
-                            <span className="relative z-10 block text-xs">{v.label}</span>
-                            <span className="relative z-10 block font-mono text-[10px] text-zinc-500 mt-0.5">
-                              {v.sub}
+                  {/* 4C. HẠNG MỤC RIÊNG CHO QUÁN ĂN vs QUÁN NƯỚC */}
+                  {formCategory === 'food' ? (
+                    <>
+                      {/* Chất lượng & Khẩu phần (25%) */}
+                      <div className="space-y-2 pt-3.5 border-t border-[var(--border-card)]">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-bold text-[var(--text-primary)] min-w-0 leading-snug">
+                            Chất lượng & Khẩu phần{' '}
+                            <span className="font-mono text-[10px] font-medium text-[var(--text-muted)]">
+                              (25%)
                             </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Metric 4: Space (AutoHeight when Dine-in is selected) */}
-                  <AutoHeight isOpen={mode === 'dinein'}>
-                    <div className="space-y-2.5 pt-4 border-t border-white/[0.06]">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-semibold text-zinc-100">
-                            4. Không gian & Chỗ ngồi
                           </span>
-                          <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">
-                            20%
+                          <div className="flex items-center gap-1.5 shrink-0 whitespace-nowrap">
+                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md theme-surface-elevated text-[var(--text-secondary)] whitespace-nowrap">
+                              {getSliderReaction(foodQuality)}
+                            </span>
+                            <motion.span
+                              key={foodQuality}
+                              initial={{ scale: 1.3 }}
+                              animate={{ scale: 1 }}
+                              className="font-mono text-sm font-extrabold text-[var(--text-primary)]"
+                            >
+                              {foodQuality.toFixed(1)}
+                            </motion.span>
+                          </div>
+                        </div>
+                        <input
+                          type="range"
+                          min="1"
+                          max="10"
+                          step="0.5"
+                          value={foodQuality}
+                          onChange={(e) =>
+                            setFoodQuality(parseFloat(e.target.value))
+                          }
+                          className="precision-slider"
+                        />
+                      </div>
+
+                      {/* Độ sạch sẽ & Vệ sinh (15%) */}
+                      <div className="space-y-2 pt-3.5 border-t border-[var(--border-card)]">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-bold text-[var(--text-primary)] min-w-0 leading-snug">
+                            Độ sạch sẽ & Vệ sinh{' '}
+                            <span className="font-mono text-[10px] font-medium text-[var(--text-muted)]">
+                              (15%)
+                            </span>
+                          </span>
+                          <div className="flex items-center gap-1.5 shrink-0 whitespace-nowrap">
+                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md theme-surface-elevated text-[var(--text-secondary)] whitespace-nowrap">
+                              {getSliderReaction(cleanliness)}
+                            </span>
+                            <motion.span
+                              key={cleanliness}
+                              initial={{ scale: 1.3 }}
+                              animate={{ scale: 1 }}
+                              className="font-mono text-sm font-extrabold text-[var(--text-primary)]"
+                            >
+                              {cleanliness.toFixed(1)}
+                            </motion.span>
+                          </div>
+                        </div>
+                        <input
+                          type="range"
+                          min="1"
+                          max="10"
+                          step="0.5"
+                          value={cleanliness}
+                          onChange={(e) =>
+                            setCleanliness(parseFloat(e.target.value))
+                          }
+                          className="precision-slider"
+                        />
+                      </div>
+
+                      {/* Không gian quán ăn / chỗ ngồi (5% cho vỉa hè, 15% cho quán ngồi) */}
+                      <div className="space-y-2 pt-3.5 border-t border-[var(--border-card)]">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-bold text-[var(--text-primary)] min-w-0 leading-snug">
+                            {foodType === 'streetfood'
+                              ? 'Chỗ ngồi vỉa hè'
+                              : 'Không gian quán'}{' '}
+                            <span className="font-mono text-[10px] font-medium text-[var(--text-muted)]">
+                              ({foodType === 'streetfood' ? '5%' : '15%'})
+                            </span>
+                          </span>
+                          <div className="flex items-center gap-1.5 shrink-0 whitespace-nowrap">
+                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md theme-surface-elevated text-[var(--text-secondary)] whitespace-nowrap">
+                              {getSliderReaction(space)}
+                            </span>
+                            <motion.span
+                              key={space}
+                              initial={{ scale: 1.3 }}
+                              animate={{ scale: 1 }}
+                              className="font-mono text-sm font-extrabold text-[var(--text-primary)]"
+                            >
+                              {space.toFixed(1)}
+                            </motion.span>
+                          </div>
+                        </div>
+                        <input
+                          type="range"
+                          min="1"
+                          max="10"
+                          step="0.5"
+                          value={space}
+                          onChange={(e) => setSpace(parseFloat(e.target.value))}
+                          className="precision-slider"
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      {/* Thể tích đồ uống (20%) */}
+                      <div className="space-y-2 pt-3.5 border-t border-[var(--border-card)]">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-bold text-[var(--text-primary)]">
+                            Thể tích đồ uống{' '}
+                            <span className="font-mono text-[10px] font-medium text-[var(--text-muted)]">
+                              (20%)
+                            </span>
+                          </span>
+                          <span className="font-mono text-xs font-bold text-[var(--accent)] shrink-0 whitespace-nowrap">
+                            {
+                              VOLUME_OPTIONS.find((v) => v.key === volumeKey)
+                                ?.label
+                            }{' '}
+                            ({liveCalc.volumeScore}đ)
                           </span>
                         </div>
-                        <span className="font-mono text-sm font-bold text-sky-400 tabular-nums">
-                          {space.toFixed(1)} / 10
-                        </span>
-                      </div>
-                      <input
-                        type="range"
-                        min="1"
-                        max="10"
-                        step="0.5"
-                        value={space}
-                        onChange={(e) => setSpace(parseFloat(e.target.value))}
-                        className="precision-slider"
-                      />
-                    </div>
-                  </AutoHeight>
 
-                  {/* Metric 5: Packaging (5%) */}
-                  <div className="space-y-2.5 pt-4 border-t border-white/[0.06]">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-zinc-100">
-                          {mode === 'dinein' ? '5.' : '4.'} Chất liệu vỏ ly / Bao bì
-                        </span>
-                        <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-white/[0.07]">
-                          5%
-                        </span>
+                        <div className="grid grid-cols-5 gap-1.5">
+                          {VOLUME_OPTIONS.map((v) => {
+                            const active = volumeKey === v.key;
+                            return (
+                              <motion.button
+                                key={v.key}
+                                type="button"
+                                whileTap={{ scale: 0.92 }}
+                                onClick={() => setVolumeKey(v.key)}
+                                className={cn(
+                                  'py-2 px-1 rounded-xl text-center transition-all cursor-pointer border',
+                                  active
+                                    ? 'bg-[var(--accent-soft)] border-[var(--border-active)] text-[var(--accent)] font-extrabold'
+                                    : 'theme-surface-elevated text-[var(--text-secondary)]'
+                                )}
+                              >
+                                <div className="text-[11px] leading-tight">
+                                  {v.label}
+                                </div>
+                                <div className="font-mono text-[10px] opacity-75 mt-0.5">
+                                  {v.score}đ
+                                </div>
+                              </motion.button>
+                            );
+                          })}
+                        </div>
                       </div>
-                      <span className="font-mono text-sm font-bold text-zinc-200 tabular-nums">
-                        {packaging.toFixed(1)} / 10
-                      </span>
-                    </div>
+
+                      {/* Không gian quán nước (Chỉ hiện khi Ngồi lại) */}
+                      <AutoHeight isOpen={mode === 'dinein'}>
+                        <div className="space-y-2 pt-3.5 border-t border-[var(--border-card)]">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-xs font-bold text-[var(--text-primary)] min-w-0 leading-snug">
+                              Không gian quán{' '}
+                              <span className="font-mono text-[10px] font-medium text-[var(--text-muted)]">
+                                (20%)
+                              </span>
+                            </span>
+                            <div className="flex items-center gap-1.5 shrink-0 whitespace-nowrap">
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[var(--accent-soft)] text-[var(--accent)] whitespace-nowrap">
+                                {getSliderReaction(space)}
+                              </span>
+                              <motion.span
+                                key={space}
+                                initial={{ scale: 1.3 }}
+                                animate={{ scale: 1 }}
+                                className="font-mono text-sm font-extrabold text-[var(--accent)]"
+                              >
+                                {space.toFixed(1)}
+                              </motion.span>
+                            </div>
+                          </div>
+                          <input
+                            type="range"
+                            min="1"
+                            max="10"
+                            step="0.5"
+                            value={space}
+                            onChange={(e) =>
+                              setSpace(parseFloat(e.target.value))
+                            }
+                            className="precision-slider"
+                          />
+                        </div>
+                      </AutoHeight>
+
+                      {/* Chất liệu vỏ ly (5%) */}
+                      <div className="space-y-2 pt-3.5 border-t border-[var(--border-card)]">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-bold text-[var(--text-primary)] min-w-0 leading-snug">
+                            Chất liệu vỏ ly{' '}
+                            <span className="font-mono text-[10px] font-medium text-[var(--text-muted)]">
+                              (5%)
+                            </span>
+                          </span>
+                          <div className="flex items-center gap-1.5 shrink-0 whitespace-nowrap">
+                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md theme-surface-elevated text-[var(--text-secondary)] whitespace-nowrap">
+                              {getSliderReaction(packaging)}
+                            </span>
+                            <motion.span
+                              key={packaging}
+                              initial={{ scale: 1.3 }}
+                              animate={{ scale: 1 }}
+                              className="font-mono text-sm font-extrabold text-[var(--text-primary)]"
+                            >
+                              {packaging.toFixed(1)}
+                            </motion.span>
+                          </div>
+                        </div>
+                        <input
+                          type="range"
+                          min="1"
+                          max="10"
+                          step="0.5"
+                          value={packaging}
+                          onChange={(e) =>
+                            setPackaging(parseFloat(e.target.value))
+                          }
+                          className="precision-slider"
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {/* Ghi chú */}
+                  <div className="pt-3.5 border-t border-[var(--border-card)]">
                     <input
-                      type="range"
-                      min="1"
-                      max="10"
-                      step="0.5"
-                      value={packaging}
-                      onChange={(e) => setPackaging(parseFloat(e.target.value))}
-                      className="precision-slider"
-                    />
-                  </div>
-
-                  {/* Review Notes */}
-                  <div className="space-y-1.5 pt-4 border-t border-white/[0.06]">
-                    <label className="block text-xs font-medium text-zinc-300">
-                      Ghi chú nhận xét
-                    </label>
-                    <textarea
-                      rows={2}
+                      type="text"
                       value={note}
                       onChange={(e) => setNote(e.target.value)}
-                      placeholder="VD: Nguyên nhân chính cho 6.5đ là lượng đồ uống ít so với mức giá 31k..."
-                      className="w-full p-3 rounded-xl bg-zinc-900 border border-white/[0.08] text-xs text-zinc-100 placeholder:text-zinc-500 focus:border-amber-500 outline-none"
+                      placeholder={
+                        formCategory === 'food'
+                          ? 'Ghi chú (VD: nước lèo ngọt thanh, chả cá dai ngon)...'
+                          : 'Ghi chú ngắn (VD: vị trà đậm, hơi ít đá)...'
+                      }
+                      className="w-full h-10.5 px-3.5 rounded-xl theme-surface-elevated text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--border-active)]"
                     />
                   </div>
-                </div>
+                </Shine>
 
-                {/* Block 4: Live Animated Score Preview + Ripple Submit Button */}
-                <div className="rounded-[20px] bg-gradient-to-b from-[#16161a] to-[#121215] border border-amber-500/30 p-5 space-y-4 shadow-2xl">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <span className="font-mono text-[10px] uppercase tracking-wider text-amber-400 font-semibold">
-                        Kết quả định lượng thời gian thực
-                      </span>
-                      <div className="text-sm font-bold text-zinc-100">
-                        {liveTier.text}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="flex items-baseline justify-end gap-0.5">
-                        <CountingNumber
-                          number={liveCalc.total}
-                          decimalPlaces={2}
-                          className={cn(
-                            'font-mono text-3xl font-extrabold',
-                            liveTier.colorClass
-                          )}
+                {/* 5. FINAL SUMMARY CARD + SUBMIT BUTTON */}
+                <Shine className="rounded-2xl theme-surface-card border-[var(--border-active)] p-4 space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-3">
+                      <CategoryScoreBadge
+                        category={formCategory}
+                        score={liveCalc.total}
+                        size="md"
+                      />
+                      <div className="space-y-1">
+                        <span className="text-[11px] text-[var(--text-secondary)] block">
+                          Xếp hạng tổng kết & Số sao
+                        </span>
+                        <span className="text-xs font-extrabold text-[var(--text-primary)] block leading-snug">
+                          {liveTier.rankLabel}
+                        </span>
+                        <StarRatingBadge
+                          score10={liveCalc.total}
+                          showFiveScale
                         />
-                        <span className="font-mono text-xs text-zinc-500">/10</span>
                       </div>
                     </div>
-                  </div>
-
-                  {/* Formula Breakdown Pills */}
-                  <div className="grid grid-cols-4 gap-1.5 pt-1">
-                    {liveCalc.parts.map((pt) => (
-                      <div
-                        key={pt.label}
-                        className="rounded-xl bg-zinc-950/80 border border-white/[0.06] p-2 text-center"
-                      >
-                        <div className="text-[10px] text-zinc-400 truncate">{pt.label}</div>
-                        <div className="font-mono text-xs font-bold text-zinc-100 mt-0.5">
-                          +{pt.weighted.toFixed(2)}
-                        </div>
-                        <div className="font-mono text-[9px] text-zinc-500">
-                          ({pt.raw}×{pt.weight})
-                        </div>
-                      </div>
-                    ))}
+                    <div className="flex items-baseline gap-0.5 shrink-0">
+                      <CountingNumber
+                        number={liveCalc.total}
+                        decimalPlaces={2}
+                        className="font-mono text-2xl font-extrabold text-[var(--accent)]"
+                      />
+                      <span className="font-mono text-xs text-[var(--text-muted)]">
+                        /10
+                      </span>
+                    </div>
                   </div>
 
                   <RippleButton
                     type="submit"
-                    className="w-full h-12 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-sm shadow-lg flex items-center justify-center gap-2 transition-colors"
+                    className="w-full h-11 rounded-xl bg-[var(--accent)] text-[var(--accent-fg)] font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md"
                   >
-                    <Scale className="w-4 h-4" strokeWidth={2} />
-                    <span>{editingId ? 'Cập Nhật Đánh Giá' : 'Lưu Vào Sổ Tay Xếp Hạng'}</span>
+                    <Flame className="w-4 h-4" strokeWidth={2.5} />
+                    <span>
+                      {editingId
+                        ? 'Lưu cập nhật quán'
+                        : formCategory === 'food'
+                          ? 'Lưu đánh giá Quán ăn & Ghim Bản đồ'
+                          : 'Lưu đánh giá Quán nước & Ghim Bản đồ'}
+                    </span>
                   </RippleButton>
-                </div>
+                </Shine>
               </form>
-            </motion.section>
+            </MotionEffect>
           )}
-        </AnimatePresence>
+
+          {/* ================================================================
+           * TAB 4: THỐNG KÊ & SAO LƯU DỮ LIỆU
+           * ============================================================== */}
+          {activeTab === 'insights' && (
+            <MotionEffect key="tab-insights" className="space-y-3.5">
+              {/* Summary Metrics */}
+              <div className="grid grid-cols-3 gap-2.5">
+                <Shine className="rounded-2xl theme-surface-card p-3.5">
+                  <span className="text-[11px] font-medium text-[var(--text-muted)]">
+                    Tổng số quán
+                  </span>
+                  <div className="mt-1">
+                    <CountingNumber
+                      number={reviews.length}
+                      decimalPlaces={0}
+                      className="font-mono text-2xl font-extrabold text-[var(--text-primary)]"
+                    />
+                  </div>
+                  <span className="text-[10px] text-[var(--text-secondary)] block mt-0.5">
+                    🥤 {reviews.filter((x) => x.category === 'drink').length} •
+                    🍜 {reviews.filter((x) => x.category === 'food').length}
+                  </span>
+                </Shine>
+                <Shine className="rounded-2xl theme-surface-card p-3.5">
+                  <span className="text-[11px] font-medium text-[var(--text-muted)]">
+                    Điểm TB
+                  </span>
+                  <div className="mt-1">
+                    <CountingNumber
+                      number={
+                        reviews.length
+                          ? reviews.reduce((s, r) => s + r.totalScore, 0) /
+                            reviews.length
+                          : 0
+                      }
+                      decimalPlaces={1}
+                      className="font-mono text-2xl font-extrabold text-[var(--accent)]"
+                    />
+                  </div>
+                  <span className="text-[10px] text-amber-400 font-mono font-bold block mt-0.5">
+                    ★{' '}
+                    {reviews.length
+                      ? scoreToStars(
+                          reviews.reduce((s, r) => s + r.totalScore, 0) /
+                            reviews.length
+                        ).toFixed(1)
+                      : '0.0'}{' '}
+                    / 5.0
+                  </span>
+                </Shine>
+                <Shine className="rounded-2xl theme-surface-card p-3.5">
+                  <span className="text-[11px] font-medium text-[var(--text-muted)]">
+                    Giá TB
+                  </span>
+                  <div className="font-mono text-2xl font-extrabold text-[var(--text-primary)] mt-1 flex items-baseline">
+                    <CountingNumber
+                      number={
+                        reviews.length
+                          ? Math.round(
+                              reviews.reduce((s, r) => s + r.priceK, 0) /
+                                reviews.length
+                            )
+                          : 0
+                      }
+                      decimalPlaces={0}
+                    />
+                    <span>k</span>
+                  </div>
+                  <span className="text-[10px] text-[var(--text-secondary)] block mt-0.5">
+                    Mức chi hợp lý
+                  </span>
+                </Shine>
+              </div>
+
+              {/* Area Breakdown */}
+              <Shine className="rounded-2xl theme-surface-card p-4 space-y-3">
+                <h3 className="text-xs font-bold text-[var(--text-primary)]">
+                  Thống kê theo Phường & Tuyến đường
+                </h3>
+                <div className="space-y-2.5">
+                  {Array.from(
+                    new Set(
+                      reviews.map((r) => `Đường ${r.street} • P. ${r.ward}`)
+                    )
+                  ).map((label, idx) => {
+                    const items = reviews.filter(
+                      (r) => `Đường ${r.street} • P. ${r.ward}` === label
+                    );
+                    const avg =
+                      items.reduce((s, x) => s + x.totalScore, 0) /
+                      items.length;
+                    return (
+                      <div
+                        key={label}
+                        className="space-y-1.5 py-2 border-b border-[var(--border-card)] last:border-none text-xs"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[var(--text-secondary)] font-medium leading-snug">
+                            {label}
+                          </span>
+                          <div className="flex items-center gap-2 font-mono shrink-0">
+                            <span className="text-[var(--text-muted)]">
+                              {items.length} quán
+                            </span>
+                            <span className="text-amber-400 font-bold">
+                              ★{scoreToStars(avg).toFixed(1)}
+                            </span>
+                            <span className="text-[var(--accent)] font-bold">
+                              {avg.toFixed(1)}đ
+                            </span>
+                          </div>
+                        </div>
+                        <div className="h-1.5 w-full rounded-full theme-surface-elevated overflow-hidden">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${Math.min(100, avg * 10)}%` }}
+                            transition={{
+                              type: 'spring',
+                              stiffness: 220,
+                              damping: 26,
+                              delay: idx * 0.06,
+                            }}
+                            className="h-full rounded-full bg-[var(--accent)]"
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Shine>
+
+              {/* Backup & Restore */}
+              <Shine className="rounded-2xl theme-surface-card p-4 space-y-3">
+                <h3 className="text-xs font-bold text-[var(--text-primary)]">
+                  Sao lưu & Khôi phục dữ liệu cá nhân
+                </h3>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <RippleButton
+                    type="button"
+                    onClick={handleExportJson}
+                    className="h-10 rounded-xl theme-surface-elevated text-xs font-bold flex items-center justify-center gap-1.5 text-[var(--text-primary)]"
+                  >
+                    <Download className="w-3.5 h-3.5 text-[var(--accent)]" />
+                    <span>Xuất file JSON</span>
+                  </RippleButton>
+
+                  <label className="h-10 rounded-xl theme-surface-elevated text-xs font-bold flex items-center justify-center gap-1.5 text-[var(--text-primary)] cursor-pointer">
+                    <Upload className="w-3.5 h-3.5 text-[var(--accent)]" />
+                    <span>Khôi phục JSON</span>
+                    <input
+                      type="file"
+                      accept="application/json"
+                      onChange={handleImportJson}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+              </Shine>
+            </MotionEffect>
+          )}
+        </div>
       </main>
 
-      {/* FORMULA MODAL DIALOG */}
+      {/* ====================================================================
+       * 3. FLOATING PILL BOTTOM NAVIGATION DOCK (ẨN KHI MỞ BÀN PHÍM / ĐANG GÕ)
+       * ================================================================== */}
+      {!isTyping && !isLocPickerOpen && (
+        <nav className="fixed bottom-5 inset-x-0 z-30 px-2.5 pointer-events-none">
+          <div className="max-w-[400px] mx-auto rounded-2xl theme-floating-dock p-1.5 grid grid-cols-4 gap-1 pointer-events-auto">
+            {(
+              [
+                {
+                  id: 'list',
+                  label: 'Quán xá',
+                  icon: <MapPin className="w-3.5 h-3.5 shrink-0" />,
+                },
+                {
+                  id: 'map',
+                  label: 'Bản đồ',
+                  icon: <MapIcon className="w-3.5 h-3.5 shrink-0" />,
+                },
+                {
+                  id: 'form',
+                  label: editingId ? 'Đang sửa' : 'Chấm điểm',
+                  icon: <Plus className="w-3.5 h-3.5 shrink-0" />,
+                },
+                {
+                  id: 'insights',
+                  label: 'Thống kê',
+                  icon: <BarChart3 className="w-3.5 h-3.5 shrink-0" />,
+                },
+              ] as const
+            ).map((tab) => {
+              const active = activeTab === tab.id;
+              return (
+                <RippleButton
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  className={cn(
+                    'h-10 px-1 rounded-xl flex items-center justify-center gap-1 text-[11px] whitespace-nowrap transition-all',
+                    active
+                      ? 'bg-[var(--accent)] text-[var(--accent-fg)] font-extrabold shadow-sm'
+                      : 'text-[var(--text-secondary)] font-medium hover:text-[var(--text-primary)]'
+                  )}
+                >
+                  {tab.icon}
+                  <span>{tab.label}</span>
+                </RippleButton>
+              );
+            })}
+          </div>
+        </nav>
+      )}
+
+      {/* ====================================================================
+       * 4. BỘ CHỌN ĐỊA LÝ HÀNH CHÍNH VIỆT NAM CHÍNH THỨC (34 TỈNH/THÀNH -> PHƯỜNG -> ĐƯỜNG)
+       * ================================================================== */}
       <AnimatePresence>
-        {isFormulaOpen && (
+        {isLocPickerOpen && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4"
-            onClick={() => setIsFormulaOpen(false)}
+            className="fixed inset-0 z-50 bg-black/65 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4"
+            onClick={() => setIsLocPickerOpen(false)}
           >
             <motion.div
-              initial={{ scale: 0.94, opacity: 0, y: 12 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.94, opacity: 0, y: 12 }}
-              transition={{ type: 'spring', stiffness: 350, damping: 28 }}
+              initial={{ y: 50, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 50, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 360, damping: 30 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-[410px] rounded-[24px] bg-[#121215] border border-white/10 p-5 space-y-4 max-h-[85vh] overflow-y-auto shadow-2xl"
+              className="w-full max-w-[440px] max-h-[85%] rounded-t-3xl sm:rounded-3xl theme-surface-card p-4 flex flex-col gap-2.5 overflow-hidden"
             >
-              <div className="flex items-center justify-between border-b border-white/[0.07] pb-3">
-                <div className="flex items-center gap-2">
-                  <Calculator className="w-4 h-4 text-amber-400" strokeWidth={1.75} />
-                  <h3 className="text-sm font-bold text-zinc-50">
-                    System Design Công Thức Chấm Điểm
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-extrabold text-[var(--text-primary)]">
+                    Dữ liệu Hành chính Việt Nam Mới Nhất (34 Tỉnh/TP)
                   </h3>
+                  <p className="text-[10px] text-[var(--text-muted)]">
+                    {currentProvinceInfo.mergedFrom}
+                  </p>
                 </div>
                 <button
                   type="button"
-                  onClick={() => setIsFormulaOpen(false)}
-                  className="w-7 h-7 rounded-lg bg-zinc-900 text-zinc-400 hover:text-white flex items-center justify-center cursor-pointer"
+                  onClick={() => setIsLocPickerOpen(false)}
+                  className="p-1.5 rounded-xl theme-surface-elevated text-[var(--text-secondary)] cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
 
-              <div className="space-y-3 text-xs text-zinc-300 leading-relaxed">
-                <div className="rounded-2xl bg-zinc-900/90 border border-white/[0.06] p-3.5 space-y-1.5">
-                  <div className="font-semibold text-amber-400">
-                    1. Phân tách Trọng số Take-away vs Ngồi lại
-                  </div>
-                  <p className="text-zinc-400">
-                    • <b className="text-zinc-100">Take-away:</b> Vị <span className="font-mono text-amber-300">50%</span> + Giá <span className="font-mono text-amber-300">25%</span> + Thể tích <span className="font-mono text-amber-300">20%</span> + Vỏ ly <span className="font-mono text-amber-300">5%</span>
-                  </p>
-                  <p className="text-zinc-400">
-                    • <b className="text-zinc-100">Ngồi lại:</b> Vị <span className="font-mono text-sky-300">35%</span> + Không gian <span className="font-mono text-sky-300">20%</span> + Giá <span className="font-mono text-sky-300">20%</span> + Thể tích <span className="font-mono text-sky-300">20%</span> + Vỏ ly <span className="font-mono text-sky-300">5%</span>
-                  </p>
-                </div>
-
-                <div className="rounded-2xl bg-zinc-900/90 border border-white/[0.06] p-3.5 space-y-2">
-                  <div className="font-semibold text-emerald-400">
-                    2. Ma trận quy đổi Giá tiền → Điểm (Thang 10)
-                  </div>
-                  <table className="w-full font-mono text-[11px] border-collapse">
-                    <thead>
-                      <tr className="border-b border-white/[0.08] text-zinc-400 text-left">
-                        <th className="py-1.5">Khung giá</th>
-                        <th className="py-1.5">Take-away</th>
-                        <th className="py-1.5">Ngồi lại</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-white/[0.05]">
-                      <tr><td className="py-1.5">&lt; 20k</td><td className="text-emerald-400 font-bold">10.0đ</td><td className="text-emerald-400 font-bold">10.0đ</td></tr>
-                      <tr><td className="py-1.5">20k – 29k</td><td className="text-emerald-400 font-bold">8.5đ</td><td className="text-emerald-400 font-bold">9.5đ</td></tr>
-                      <tr><td className="py-1.5">30k – 39k (Nốt: 31k)</td><td className="text-amber-400 font-bold">7.0đ</td><td className="text-emerald-400 font-bold">8.5đ</td></tr>
-                      <tr><td className="py-1.5">40k – 49k</td><td className="text-orange-400 font-bold">5.0đ</td><td className="text-amber-400 font-bold">7.5đ</td></tr>
-                      <tr><td className="py-1.5">50k – 65k</td><td className="text-rose-400 font-bold">3.0đ</td><td className="text-orange-400 font-bold">6.0đ</td></tr>
-                      <tr><td className="py-1.5">&gt; 65k</td><td className="text-rose-500 font-bold">1.5đ</td><td className="text-rose-400 font-bold">4.0đ</td></tr>
-                    </tbody>
-                  </table>
-                </div>
-
-                <div className="rounded-2xl bg-amber-500/10 border border-amber-500/25 p-3.5 space-y-1 font-mono text-[11px]">
-                  <div className="font-sans font-bold text-amber-300 text-xs">
-                    Chuẩn đối chiếu: Quán Nốt (Phan Thanh, Đà Nẵng)
-                  </div>
-                  <div>• Hương vị: 7.0 × 0.50 = 3.50</div>
-                  <div>• Giá 31k (Take-away): 7.0 × 0.25 = 1.75</div>
-                  <div>• Thể tích (Ít = 4đ): 4.0 × 0.20 = 0.80</div>
-                  <div>• Vỏ ly: 9.0 × 0.05 = 0.45</div>
-                  <div className="pt-1 text-amber-300 font-bold">
-                    ⇒ Tổng điểm = 3.50 + 1.75 + 0.80 + 0.45 = 6.50 / 10
-                  </div>
-                </div>
+              {/* Step Switcher */}
+              <div className="grid grid-cols-3 gap-1 p-1 rounded-xl theme-surface-elevated text-xs">
+                {(
+                  [
+                    {
+                      k: 'city',
+                      t: `1. Tỉnh (${VIETNAM_34_PROVINCE_NAMES.length})`,
+                    },
+                    {
+                      k: 'ward',
+                      t: `2. Phường (${wardOptionsForCurrentCity.length})`,
+                    },
+                    {
+                      k: 'street',
+                      t: `3. Đường (${streetOptionsForCurrentCityAndWard.length})`,
+                    },
+                  ] as const
+                ).map((s) => (
+                  <button
+                    key={s.k}
+                    type="button"
+                    onClick={() => {
+                      setLocStep(s.k);
+                      setLocSearch('');
+                    }}
+                    className={cn(
+                      'py-1.5 rounded-lg transition-colors cursor-pointer whitespace-nowrap',
+                      locStep === s.k
+                        ? 'bg-[var(--accent)] text-[var(--accent-fg)] font-extrabold'
+                        : 'text-[var(--text-muted)]'
+                    )}
+                  >
+                    {s.t}
+                  </button>
+                ))}
               </div>
 
-              <RippleButton
-                type="button"
-                onClick={() => setIsFormulaOpen(false)}
-                className="w-full h-10 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-100 font-semibold text-xs"
-              >
-                Đóng bảng công thức
-              </RippleButton>
+              {/* Search inside current step */}
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 text-[var(--text-muted)] absolute left-3 top-1/2 -translate-y-1/2 z-10 pointer-events-none" />
+                <input
+                  type="text"
+                  value={locSearch}
+                  onChange={(e) => setLocSearch(e.target.value)}
+                  placeholder={
+                    locStep === 'city'
+                      ? 'Tìm nhanh trong 34 Tỉnh / Thành phố...'
+                      : locStep === 'ward'
+                        ? `Tìm trong ${wardOptionsForCurrentCity.length} Phường / Xã tại ${city}...`
+                        : `Tìm trong ${streetOptionsForCurrentCityAndWard.length} Đường / Phố tại P. ${ward}...`
+                  }
+                  className="w-full h-9 pl-8 pr-3 rounded-xl theme-surface-elevated text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--border-active)]"
+                />
+              </div>
+
+              {/* Sync status for OpenStreetMap streets */}
+              {locStep === 'street' && (
+                <div className="flex items-center justify-between px-1 text-[10px] text-[var(--text-secondary)]">
+                  <span>
+                    Đã tích hợp sẵn đường phố của <b>P. {ward}</b> ({city})
+                  </span>
+                  {isSyncingOsm && (
+                    <span className="inline-flex items-center gap-1 text-[var(--accent)] font-mono">
+                      <RefreshCw className="w-3 h-3 animate-spin" />
+                      Đang tải thêm từ OSM...
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* Scrollable Options Grid */}
+              <div className="flex-1 min-h-0 overflow-y-auto grid grid-cols-2 gap-1.5 py-1 pr-0.5">
+                {locStep === 'city' &&
+                  VIETNAM_34_PROVINCES_DATA.filter(
+                    (c) =>
+                      c.name.toLowerCase().includes(locSearch.toLowerCase()) ||
+                      c.mergedFrom
+                        .toLowerCase()
+                        .includes(locSearch.toLowerCase())
+                  ).map((c) => {
+                    const active = city === c.name;
+                    return (
+                      <button
+                        key={c.name}
+                        type="button"
+                        onClick={() => {
+                          setCity(c.name);
+                          const defaultWards = getWardsForCity(c.name);
+                          const nextWard = defaultWards[0] || 'Trung Tâm';
+                          setWard(nextWard);
+                          const defaultStreets = getStreetsForCityAndWard(
+                            c.name,
+                            nextWard
+                          );
+                          setStreet(defaultStreets[0] || 'Trần Phú');
+                          setLocStep('ward');
+                          setLocSearch('');
+                        }}
+                        className={cn(
+                          'px-3 py-2 rounded-xl text-left transition-all cursor-pointer border',
+                          active
+                            ? 'bg-[var(--accent-soft)] border-[var(--border-active)] text-[var(--accent)] font-bold'
+                            : 'theme-surface-elevated text-[var(--text-secondary)]'
+                        )}
+                      >
+                        <div className="flex items-center justify-between text-xs font-bold">
+                          <span>{c.name}</span>
+                          {active && <Check className="w-3.5 h-3.5 shrink-0" />}
+                        </div>
+                        <span className="text-[9px] text-[var(--text-muted)] block truncate mt-0.5">
+                          {c.mergedFrom}
+                        </span>
+                      </button>
+                    );
+                  })}
+
+                {locStep === 'ward' &&
+                  wardOptionsForCurrentCity
+                    .filter((w) =>
+                      w.toLowerCase().includes(locSearch.toLowerCase())
+                    )
+                    .map((w) => {
+                      const active = ward === w;
+                      return (
+                        <button
+                          key={w}
+                          type="button"
+                          onClick={() => {
+                            setWard(w);
+                            const nextStreets = getStreetsForCityAndWard(
+                              city,
+                              w
+                            );
+                            if (nextStreets.length > 0) {
+                              setStreet(nextStreets[0]);
+                            }
+                            setLocStep('street');
+                            setLocSearch('');
+                          }}
+                          className={cn(
+                            'px-3 py-2 rounded-xl text-xs text-left transition-all cursor-pointer flex items-center justify-between border',
+                            active
+                              ? 'bg-[var(--accent-soft)] border-[var(--border-active)] text-[var(--accent)] font-bold'
+                              : 'theme-surface-elevated text-[var(--text-secondary)]'
+                          )}
+                        >
+                          <span>
+                            {w.startsWith('Xã ') || w.startsWith('Đặc khu')
+                              ? w
+                              : `P. ${w}`}
+                          </span>
+                          {active && <Check className="w-3.5 h-3.5 shrink-0" />}
+                        </button>
+                      );
+                    })}
+
+                {locStep === 'street' &&
+                  streetOptionsForCurrentCityAndWard
+                    .filter((s) =>
+                      s.toLowerCase().includes(locSearch.toLowerCase())
+                    )
+                    .map((s) => {
+                      const active = street === s;
+                      return (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => {
+                            setStreet(s);
+                            setIsLocPickerOpen(false);
+                          }}
+                          className={cn(
+                            'px-3 py-2 rounded-xl text-xs text-left transition-all cursor-pointer flex items-center justify-between border',
+                            active
+                              ? 'bg-[var(--accent-soft)] border-[var(--border-active)] text-[var(--accent)] font-bold'
+                              : 'theme-surface-elevated text-[var(--text-secondary)]'
+                          )}
+                        >
+                          <span>Đường {s}</span>
+                          {active && <Check className="w-3.5 h-3.5 shrink-0" />}
+                        </button>
+                      );
+                    })}
+              </div>
+
+              {/* Optional Custom Addition if a tiny alley isn't listed */}
+              {locStep !== 'city' && (
+                <div className="flex items-center gap-2 pt-2 border-t border-[var(--border-card)]">
+                  <input
+                    type="text"
+                    value={customInput}
+                    onChange={(e) => setCustomInput(e.target.value)}
+                    placeholder={
+                      locStep === 'ward'
+                        ? 'Hoặc thêm Phường/Xã khác...'
+                        : 'Hoặc thêm tên Đường/Kiệt nhỏ khác...'
+                    }
+                    className="flex-1 h-9 px-3 rounded-xl theme-surface-elevated text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none"
+                  />
+                  <RippleButton
+                    type="button"
+                    onClick={() => {
+                      const val = customInput.trim();
+                      if (!val) return;
+                      if (locStep === 'ward') {
+                        setWard(val.replace(/^Phường\s+/i, ''));
+                        setCustomInput('');
+                        setLocStep('street');
+                      } else {
+                        setStreet(val.replace(/^Đường\s+/i, ''));
+                        setCustomInput('');
+                        setIsLocPickerOpen(false);
+                      }
+                    }}
+                    className="h-9 px-3.5 rounded-xl bg-[var(--accent)] text-[var(--accent-fg)] text-xs font-extrabold shrink-0"
+                  >
+                    Chọn
+                  </RippleButton>
+                </div>
+              )}
             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ====================================================================
+       * 5. MODAL CÔNG THỨC TÍNH ĐIỂM (QUÁN NƯỚC & QUÁN ĂN)
+       * ================================================================== */}
+      <AnimatePresence>
+        {showFormulaModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/65 backdrop-blur-xs flex items-center justify-center p-4"
+            onClick={() => setShowFormulaModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.94, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.94, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-[410px] max-h-[85vh] overflow-y-auto rounded-3xl theme-surface-card p-5 space-y-3.5"
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-extrabold text-[var(--text-primary)]">
+                  Hệ thống Công thức Chấm điểm Chuẩn hóa
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setShowFormulaModal(false)}
+                  className="p-1.5 rounded-xl theme-surface-elevated text-[var(--text-secondary)] cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="space-y-2.5 text-xs text-[var(--text-secondary)] leading-relaxed">
+                <div className="p-3 rounded-xl theme-surface-elevated space-y-1">
+                  <div className="font-bold text-[var(--accent)]">
+                    🥤 1. Quán nước • Take-away (Mang đi)
+                  </div>
+                  <p className="font-mono text-[11px]">
+                    Tổng = Vị (50%) + Giá (25%) + Thể tích (20%) + Vỏ ly (5%)
+                  </p>
+                  <p className="text-[11px] text-[var(--text-muted)]">
+                    Mốc chuẩn quán <b>Nốt</b> (Phan Thanh, Đà Nẵng): Vị 7×0.5 +
+                    Giá 31k (7đ×0.25) + Lượng Ít (4đ×0.2) + Vỏ ly 9×0.05 ={' '}
+                    <b className="text-[var(--accent)]">6.50 / 10 (★3.3)</b>.
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-xl theme-surface-elevated space-y-1">
+                  <div className="font-bold text-[var(--text-primary)]">
+                    🥤 2. Quán nước • Ngồi lại quán (Dine-in)
+                  </div>
+                  <p className="font-mono text-[11px]">
+                    Tổng = Vị (35%) + Không gian (20%) + Giá (20%) + Thể tích
+                    (20%) + Vỏ ly (5%)
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-xl theme-surface-elevated space-y-1 border border-orange-500/30">
+                  <div className="font-bold text-orange-400">
+                    🍜 3. Quán ăn • Vỉa hè / Bình dân
+                  </div>
+                  <p className="font-mono text-[11px]">
+                    Tổng = Độ ngon (40%) + Chất lượng đồ ăn (25%) + Sạch sẽ
+                    (15%) + Giá (15%) + Không gian (5%)
+                  </p>
+                  <p className="text-[11px] text-[var(--text-muted)]">
+                    Khung giá vỉa hè: ≤25k (10đ) • 26-35k (8.5đ) • 36-50k (7đ).
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-xl theme-surface-elevated space-y-1 border border-orange-500/30">
+                  <div className="font-bold text-orange-400">
+                    🍜 4. Quán ăn • Quán ngồi / Nhà hàng
+                  </div>
+                  <p className="font-mono text-[11px]">
+                    Tổng = Độ ngon (35%) + Chất lượng đồ ăn (25%) + Sạch sẽ
+                    (15%) + Không gian (15%) + Giá (10%)
+                  </p>
+                  <p className="text-[11px] text-[var(--text-muted)]">
+                    Quy đổi Sao bản đồ: <b>Số Sao (★) = Điểm hệ 10 ÷ 2</b> (tối
+                    đa 5.0★).
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ====================================================================
+       * 6. TOAST NOTIFICATION
+       * ================================================================== */}
+      <AnimatePresence>
+        {toastMsg && (
+          <motion.div
+            initial={{ opacity: 0, y: -16, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -16, scale: 0.95 }}
+            className="fixed top-16 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-[var(--accent)] text-[var(--accent-fg)] text-xs font-extrabold shadow-lg flex items-center gap-1.5 whitespace-nowrap"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>{toastMsg}</span>
           </motion.div>
         )}
       </AnimatePresence>
     </div>
   );
 }
+
+export default App;

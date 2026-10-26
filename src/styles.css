@@ -1,8 +1,73 @@
 @import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
 
 :root {
+  --vvh: 100dvh;
+  --vvo: 0px;
+}
+
+/* ============================================================================
+ * 1. HIGH-CONTRAST DARK THEME (DEEP SLATE + FRESH EMERALD MINT)
+ *    Tách bạch rõ ràng 3 lớp: Nền (#080C14) -> Thẻ (#111827) -> Ô nhập/Nút (#1E293B)
+ * ========================================================================== */
+:root,
+[data-theme="dark"] {
   --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
+
+  --bg-canvas: #080c14;
+  --bg-header: #0b111d;
+  --bg-card: #111827;
+  --bg-card-expanded: #0d1320;
+  --bg-elevated: #1e293b;
+  --bg-pill: #283548;
+  --border-card: rgba(148, 163, 184, 0.22);
+  --border-elevated: rgba(148, 163, 184, 0.28);
+  --border-active: rgba(16, 185, 129, 0.65);
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --accent: #10b981;
+  --accent-bright: #34d399;
+  --accent-secondary: #06b6d4;
+  --accent-fg: #042f2e;
+  --accent-soft: rgba(16, 185, 129, 0.18);
+  --food-accent: #f97316;
+  --food-soft: rgba(249, 115, 22, 0.18);
+  --star-gold: #fbbf24;
+  --card-shadow: 0 12px 28px -6px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.03);
+  --card-inset: inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
+  --slider-track: #334155;
+}
+
+/* ============================================================================
+ * 2. CLEAN & FRESH LIGHT THEME (COOL ALABASTER SLATE + EMERALD MINT)
+ *    Tách bạch rõ ràng: Nền (#EEF2F6) -> Thẻ trắng (#FFFFFF) -> Ô nhập (#F1F5F9)
+ * ========================================================================== */
+[data-theme="light"] {
+  --bg-canvas: #eef2f6;
+  --bg-header: #ffffff;
+  --bg-card: #ffffff;
+  --bg-card-expanded: #f8fafc;
+  --bg-elevated: #f1f5f9;
+  --bg-pill: #e2e8f0;
+  --border-card: rgba(15, 23, 42, 0.12);
+  --border-elevated: rgba(15, 23, 42, 0.16);
+  --border-active: rgba(5, 150, 105, 0.55);
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  --accent: #059669;
+  --accent-bright: #10b981;
+  --accent-secondary: #0891b2;
+  --accent-fg: #ffffff;
+  --accent-soft: rgba(5, 150, 105, 0.12);
+  --food-accent: #ea580c;
+  --food-soft: rgba(234, 88, 12, 0.12);
+  --star-gold: #f59e0b;
+  --card-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.08), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
+  --card-inset: inset 0 1px 0 0 rgba(255, 255, 255, 1);
+  --slider-track: #cbd5e1;
 }
 
 * {
@@ -10,12 +75,54 @@
   box-sizing: border-box;
 }
 
-html, body {
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
   font-family: var(--font-sans);
-  background-color: #09090b;
-  color: #fafafa;
+  background-color: var(--bg-canvas);
+  color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
+}
+
+/* Native Standalone PWA App Shell synced with visualViewport */
+.pwa-app-shell {
+  position: fixed;
+  top: var(--vvo, 0px);
+  left: 0;
+  right: 0;
+  height: var(--vvh, 100dvh);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.pwa-scroll-main {
+  flex: 1 1 0%;
+  min-height: 0;
+  overflow-y: auto;
   overflow-x: hidden;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-gutter: stable;
+}
+
+::-webkit-scrollbar {
+  width: 0px;
+  height: 0px;
+  background: transparent;
+}
+
+/* View Transition API styling from imskyleen/animate-ui ThemeToggler */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
 }
 
 .font-mono {
@@ -27,13 +134,79 @@ html, body {
   font-variant-numeric: tabular-nums;
 }
 
-/* Custom Precision Range Slider for Samsung A56 Touch Target */
+/* High-Contrast Surface Classes */
+.theme-surface-card {
+  position: relative;
+  background: var(--bg-card);
+  border: 1.5px solid var(--border-card);
+  box-shadow: var(--card-shadow), var(--card-inset);
+}
+
+.theme-surface-elevated {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-elevated);
+  box-shadow: var(--card-inset);
+}
+
+.theme-header {
+  background: var(--bg-header);
+  border-bottom: 1.5px solid var(--border-card);
+  box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
+
+.theme-floating-dock {
+  background: var(--bg-card);
+  border: 1.5px solid var(--border-elevated);
+  box-shadow:
+    0 16px 36px -6px rgba(0, 0, 0, 0.55),
+    0 4px 12px rgba(0, 0, 0, 0.2),
+    var(--card-inset);
+  backdrop-filter: blur(24px) saturate(190%);
+  -webkit-backdrop-filter: blur(24px) saturate(190%);
+}
+
+/* Zero-Layout-Shift CSS Grid Accordion - Fixed horizontal padding so slider thumbs never clip */
+.collapse-grid {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 200ms ease;
+}
+
+.collapse-grid.is-open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.collapse-inner {
+  overflow: hidden;
+  min-height: 0;
+  padding-left: 16px;
+  padding-right: 16px;
+  margin-left: -16px;
+  margin-right: -16px;
+}
+
+.collapse-grid.is-open > .collapse-inner {
+  padding-top: 2px;
+  padding-bottom: 6px;
+  margin-top: -2px;
+  margin-bottom: -6px;
+}
+
+/* Precision Range Slider with Zero-Clip Inner-Box Ring Thumb */
 input[type="range"].precision-slider {
   -webkit-appearance: none;
   appearance: none;
+  display: block;
   width: 100%;
-  height: 6px;
-  background: #27272a;
+  margin: 12px 0 8px 0;
+  height: 7px;
+  background: var(--slider-track);
   border-radius: 999px;
   outline: none;
   cursor: pointer;
@@ -42,25 +215,99 @@ input[type="range"].precision-slider {
 input[type="range"].precision-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 22px;
-  height: 22px;
+  box-sizing: border-box;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
-  background: #f59e0b;
-  border: 3px solid #09090b;
-  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.5), 0 4px 10px rgba(0, 0, 0, 0.5);
-  transition: transform 0.15s cubic-bezier(0.2, 0, 0, 1);
+  background: var(--accent);
+  border: 2.5px solid var(--accent);
+  box-shadow: inset 0 0 0 3px var(--bg-card);
+  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.15s ease;
 }
 
 input[type="range"].precision-slider::-webkit-slider-thumb:active {
-  transform: scale(1.18);
-  background: #fbbf24;
+  transform: scale(1.15);
+  background: var(--accent-bright);
+  border-color: var(--accent-bright);
 }
 
-/* Hide horizontal scrollbar on filter pill rails */
+input[type="range"].precision-slider::-moz-range-thumb {
+  box-sizing: border-box;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2.5px solid var(--accent);
+  box-shadow: inset 0 0 0 3px var(--bg-card);
+}
+
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+@keyframes liquidWaveSlow {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-liquid-wave {
+  animation: liquidWaveSlow 3.8s linear infinite;
+}
+
+.animate-liquid-wave-reverse {
+  animation: liquidWaveSlow 5.4s linear infinite reverse;
+}
+
+/* Custom Leaflet Map Styling for NỐT Food & Drink Index (Watermark-free OSM) */
+.leaflet-container {
+  font-family: var(--font-sans) !important;
+  background: var(--bg-canvas) !important;
+}
+
+[data-theme="dark"] .leaflet-tile-pane {
+  filter: invert(90%) hue-rotate(185deg) brightness(96%) contrast(92%);
+}
+
+.leaflet-control-attribution {
+  font-size: 9px !important;
+  opacity: 0.65;
+  background: var(--bg-card) !important;
+  color: var(--text-muted) !important;
+  border-radius: 6px 0 0 0;
+}
+
+.leaflet-control-attribution a {
+  color: var(--accent) !important;
+}
+
+.not-map-pin-wrapper {
+  background: transparent !important;
+  border: none !important;
+}
+
+@keyframes pulsePinRing {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+  70% {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+}
+
+.animate-pin-pulse {
+  animation: pulsePinRing 2.2s cubic-bezier(0.22, 1, 0.36, 1) infinite;
 }
