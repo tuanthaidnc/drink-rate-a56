@@ -10,6 +10,10 @@ import {
   CupSoda,
   Compass,
   Sparkles,
+  MapPin,
+  Plus,
+  X,
+  RotateCw,
 } from 'lucide-react';
 import {
   cn,
@@ -23,7 +27,9 @@ import {
 import {
   calculateDistanceKm,
   getProvinceInfo,
+  reverseGeocodeOsm,
 } from '../data/vietnamLocations2025';
+import { getQuotaStatus, TONE_CLASSES } from '../lib/frequency';
 
 export interface MapReviewItem {
   id: string;
@@ -40,6 +46,7 @@ export interface MapReviewItem {
   note: string;
   lat: number;
   lng: number;
+  visits?: string[];
 }
 
 interface MapExplorerProps {
@@ -49,6 +56,14 @@ interface MapExplorerProps {
   initialFocusId?: string | null;
   onEditItem: (item: MapReviewItem) => void;
   onOpenDirectionsExternal: (item: MapReviewItem) => void;
+  onCreateReviewAtCoords?: (coords: {
+    lat: number;
+    lng: number;
+    street?: string;
+    ward?: string;
+    city?: string;
+  }) => void;
+  onOpenSpinWheel?: () => void;
 }
 
 export function MapExplorer({
@@ -58,11 +73,14 @@ export function MapExplorer({
   initialFocusId,
   onEditItem,
   onOpenDirectionsExternal,
+  onCreateReviewAtCoords,
+  onOpenSpinWheel,
 }: MapExplorerProps) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
   const routeLayerRef = useRef<L.LayerGroup | null>(null);
+  const customPinLayerRef = useRef<L.LayerGroup | null>(null);
 
   const [catFilter, setCatFilter] = useState<'ALL' | 'food' | 'drink'>('ALL');
   const [minStars, setMinStars] = useState<number>(0);
@@ -80,6 +98,16 @@ export function MapExplorer({
   });
   const [showRouteOnMap, setShowRouteOnMap] = useState<boolean>(false);
   const [locatingGps, setLocatingGps] = useState<boolean>(false);
+
+  // Pin Mode states (Chấm ghim 2D tạo quán mới)
+  const [isPinModeActive, setIsPinModeActive] = useState<boolean>(false);
+  const [customPin, setCustomPin] = useState<{
+    lat: number;
+    lng: number;
+    street?: string;
+    ward?: string;
+    city?: string;
+  } | null>(null);
 
   useEffect(() => {
     if (initialFocusId) {
@@ -103,6 +131,12 @@ export function MapExplorer({
       null
     );
   }, [filteredMapItems, activeId]);
+
+  // Quota status for active item
+  const activeItemQuota = useMemo(() => {
+    if (!activeItem) return null;
+    return getQuotaStatus(activeItem.category, activeItem.priceK, activeItem.visits);
+  }, [activeItem]);
 
   // Initialize Clean 2D Google Maps Roadmap
   useEffect(() => {
@@ -128,10 +162,40 @@ export function MapExplorer({
 
     const markersGroup = L.layerGroup().addTo(map);
     const routeGroup = L.layerGroup().addTo(map);
+    const customPinGroup = L.layerGroup().addTo(map);
 
     mapInstanceRef.current = map;
     markersLayerRef.current = markersGroup;
     routeLayerRef.current = routeGroup;
+    customPinLayerRef.current = customPinGroup;
+
+    // Handle Map Tap to Pin
+    map.on('click', async (e: L.LeafletMouseEvent) => {
+      const lat = Math.round(e.latlng.lat * 100000) / 100000;
+      const lng = Math.round(e.latlng.lng * 100000) / 100000;
+
+      // Drop custom pin
+      setCustomPin({ lat, lng });
+
+      // Resolve address in background
+      try {
+        const addr = await reverseGeocodeOsm(lat, lng);
+        if (addr) {
+          setCustomPin((prev) =>
+            prev && prev.lat === lat && prev.lng === lng
+              ? {
+                  ...prev,
+                  street: addr.street,
+                  ward: addr.ward,
+                  city: addr.city,
+                }
+              : prev
+          );
+        }
+      } catch {
+        // fallback
+      }
+    });
 
     setTimeout(() => {
       map.invalidateSize();
@@ -143,7 +207,35 @@ export function MapExplorer({
     };
   }, []);
 
-  // Render Markers: Active Pin shows Full Name + Stars; Inactive Pins show Compact Icon + Stars so nothing clips at map edges
+  // Update Custom Dropped Pin Marker
+  useEffect(() => {
+    const customPinGroup = customPinLayerRef.current;
+    if (!customPinGroup) return;
+    customPinGroup.clearLayers();
+
+    if (customPin) {
+      const customPinHtml = `
+        <div style="position:relative;display:inline-flex;flex-direction:column;align-items:center;transform:translate(-50%,-100%);animation:bounce 0.4s ease;">
+          <div style="display:inline-flex;align-items:center;gap:4px;padding:5px 9px;border-radius:999px;background:#ea580c;color:#ffffff;font-size:11px;font-weight:800;box-shadow:0 6px 18px rgba(234,88,12,0.65);white-space:nowrap;border:2px solid #ffffff;">
+            <span>📍 Điểm mới đã chọn</span>
+          </div>
+          <div style="width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:8px solid #ea580c;margin-top:-1px;"></div>
+        </div>
+      `;
+      const icon = L.divIcon({
+        className: 'not-custom-pin-wrapper',
+        html: customPinHtml,
+        iconSize: [0, 0],
+        iconAnchor: [0, 0],
+      });
+      L.marker([customPin.lat, customPin.lng], {
+        icon,
+        zIndexOffset: 2000,
+      }).addTo(customPinGroup);
+    }
+  }, [customPin]);
+
+  // Render Markers
   useEffect(() => {
     const map = mapInstanceRef.current;
     const markersGroup = markersLayerRef.current;
@@ -222,6 +314,7 @@ export function MapExplorer({
 
       marker.on('click', () => {
         setActiveId(item.id);
+        setCustomPin(null);
       });
     });
   }, [filteredMapItems, activeItem, theme, userPos]);
@@ -308,10 +401,10 @@ export function MapExplorer({
 
   return (
     <div className="space-y-3">
-      {/* 1. BỘ LỌC NHANH TRÊN BẢN ĐỒ (LOẠI QUÁN + SỐ SAO) */}
+      {/* 1. BỘ LỌC NHANH TRÊN BẢN ĐỒ + NÚT VÒNG QUAY ĂN GÌ & CHẤM GHIM 2D */}
       <div className="rounded-2xl theme-surface-card p-3 space-y-2.5">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex p-0.5 rounded-xl theme-surface-elevated flex-1 min-w-0">
+        <div className="flex items-center justify-between gap-1.5 flex-wrap">
+          <div className="flex p-0.5 rounded-xl theme-surface-elevated flex-1 min-w-[180px]">
             {(
               [
                 { k: 'ALL', l: `Tất cả (${items.length})` },
@@ -341,46 +434,81 @@ export function MapExplorer({
             ))}
           </div>
 
-          <button
-            type="button"
-            onClick={handleLocateMe}
-            className="h-8 px-2.5 rounded-xl theme-surface-elevated flex items-center gap-1 text-[11px] font-bold text-[var(--accent)] shrink-0 cursor-pointer"
-            title="Định vị GPS của tôi"
-          >
-            <LocateFixed
-              className={cn('w-3.5 h-3.5', locatingGps && 'animate-spin')}
-            />
-            <span>GPS</span>
-          </button>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {/* Nút Vòng quay Quyết định */}
+            {onOpenSpinWheel && (
+              <button
+                type="button"
+                onClick={onOpenSpinWheel}
+                className="h-8 px-2.5 rounded-xl bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-orange-500/40 flex items-center gap-1 text-[11px] font-extrabold text-orange-400 cursor-pointer shadow-xs"
+                title="Hôm nay Ăn/Uống gì? Quay ngẫu nhiên thông minh"
+              >
+                <span>🎡</span>
+                <span>Ăn gì?</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={handleLocateMe}
+              className="h-8 px-2 rounded-xl theme-surface-elevated flex items-center gap-1 text-[11px] font-bold text-[var(--accent)] shrink-0 cursor-pointer"
+              title="Định vị GPS của tôi"
+            >
+              <LocateFixed
+                className={cn('w-3.5 h-3.5', locatingGps && 'animate-spin')}
+              />
+              <span>GPS</span>
+            </button>
+          </div>
         </div>
 
         {/* Bộ lọc mức Sao */}
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-          {(
-            [
-              { v: 0, label: 'Mọi mức sao' },
-              { v: 4.0, label: '★ ≥ 4.0 (Quán ruột)' },
-              { v: 3.5, label: '★ ≥ 3.5 (Đáng thử)' },
-              { v: 3.0, label: '★ ≥ 3.0' },
-            ] as const
-          ).map((st) => {
-            const active = minStars === st.v;
-            return (
-              <button
-                key={st.v}
-                type="button"
-                onClick={() => setMinStars(st.v)}
-                className={cn(
-                  'px-2.5 py-1 rounded-lg text-[11px] font-semibold whitespace-nowrap border transition-all cursor-pointer',
-                  active
-                    ? 'bg-amber-500/20 text-amber-400 border-amber-400/60 font-bold'
-                    : 'theme-surface-elevated text-[var(--text-secondary)]'
-                )}
-              >
-                {st.label}
-              </button>
-            );
-          })}
+        <div className="flex items-center justify-between gap-1.5 overflow-x-auto no-scrollbar">
+          <div className="flex items-center gap-1.5">
+            {(
+              [
+                { v: 0, label: 'Mọi mức sao' },
+                { v: 4.0, label: '★ ≥ 4.0 (Quán ruột)' },
+                { v: 3.5, label: '★ ≥ 3.5 (Đáng thử)' },
+                { v: 3.0, label: '★ ≥ 3.0' },
+              ] as const
+            ).map((st) => {
+              const active = minStars === st.v;
+              return (
+                <button
+                  key={st.v}
+                  type="button"
+                  onClick={() => setMinStars(st.v)}
+                  className={cn(
+                    'px-2.5 py-1 rounded-lg text-[11px] font-semibold whitespace-nowrap border transition-all cursor-pointer',
+                    active
+                      ? 'bg-amber-500/20 text-amber-400 border-amber-400/60 font-bold'
+                      : 'theme-surface-elevated text-[var(--text-secondary)]'
+                  )}
+                >
+                  {st.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Toggle Chế độ Chấm ghim */}
+          <button
+            type="button"
+            onClick={() => {
+              setIsPinModeActive((prev) => !prev);
+              if (!isPinModeActive) setCustomPin(null);
+            }}
+            className={cn(
+              'h-7 px-2.5 rounded-lg text-[10px] font-extrabold flex items-center gap-1 border shrink-0 transition-all cursor-pointer whitespace-nowrap',
+              isPinModeActive
+                ? 'bg-orange-500 text-white border-orange-400 shadow-xs'
+                : 'theme-surface-elevated text-[var(--text-secondary)]'
+            )}
+          >
+            <MapPin className="w-3 h-3" />
+            <span>{isPinModeActive ? 'Đang bật chấm ghim' : 'Chấm ghim 2D'}</span>
+          </button>
         </div>
       </div>
 
@@ -389,17 +517,76 @@ export function MapExplorer({
         <div
           ref={mapContainerRef}
           id="not-interactive-map"
-          className="w-full h-[265px] z-0"
+          className="w-full h-[270px] z-0"
+          style={{ cursor: isPinModeActive ? 'crosshair' : 'default' }}
         />
 
         {/* Chú thích nổi trên góc Bản đồ */}
         <div className="absolute top-2.5 left-2.5 z-[400] flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[var(--bg-card)]/92 border border-[var(--border-card)] shadow-xs text-[10px] font-bold text-[var(--text-secondary)]">
           <Compass className="w-3.5 h-3.5 text-[var(--accent)] shrink-0" />
-          <span>Bản đồ 2D • Chạm ghim ★ để xem quán</span>
+          <span>
+            {isPinModeActive
+              ? 'Chạm bất kỳ đâu trên bản đồ để thả ghim quán mới'
+              : 'Bản đồ 2D • Chạm ghim ★ để xem quán'}
+          </span>
         </div>
       </div>
 
-      {/* 3. THANH CUỘN CHỌN NHANH CÁC QUÁN TRÊN BẢN ĐỒ */}
+      {/* 3. THẺ THÔNG BÁO VỊ TRÍ ĐÃ CHẤM GHIM TRÊN BẢN ĐỒ (KHI CHẠM THẢ GHIM) */}
+      {customPin && (
+        <Shine className="rounded-2xl theme-surface-card border-2 border-orange-500/80 p-3.5 space-y-2.5 bg-gradient-to-r from-orange-500/10 to-transparent">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-base">📍</span>
+              <div>
+                <span className="text-xs font-extrabold text-[var(--text-primary)] block">
+                  Đã chấm ghim vị trí mới trên bản đồ
+                </span>
+                <span className="text-[10px] text-[var(--text-muted)] font-mono">
+                  {customPin.lat.toFixed(5)}, {customPin.lng.toFixed(5)}
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setCustomPin(null)}
+              className="p-1 rounded-lg theme-surface-elevated text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {customPin.street && (
+            <p className="text-xs text-[var(--text-secondary)]">
+              Gần: <b>Đường {customPin.street}</b> • P. {customPin.ward || '...'} ({customPin.city || '...'})
+            </p>
+          )}
+
+          {onCreateReviewAtCoords && (
+            <RippleButton
+              type="button"
+              onClick={() => {
+                onCreateReviewAtCoords({
+                  lat: customPin.lat,
+                  lng: customPin.lng,
+                  street: customPin.street,
+                  ward: customPin.ward,
+                  city: customPin.city,
+                });
+                setCustomPin(null);
+                setIsPinModeActive(false);
+              }}
+              className="w-full h-9 rounded-xl bg-orange-500 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-sm"
+            >
+              <Plus className="w-3.5 h-3.5" strokeWidth={2.5} />
+              <span>+ Chấm điểm quán tại vị trí ghim này</span>
+            </RippleButton>
+          )}
+        </Shine>
+      )}
+
+      {/* 4. THANH CUỘN CHỌN NHANH CÁC QUÁN TRÊN BẢN ĐỒ */}
       {filteredMapItems.length > 0 && (
         <div className="flex gap-2 overflow-x-auto no-scrollbar pb-0.5">
           {filteredMapItems.map((it) => {
@@ -409,7 +596,10 @@ export function MapExplorer({
               <button
                 key={it.id}
                 type="button"
-                onClick={() => setActiveId(it.id)}
+                onClick={() => {
+                  setActiveId(it.id);
+                  setCustomPin(null);
+                }}
                 className={cn(
                   'px-3 py-2 rounded-xl border text-left shrink-0 transition-all cursor-pointer flex items-center gap-2',
                   isSelected
@@ -439,7 +629,7 @@ export function MapExplorer({
         </div>
       )}
 
-      {/* 4. THẺ CHI TIẾT QUÁN ĐANG CHỌN TRÊN BẢN ĐỒ & CHỈ ĐƯỜNG 1 DÒNG GỌN GÀNG */}
+      {/* 5. THẺ CHI TIẾT QUÁN ĐANG CHỌN TRÊN BẢN ĐỒ + BADGE TẦN SUẤT & CHỈ ĐƯỜNG */}
       {activeItem ? (
         <Shine className="rounded-2xl theme-surface-card border-[var(--border-active)] p-4 space-y-3">
           <div className="flex items-start justify-between gap-3">
@@ -482,6 +672,18 @@ export function MapExplorer({
                   <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded-md theme-surface-elevated text-[var(--text-primary)] whitespace-nowrap">
                     {activeItem.priceK}k
                   </span>
+
+                  {/* Frequency Tier Badge */}
+                  {activeItemQuota && (
+                    <span
+                      className={cn(
+                        'text-[10px] font-bold px-2 py-0.5 rounded-md border whitespace-nowrap',
+                        TONE_CLASSES[activeItemQuota.tier.tone]
+                      )}
+                    >
+                      {activeItemQuota.tier.emoji} {activeItemQuota.tier.label}
+                    </span>
+                  )}
                 </div>
 
                 <h3 className="text-base font-extrabold text-[var(--text-primary)] leading-snug">
@@ -527,7 +729,7 @@ export function MapExplorer({
             </p>
           )}
 
-          {/* Cụm nút Chỉ đường & Xem lộ trình: Tất cả nằm gọn trên 1 dòng, không bị rớt chữ */}
+          {/* Cụm nút Chỉ đường & Xem lộ trình */}
           <div className="grid grid-cols-12 gap-2 pt-1">
             <RippleButton
               type="button"

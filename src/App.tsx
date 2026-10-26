@@ -52,6 +52,15 @@ import {
   geocodeAddressOsm,
 } from './data/vietnamLocations2025';
 import { MapExplorer } from './components/MapExplorer';
+import { SmartSpinModal } from './components/SmartSpinModal';
+import { MapPinPickerModal } from './components/MapPinPickerModal';
+import {
+  getFreqTier,
+  getQuotaStatus,
+  getMonthCycleInfo,
+  TONE_CLASSES,
+  type FrequencyTier,
+} from './lib/frequency';
 
 // ============================================================================
 // 1. MÔ HÌNH DỮ LIỆU ĐỒNG BỘ: QUÁN NƯỚC (DRINK) & QUÁN ĂN (FOOD) + TỌA ĐỘ BẢN ĐỒ
@@ -86,6 +95,8 @@ export interface ReviewItem {
   foodType?: FoodVenueType; // 'streetfood' (Vỉa hè) | 'restaurant' (Quán ngồi)
   cleanliness?: number; // 1 - 10 (Độ sạch sẽ / Vệ sinh)
   foodQuality?: number; // 1 - 10 (Chất lượng đồ ăn & Khẩu phần)
+  // Lịch sử ghé quán (Hỗ trợ theo dõi tần suất chu kỳ ngày 5)
+  visits?: string[];
 }
 
 export const VOLUME_OPTIONS: {
@@ -395,17 +406,18 @@ const INITIAL_REVIEWS: ReviewItem[] = [
   },
 ];
 
-const STORAGE_KEY_REVIEWS = 'not_drink_food_reviews_v9';
+const STORAGE_KEY_REVIEWS = 'not_drink_food_reviews_v11';
 const LEGACY_STORAGE_KEYS = [
+  'not_drink_food_reviews_v9',
   'not_drink_reviews_v5_34tinh',
   'not_drink_reviews_v4_34provinces',
 ];
 
 function migrateAndLoadReviews(): ReviewItem[] {
   try {
-    const savedV9 = localStorage.getItem(STORAGE_KEY_REVIEWS);
-    if (savedV9) {
-      const parsed = JSON.parse(savedV9);
+    const savedV11 = localStorage.getItem(STORAGE_KEY_REVIEWS);
+    if (savedV11) {
+      const parsed = JSON.parse(savedV11);
       if (Array.isArray(parsed) && parsed.length > 0) {
         return parsed.map((item: ReviewItem) => {
           const coords =
@@ -418,6 +430,7 @@ function migrateAndLoadReviews(): ReviewItem[] {
             foodType: item.foodType || 'streetfood',
             cleanliness: item.cleanliness ?? 8,
             foodQuality: item.foodQuality ?? 8,
+            visits: Array.isArray(item.visits) ? item.visits : [],
             lat: coords.lat,
             lng: coords.lng,
           };
@@ -578,6 +591,9 @@ export function App() {
   >('list');
   const [mapFocusId, setMapFocusId] = useState<string | null>(null);
   const [showFormulaModal, setShowFormulaModal] = useState(false);
+  const [showSpinModal, setShowSpinModal] = useState(false);
+  const [showPinPickerModal, setShowPinPickerModal] = useState(false);
+  const [customCoords, setCustomCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [expandedCardId, setExpandedCardId] = useState<string | null>(
     'seed-not-phan-thanh-dn'
   );
@@ -587,6 +603,31 @@ export function App() {
   const showToast = (msg: string) => {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(null), 2600);
+  };
+
+  const handleLogVisit = (itemId: string) => {
+    const nowIso = new Date().toISOString();
+    let updatedName = '';
+    let updatedQuotaInfo: ReturnType<typeof getQuotaStatus> | null = null;
+
+    setReviews((prev) =>
+      prev.map((r) => {
+        if (r.id === itemId) {
+          const nextVisits = [...(r.visits || []), nowIso];
+          const updated = { ...r, visits: nextVisits };
+          updatedName = r.name;
+          updatedQuotaInfo = getQuotaStatus(updated);
+          return updated;
+        }
+        return r;
+      })
+    );
+
+    if (updatedQuotaInfo) {
+      showToast(
+        `✓ Đã ghé "${updatedName}" (-1 lượt)! Còn ${updatedQuotaInfo.remaining}/${updatedQuotaInfo.tier.cycleLimit} lượt chu kỳ này.`
+      );
+    }
   };
 
   // --- Filters (List Tab) ---
@@ -779,6 +820,7 @@ export function App() {
   const resetForm = (nextCat?: PlaceCategory) => {
     const targetCat = nextCat || formCategory;
     setEditingId(null);
+    setCustomCoords(null);
     setFormCategory(targetCat);
     setName('');
     setMode('takeaway');
@@ -809,7 +851,7 @@ export function App() {
     const cleanStreet =
       street.trim().replace(/^Đường\s+/i, '') || 'Phan Thanh';
 
-    // Tính toán tọa độ tức thì + nâng cấp bằng OSM Nominatim nếu có mạng
+    // Tính toán tọa độ tức thì hoặc lấy tọa độ ghim thủ công của người dùng
     const fallbackCoords = resolveCoordinates(
       cleanCity,
       cleanWard,
@@ -817,6 +859,10 @@ export function App() {
       cleanName
     );
 
+    const finalLat = customCoords ? customCoords.lat : fallbackCoords.lat;
+    const finalLng = customCoords ? customCoords.lng : fallbackCoords.lng;
+
+    const existingItem = editingId ? reviews.find((r) => r.id === editingId) : null;
     const newItemId = editingId || `place-${Date.now()}`;
     const newItem: ReviewItem = {
       id: newItemId,
@@ -836,9 +882,10 @@ export function App() {
       space,
       totalScore: liveCalc.total,
       note: note.trim(),
-      createdAt: new Date().toISOString().split('T')[0],
-      lat: fallbackCoords.lat,
-      lng: fallbackCoords.lng,
+      createdAt: existingItem ? existingItem.createdAt : new Date().toISOString().split('T')[0],
+      visits: existingItem ? existingItem.visits : [],
+      lat: finalLat,
+      lng: finalLng,
     };
 
     if (editingId) {
@@ -851,20 +898,22 @@ export function App() {
       showToast(`Đã lưu "${cleanName}" (${liveCalc.total}đ)`);
     }
 
-    // Geocode bất đồng bộ bằng OpenStreetMap để ghim chính xác hơn trên Bản đồ
-    geocodeAddressOsm(cleanName, cleanStreet, cleanWard, cleanCity).then(
-      (osmCoords) => {
-        if (osmCoords) {
-          setReviews((prev) =>
-            prev.map((r) =>
-              r.id === newItemId
-                ? { ...r, lat: osmCoords.lat, lng: osmCoords.lng }
-                : r
-            )
-          );
+    // Nếu người dùng CHƯA ghim thủ công, geocode bất đồng bộ bằng OpenStreetMap để ghim chuẩn xác hơn
+    if (!customCoords) {
+      geocodeAddressOsm(cleanName, cleanStreet, cleanWard, cleanCity).then(
+        (osmCoords) => {
+          if (osmCoords) {
+            setReviews((prev) =>
+              prev.map((r) =>
+                r.id === newItemId
+                  ? { ...r, lat: osmCoords.lat, lng: osmCoords.lng }
+                  : r
+              )
+            );
+          }
         }
-      }
-    );
+      );
+    }
 
     setSelectedCity(cleanCity);
     setSelectedWard('ALL');
@@ -876,6 +925,11 @@ export function App() {
 
   const handleEdit = (item: ReviewItem) => {
     setEditingId(item.id);
+    if (item.lat && item.lng) {
+      setCustomCoords({ lat: item.lat, lng: item.lng });
+    } else {
+      setCustomCoords(null);
+    }
     setFormCategory(item.category || 'drink');
     setName(item.name);
     setCity(item.city);
@@ -1054,14 +1108,26 @@ export function App() {
                 })}
               </div>
 
+              {/* Smart Spin Wheel Button: Hôm nay Ăn / Uống gì? */}
+              <RippleButton
+                type="button"
+                onClick={() => setShowSpinModal(true)}
+                className="h-8 px-2.5 rounded-xl bg-[var(--accent)] text-[var(--accent-fg)] flex items-center gap-1 text-[11px] font-extrabold shadow-xs whitespace-nowrap cursor-pointer"
+                title="Vòng quay Quyết định: Hôm nay Ăn / Uống gì?"
+              >
+                <span className="text-xs">🎡</span>
+                <span>Ăn gì?</span>
+              </RippleButton>
+
               {/* Formula Reference Button */}
               <RippleButton
                 type="button"
                 onClick={() => setShowFormulaModal(true)}
                 className="h-8 px-2 rounded-xl theme-surface-elevated flex items-center gap-1 text-[11px] font-bold text-[var(--text-primary)] whitespace-nowrap"
+                title="Xem hệ thống công thức chấm điểm"
               >
                 <Calculator className="w-3.5 h-3.5 text-[var(--accent)] shrink-0" />
-                <span>Công thức</span>
+                <span className="hidden sm:inline">Công thức</span>
               </RippleButton>
             </div>
           </div>
@@ -1464,6 +1530,23 @@ export function App() {
                                     <StarRatingBadge
                                       score10={item.totalScore}
                                     />
+                                    {(() => {
+                                      const quota = getQuotaStatus(item);
+                                      return (
+                                        <span
+                                          className={cn(
+                                            'text-[10px] font-bold px-2 py-0.5 rounded-md border flex items-center gap-1',
+                                            TONE_CLASSES[quota.tier.tone]
+                                          )}
+                                          title={quota.tier.recommendation}
+                                        >
+                                          <span>{quota.tier.label}</span>
+                                          <span className="opacity-75 font-mono text-[9px]">
+                                            ({quota.used}/{quota.tier.cycleLimit})
+                                          </span>
+                                        </span>
+                                      );
+                                    })()}
                                   </div>
 
                                   <div className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)] flex-wrap leading-snug pt-0.5">
@@ -1707,6 +1790,49 @@ export function App() {
                                 </p>
                               )}
 
+                              {/* Quota & Frequency Cycle Tracker (Reset ngày 5 hằng tháng) */}
+                              {(() => {
+                                const quota = getQuotaStatus(item);
+                                const monthCycle = getMonthCycleInfo();
+                                return (
+                                  <div className="p-2.5 rounded-xl theme-surface-elevated flex items-center justify-between gap-2 border border-[var(--border-card)]">
+                                    <div className="min-w-0 space-y-0.5">
+                                      <div className="flex items-center gap-1.5 flex-wrap">
+                                        <span
+                                          className={cn(
+                                            'text-[10px] font-bold px-1.5 py-0.5 rounded border',
+                                            TONE_CLASSES[quota.tier.tone]
+                                          )}
+                                        >
+                                          {quota.tier.label}
+                                        </span>
+                                        <span className="text-[11px] font-bold text-[var(--text-primary)]">
+                                          Đã ghé: {quota.used}/{quota.tier.cycleLimit} lượt
+                                        </span>
+                                      </div>
+                                      <p className="text-[10.5px] text-[var(--text-muted)] truncate">
+                                        {quota.tier.cycle === 'month'
+                                          ? `Chu kỳ tháng (${monthCycle.label}) • Reset ngày 5`
+                                          : quota.resetText}{' '}
+                                        • {quota.tier.recommendation}
+                                      </p>
+                                    </div>
+                                    <RippleButton
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleLogVisit(item.id);
+                                      }}
+                                      className="px-2.5 py-1.5 rounded-lg bg-[var(--accent)] text-[var(--accent-fg)] text-[11px] font-bold shrink-0 flex items-center gap-1 cursor-pointer"
+                                      title="Ghi nhận 1 lần ghé quán trong chu kỳ hiện tại"
+                                    >
+                                      <Check className="w-3.5 h-3.5" />
+                                      <span>Ghé (+1)</span>
+                                    </RippleButton>
+                                  </div>
+                                );
+                              })()}
+
                               {/* Action Bar: Chỉ đường ăn/uống lại + Xem bản đồ + Sửa + Xóa */}
                               <div className="flex items-center justify-between gap-2 pt-1 flex-wrap">
                                 <div className="flex items-center gap-1.5">
@@ -1786,6 +1912,18 @@ export function App() {
                   if (full) handleEdit(full);
                 }}
                 onOpenDirectionsExternal={handleOpenDirectionsExternal}
+                onOpenSpinWheel={() => setShowSpinModal(true)}
+                onCreateReviewAtCoords={(c) => {
+                  resetForm();
+                  if (c.city) setCity(c.city);
+                  if (c.ward) setWard(c.ward);
+                  if (c.street) setStreet(c.street);
+                  setCustomCoords({ lat: c.lat, lng: c.lng });
+                  setActiveTab('form');
+                  showToast(
+                    `Đã lấy vị trí ghim (${c.lat.toFixed(4)}, ${c.lng.toFixed(4)}) vào biểu mẫu!`
+                  );
+                }}
               />
             </MotionEffect>
           )}
@@ -1932,6 +2070,40 @@ export function App() {
                         </span>
                       </RippleButton>
                     </div>
+
+                    {/* Direct 2D Map Pin Button */}
+                    <div className="pt-1.5 flex items-center gap-2">
+                      <RippleButton
+                        type="button"
+                        onClick={() => setShowPinPickerModal(true)}
+                        className="flex-1 py-2 px-3 rounded-xl theme-surface-elevated border border-[var(--border-active)] text-xs font-bold text-[var(--text-primary)] flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <MapPin className="w-3.5 h-3.5 text-[var(--accent)] shrink-0" />
+                        <span className="truncate">
+                          {customCoords
+                            ? 'Chỉnh ghim tọa độ 2D'
+                            : '📍 Chấm ghim trực tiếp trên Bản đồ 2D'}
+                        </span>
+                      </RippleButton>
+                      {customCoords && (
+                        <button
+                          type="button"
+                          onClick={() => setCustomCoords(null)}
+                          className="px-2.5 py-2 rounded-xl theme-surface-elevated text-xs font-bold text-rose-400 hover:bg-rose-500/10 cursor-pointer shrink-0"
+                          title="Hủy ghim thủ công (sử dụng địa chỉ hành chính)"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                    {customCoords && (
+                      <div className="flex items-center gap-1.5 text-[11px] font-mono text-[var(--accent)] bg-[var(--accent-soft)] px-2.5 py-1 rounded-lg">
+                        <MapPin className="w-3 h-3 shrink-0" />
+                        <span className="truncate">
+                          Đã ghim: {customCoords.lat.toFixed(5)}, {customCoords.lng.toFixed(5)}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </Shine>
 
@@ -2114,6 +2286,52 @@ export function App() {
                         })}
                       </div>
                     </div>
+
+                    {/* Live Frequency Tier Recommendation (Theo công thức phân loại giá và chu kỳ ngày 5) */}
+                    {(() => {
+                      const fTier = getFreqTier(formCategory, Number(priceK) || 0);
+                      const monthCycle = getMonthCycleInfo();
+                      return (
+                        <div
+                          className={cn(
+                            'p-2.5 rounded-xl border text-xs space-y-1 mt-1',
+                            TONE_CLASSES[fTier.tone]
+                          )}
+                        >
+                          <div className="flex items-center justify-between gap-1 flex-wrap">
+                            <span className="font-extrabold flex items-center gap-1">
+                              <span>📅 Đề xuất tần suất:</span>
+                              <span className="underline font-black">{fTier.label}</span>
+                            </span>
+                            <span className="text-[10px] font-mono opacity-85">
+                              {fTier.cycle === 'month'
+                                ? `Chu kỳ tháng (${monthCycle.label}) • Reset ngày 5`
+                                : fTier.cycle === 'week'
+                                  ? 'Reset Thứ Hai'
+                                  : '1–2 lần/năm'}
+                            </span>
+                          </div>
+                          <p className="text-[11px] opacity-90 leading-snug">
+                            {fTier.recommendation}{' '}
+                            <span className="opacity-75">
+                              (
+                              {formCategory === 'food'
+                                ? priceK <= 40
+                                  ? 'Món ăn ≤40k: 2 lần/tuần'
+                                  : priceK <= 80
+                                    ? 'Món ăn 40-80k: 1 lần/tuần'
+                                    : 'Món ăn >80k: 1 lần/tháng'
+                                : priceK <= 40
+                                  ? 'Nước uống ≤40k: 2 lần/tuần'
+                                  : priceK <= 80
+                                    ? 'Nước uống 40-80k: 1 lần/2 tuần'
+                                    : 'Nước uống >80k: 1-2 lần/năm'}
+                              )
+                            </span>
+                          </p>
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* 4C. HẠNG MỤC RIÊNG CHO QUÁN ĂN vs QUÁN NƯỚC */}
@@ -2980,6 +3198,23 @@ export function App() {
                     đa 5.0★).
                   </p>
                 </div>
+
+                <div className="p-3 rounded-xl theme-surface-elevated space-y-1.5 border border-emerald-500/30">
+                  <div className="font-bold text-emerald-400">
+                    📅 5. Tần suất Thưởng thức & Chu kỳ Ngày 5
+                  </div>
+                  <div className="space-y-1 text-[11px]">
+                    <p>
+                      • <b>Món ăn:</b> ≤40k: <b>2 lần/tuần</b> • 40-80k: <b>1 lần/tuần</b> • &gt;80k: <b>1 lần/tháng</b>.
+                    </p>
+                    <p>
+                      • <b>Nước uống:</b> ≤40k: <b>2 lần/tuần</b> • 40-80k: <b>1 lần/2 tuần</b> • &gt;80k: <b>1–2 lần/năm</b>.
+                    </p>
+                    <p className="text-[10.5px] text-[var(--text-muted)]">
+                      * Chu kỳ tháng bắt đầu từ <b>ngày 5 hằng tháng</b> (05/MM → 04/MM+1), tự động reset số lượt đã ghé.
+                    </p>
+                  </div>
+                </div>
               </div>
             </motion.div>
           </motion.div>
@@ -2987,7 +3222,45 @@ export function App() {
       </AnimatePresence>
 
       {/* ====================================================================
-       * 6. TOAST NOTIFICATION
+       * 6. VÒNG QUAY QUYẾT ĐỊNH THÔNG MINH: "HÔM NAY ĂN / UỐNG GÌ?"
+       * ================================================================== */}
+      <SmartSpinModal
+        isOpen={showSpinModal}
+        onClose={() => setShowSpinModal(false)}
+        items={reviews}
+        onSelectShop={(item) => {
+          setExpandedCardId(item.id);
+          setActiveTab('list');
+        }}
+        onLogVisit={handleLogVisit}
+        onOpenDirections={handleOpenDirectionsExternal}
+      />
+
+      {/* ====================================================================
+       * 7. MODAL CHẤM TỌA ĐỘ GHIM TRỰC TIẾP TRÊN BẢN ĐỒ 2D
+       * ================================================================== */}
+      <MapPinPickerModal
+        isOpen={showPinPickerModal}
+        onClose={() => setShowPinPickerModal(false)}
+        initialCoords={customCoords || resolveCoordinates(city, ward, street, name)}
+        initialCity={city}
+        initialWard={ward}
+        initialStreet={street}
+        shopName={name}
+        theme={theme}
+        onConfirmPin={(c) => {
+          setCustomCoords({ lat: c.lat, lng: c.lng });
+          if (c.city) setCity(c.city);
+          if (c.ward) setWard(c.ward);
+          if (c.street) setStreet(c.street);
+          showToast(
+            `Đã ghim tọa độ 2D (${c.lat.toFixed(4)}, ${c.lng.toFixed(4)}) vào biểu mẫu!`
+          );
+        }}
+      />
+
+      {/* ====================================================================
+       * 8. TOAST NOTIFICATION
        * ================================================================== */}
       <AnimatePresence>
         {toastMsg && (

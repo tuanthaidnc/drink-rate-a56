@@ -1275,3 +1275,56 @@ export function calculateDistanceKm(
   // Nhân hệ số đường phố thực tế ~1.25x
   return Math.round(R * c * 1.25 * 10) / 10;
 }
+
+// Giải mã ngược tọa độ sang Địa chỉ (Đường, Phường, Tỉnh/Thành) từ OpenStreetMap Nominatim
+export async function reverseGeocodeOsm(
+  lat: number,
+  lng: number
+): Promise<{ city?: string; ward?: string; street?: string; displayName?: string } | null> {
+  try {
+    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`;
+    const res = await fetch(url, {
+      headers: { 'Accept-Language': 'vi' },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.address) {
+        const addr = data.address;
+        const street = addr.road || addr.pedestrian || addr.suburb || '';
+        const ward = addr.suburb || addr.quarter || addr.neighbourhood || addr.city_district || '';
+        let city = addr.city || addr.state || addr.province || '';
+        
+        // Match city against 34 official provinces
+        const matchedCity = VIETNAM_34_PROVINCES_DATA.find((p) =>
+          city.toLowerCase().includes(p.name.toLowerCase()) ||
+          p.mergedFrom.toLowerCase().includes(city.toLowerCase())
+        );
+
+        return {
+          city: matchedCity ? matchedCity.name : undefined,
+          ward: ward ? ward.replace(/^Phường\s+/i, '').replace(/^Xã\s+/i, '') : undefined,
+          street: street ? street.replace(/^Đường\s+/i, '').replace(/^Phố\s+/i, '') : undefined,
+          displayName: data.display_name,
+        };
+      }
+    }
+  } catch {
+    // Offline fallback: find nearest city in VIETNAM_34_PROVINCES_DATA
+  }
+
+  // Fallback to nearest city in 34 provinces
+  let nearestCity = VIETNAM_34_PROVINCES_DATA[0].name;
+  let minDist = Infinity;
+  for (const p of VIETNAM_34_PROVINCES_DATA) {
+    const d = calculateDistanceKm(lat, lng, p.lat, p.lng);
+    if (d < minDist) {
+      minDist = d;
+      nearestCity = p.name;
+    }
+  }
+
+  return {
+    city: nearestCity,
+  };
+}
+
