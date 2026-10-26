@@ -1,4 +1,4 @@
-const CACHE_NAME = 'drink-reviewer-v10-clean';
+const CACHE_NAME = 'drink-reviewer-v11-spin-wheel';
 
 self.addEventListener('install', () => {
   self.skipWaiting();
