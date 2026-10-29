@@ -1,4 +1,4 @@
-const CACHE_NAME = 'drink-reviewer-v11-spin-wheel';
+const CACHE_NAME = 'drink-reviewer-v12-clean-map';
 
 self.addEventListener('install', () => {
   self.skipWaiting();
