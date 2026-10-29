@@ -156,7 +156,7 @@ export function MapExplorer({
     L.control.zoom({ position: 'topright' }).addTo(map);
 
     // Giao diện Bản đồ 2D Google Maps Tiếng Việt sạch sẽ, đơn giản, dễ nhìn
-    L.tileLayer('https://mt1.google.com/vt/lyrs=m&hl=vi&x={x}&y={y}&z={z}', {
+    L.tileLayer('https://mt1.google.com/vt/lyrs=m&hl=vi&x={x}&y={y}&z={z}&apistyle=s.t%3A2%7Cp.v%3Aoff%2Cs.t%3A4%7Cp.v%3Aoff%2Cs.t%3A6%7Cs.e%3Al%7Cp.v%3Aoff%2Cs.t%3A81%7Cs.e%3Al%7Cp.v%3Aoff', {
       maxZoom: 20,
     }).addTo(map);
 
