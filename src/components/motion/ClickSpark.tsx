@@ -491,7 +491,7 @@ const ClickSpark = forwardRef<ClickSparkHandle, ClickSparkProps>(
         for (const burst of [...bursts]) remove(burst);
         engineRef.current = null;
       };
-    }, []);
+    }, [disabled]);
 
     useImperativeHandle(
       ref,

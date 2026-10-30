@@ -1,7 +1,11 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { MotionConfig, useReducedMotion } from 'motion/react';
+import { MotionConfig } from 'motion/react';
 import ClickSpark from './components/motion/ClickSpark.tsx';
-import { MotionPreference, TransitionPanel } from './components/motion/kinetic.tsx';
+import {
+  MotionPreference,
+  TransitionPanel,
+  useSystemReducedMotion,
+} from './components/motion/kinetic.tsx';
 import {
   MapPin,
   Map,
@@ -102,7 +106,7 @@ export default function App() {
   const formRef = useRef(isForm);
   formRef.current = isForm && dirty;
   const reduced = doc?.settings.reducedMotion === true;
-  const systemReduced = useReducedMotion();
+  const systemReduced = useSystemReducedMotion();
   const navigate = useCallback((target: Tab, push = true) => {
     setTab(target);
     if (push) history.pushState({ notTab: target }, '', location.href);

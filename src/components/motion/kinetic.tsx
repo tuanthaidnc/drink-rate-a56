@@ -1,17 +1,47 @@
-import { createContext, useContext, useEffect, useRef, forwardRef, type ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useSyncExternalStore,
+  forwardRef,
+  type ReactNode,
+} from 'react';
 import {
   AnimatePresence,
   motion,
   useIsPresent,
-  useReducedMotion,
   useSpring,
   useTransform,
   type SpringOptions,
 } from 'motion/react';
 
 export const MotionPreference = createContext(false);
+let systemQuery: MediaQueryList | undefined;
+const motionListeners = new Set<() => void>();
+const notifyMotion = () => motionListeners.forEach((notify) => notify());
+function queryMotion() {
+  return (systemQuery ??= window.matchMedia('(prefers-reduced-motion: reduce)'));
+}
+function subscribeMotion(notify: () => void) {
+  motionListeners.add(notify);
+  if (motionListeners.size === 1) queryMotion().addEventListener('change', notifyMotion);
+  return () => {
+    motionListeners.delete(notify);
+    if (!motionListeners.size) queryMotion().removeEventListener('change', notifyMotion);
+  };
+}
+export function useSystemReducedMotion() {
+  return useSyncExternalStore(
+    subscribeMotion,
+    () => queryMotion().matches,
+    () => false,
+  );
+}
 export function useQuietMotion() {
-  return useContext(MotionPreference) || useReducedMotion() === true;
+  const preference = useContext(MotionPreference),
+    system = useSystemReducedMotion();
+  return preference || system;
 }
 
 // Adapted from ibelick/motion-primitives animated-number.tsx at 120f64f6.
