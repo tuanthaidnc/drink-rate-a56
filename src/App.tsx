@@ -25,12 +25,13 @@ import DataTools from './components/DataTools.tsx';
 import AppNavigation from './components/AppNavigation.tsx';
 import ReviewInspector from './components/ReviewInspector.tsx';
 import PlaceReconciliation, { HistoricalPlaces } from './components/PlaceReconciliation.tsx';
-import { isRetiredBepTrangSample, THANH_HUONG_CANDIDATE } from './lib/placeCorrections.ts';
+import { applyPlaceCorrections, THANH_HUONG_CANDIDATE } from './lib/placeCorrections.ts';
 import { useReviewStore } from './lib/useReviewStore.ts';
 import { useNow } from './lib/useNow.ts';
 import { usePwa } from './lib/usePwa.ts';
 import {
   APP_VERSION,
+  emptyDocument,
   hasConfirmedLocation,
   newId,
   type PhotoData,
@@ -395,9 +396,10 @@ export default function App() {
   );
   const examples = demos.length
     ? demos
-    : validateReviews(DEMO_REVIEWS, true)
-        .filter((r) => !isRetiredBepTrangSample(r))
-        .map((r) => ({ ...r, isDemo: true }));
+    : applyPlaceCorrections({
+        ...emptyDocument(),
+        reviews: validateReviews(DEMO_REVIEWS, true),
+      }).reviews.map((r) => ({ ...r, isDemo: true }));
   return (
     <MotionConfig reducedMotion={reduced ? 'always' : 'user'}>
       <div className={`not-app ${typing && isForm ? 'is-typing' : ''}`}>

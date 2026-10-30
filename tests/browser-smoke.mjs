@@ -350,6 +350,24 @@ try {
       await p.getByRole('button', { name: 'Chấm quán đầu tiên', exact: true }).waitFor();
       await p.reload();
       assert.equal((await readDoc(p)).reviews.length, 0);
+      await p
+        .getByRole('button', { name: 'Xem cách hoạt động với quán minh họa', exact: true })
+        .click();
+      const examples = p.getByRole('dialog', { name: 'Quán minh họa' });
+      await examples.getByRole('heading', { name: 'Nốt Tea', exact: true }).waitFor();
+      assert.equal(await examples.getByText(/Bếp Trang/).count(), 0);
+      await examples
+        .locator('.panel')
+        .filter({ hasText: 'Bánh Canh Cá Lóc Thanh Hương' })
+        .getByRole('button', { name: 'Chấm lại theo trải nghiệm của tôi', exact: true })
+        .click();
+      await p.locator('.form-address>summary').click();
+      assert.equal(await p.getByLabel('Đường / phố / kiệt').inputValue(), '');
+      await p
+        .getByText('Chưa có ghim. Bạn vẫn có thể lưu đánh giá và ghim sau.', { exact: true })
+        .waitFor();
+      await p.getByRole('button', { name: 'Hủy', exact: true }).click();
+      assert.equal(await p.getByRole('dialog').count(), 0);
       const c = await browser.newContext();
       contexts.push(c);
       await c.addInitScript(() => localStorage.setItem('not_drink_food_reviews_v11', '{bad'));
