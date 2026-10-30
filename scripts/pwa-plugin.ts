@@ -3,6 +3,7 @@ import { readFileSync, readdirSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { Plugin } from 'vite';
 export function pwaPlugin(): Plugin {
+  const appVersion=JSON.parse(readFileSync(new URL('../package.json',import.meta.url),'utf8')).version as string;
   const base = '/drink-rate-a56/';
   let out = '';
   return {
@@ -32,7 +33,7 @@ export function pwaPlugin(): Plugin {
       const build = digest.digest('hex').slice(0, 16);
       writeFileSync(
         join(out, 'version.json'),
-        JSON.stringify({ version: '13.0.0', build, precacheFiles: names.length + 2 }),
+        JSON.stringify({ version: appVersion, build, precacheFiles: names.length + 2 }),
       );
       const urls = [base, ...names.map((n) => base + n), base + 'version.json'];
       const source = readFileSync(new URL('./sw-template.js', import.meta.url), 'utf8')

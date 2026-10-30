@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { chromium } from 'playwright';
 import { INITIAL_REVIEWS } from '../src/data/demo.ts';
 import { createReview, validateReview } from '../src/lib/validation.ts';
-// Browser plugin not available: use the installed Playwright library and Chrome.
+// Automated CI regression suite. Interactive local QA uses the connected browser.
 const base = process.env.TEST_URL ?? 'http://127.0.0.1:4173/drink-rate-a56/';
 const output = resolve(process.env.TEST_OUTPUT ?? resolve(tmpdir(), 'not-browser-qa'));
 await mkdir(output, { recursive: true });
@@ -63,7 +63,7 @@ async function setup({ legacy, viewport = { width: 393, height: 852 }, offline =
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto(base);
-  await page.getByRole('navigation', { name: 'Điều hướng chính' }).waitFor();
+  await page.getByRole('heading', { name: /Quán xá/ }).waitFor();
   return { context, page, errors };
 }
 const nav = (p, label) =>
@@ -125,16 +125,21 @@ async function importText(p, text) {
 try {
   let primary;
   await scenario(
-    'v12 migration keeps raw source, separates examples, no manufactured pins',
+    'v12 migration preserves raw source, remaps verified Nốt and retires only Bếp Trang sample',
     async () => {
       primary = await setup({ legacy: JSON.stringify(INITIAL_REVIEWS) });
       const { page: p, errors } = primary;
       await p.getByRole('heading', { name: 'Quán xá (1)', exact: true }).waitFor();
       const d = await readDoc(p);
-      assert.equal(d.reviews.length, 3);
-      assert.equal(d.reviews.filter((r) => r.isDemo).length, 2);
+      assert.equal(d.reviews.length, 2);
+      assert.equal(d.reviews.filter((r) => r.isDemo).length, 1);
       assert.equal(d.reviews[0].totalScore, 6.5);
-      assert.equal(d.reviews[0].locationStatus, 'approximate');
+      assert.equal(d.reviews[0].locationStatus, 'confirmed');
+      assert.equal(d.reviews[0].name, 'Nốt Tea');
+      assert.equal(d.reviews[0].address, '38');
+      assert.equal(d.reviews[0].lat, 16.06528);
+      assert.equal(d.reviews[0].lng, 108.2083);
+      assert.equal(d.reviews[1].locationStatus, 'missing');
       assert.equal(
         await p.evaluate(() => localStorage.getItem('not_drink_food_reviews_v11')),
         JSON.stringify(INITIAL_REVIEWS),
@@ -142,6 +147,39 @@ try {
       await p.screenshot({ path: resolve(output, '01-mobile-list.png') });
       await assertNoOverflow(p);
       assert.deepEqual(errors, []);
+    },
+  );
+  await scenario(
+    'pristine and reverted forms leave freely; only real changes require confirmation',
+    async () => {
+      const p = primary.page;
+      await nav(p, 'Chấm điểm');
+      await p.getByRole('heading', { name: 'Chấm điểm quán', exact: true }).waitFor();
+      await nav(p, 'Bản đồ');
+      assert.equal(await p.getByRole('dialog').count(), 0);
+      await nav(p, 'Chấm điểm');
+      await p.getByLabel('Tên quán').fill('Tên tạm');
+      await p.getByLabel('Tên quán').fill('');
+      await p.getByRole('slider', { name: 'Hương vị', exact: true }).press('ArrowRight');
+      await p.getByRole('slider', { name: 'Hương vị', exact: true }).press('ArrowLeft');
+      await nav(p, 'Thống kê');
+      assert.equal(await p.getByRole('dialog').count(), 0);
+      await nav(p, 'Chấm điểm');
+      await p.getByLabel('Tên quán').fill('Bản nháp cần giữ');
+      await nav(p, 'Quán xá');
+      await p.getByRole('dialog', { name: 'Rời phần đang nhập?' }).waitFor();
+      await p.getByRole('button', { name: 'Tiếp tục nhập', exact: true }).click();
+      assert.equal(await p.getByLabel('Tên quán').inputValue(), 'Bản nháp cần giữ');
+      await p.getByLabel('Tên quán').fill('');
+      await nav(p, 'Quán xá');
+      assert.equal(await p.getByRole('dialog').count(), 0);
+      await p.locator('.review-card>summary').click();
+      await p.getByRole('button', { name: 'Sửa đánh giá', exact: true }).click();
+      await nav(p, 'Thống kê');
+      assert.equal(await p.getByRole('dialog').count(), 0);
+      await nav(p, 'Quán xá');
+      if (await p.locator('.review-card').evaluate((el) => el.open))
+        await p.locator('.review-card>summary').click();
     },
   );
   await scenario(
@@ -161,7 +199,7 @@ try {
   );
   await scenario('shared category filter drives list, map, insights and spin', async () => {
     const p = primary.page;
-    await p.getByRole('button', { name: 'Quán ăn (0)', exact: true }).click();
+    await p.getByRole('radio', { name: 'Quán ăn (0)', exact: true }).click();
     await p.getByRole('heading', { name: 'Quán xá (0)', exact: true }).waitFor();
     await nav(p, 'Bản đồ');
     await p.getByText('0 quán · 0 ghim xác nhận', { exact: true }).waitFor();
@@ -171,7 +209,7 @@ try {
     await p.getByRole('button', { name: 'Ăn gì?', exact: true }).click();
     await p.getByText('0 quán hợp lệ, còn lượt gợi ý', { exact: true }).waitFor();
     await closeDialog(p);
-    await p.getByRole('button', { name: 'Tất cả (1)', exact: true }).click();
+    await p.getByRole('radio', { name: 'Tất cả (1)', exact: true }).click();
   });
   await scenario('bad JSON and invalid negative price cannot overwrite data', async () => {
     const p = primary.page,
@@ -231,7 +269,7 @@ try {
     const download = await downloading;
     await download.saveAs(resolve(output, 'roundtrip-backup.json'));
     const backup = JSON.parse(await readFile(await download.path(), 'utf8'));
-    assert.equal(backup.reviews.length, 4);
+    assert.equal(backup.reviews.length, 3);
     assert.ok(backup.reviews.some((r) => r.visitLog.length));
     await importText(p, '[]');
     const dialog = p.getByRole('dialog');
@@ -249,10 +287,10 @@ try {
     await p.getByText(/Bản dự phòng tự động trên thiết bị/).click();
     await p.getByRole('button').filter({ hasText: 'Khôi phục JSON (thay thế)' }).first().click();
     await p.getByRole('button', { name: 'Khôi phục bản này', exact: true }).click();
-    await eventuallyDoc(p, (d) => d.reviews.length === 4);
+    await eventuallyDoc(p, (d) => d.reviews.length === 3);
   });
   await scenario(
-    'native modal traps focus, Escape restores focus, phone 360px light theme and 200% text',
+    'animated Radix modal traps focus, Escape restores focus, phone 360px light theme and 200% text',
     async () => {
       const p = primary.page;
       await p.setViewportSize({ width: 360, height: 800 });
@@ -260,7 +298,9 @@ try {
       await p.getByRole('button', { name: 'Bộ lọc', exact: true }).click();
       await p.keyboard.press('Tab');
       assert.equal(
-        await p.evaluate(() => document.querySelector('dialog').contains(document.activeElement)),
+        await p.evaluate(() =>
+          document.querySelector('[role="dialog"]').contains(document.activeElement),
+        ),
         true,
       );
       await p.screenshot({ path: resolve(output, '02-mobile-light-filters.png') });
@@ -311,6 +351,7 @@ try {
       await nav(p, 'Thống kê');
       await p.getByRole('heading', { name: 'Thống kê theo bộ lọc' }).waitFor();
       await nav(p, 'Chấm điểm');
+      await p.locator('.form-address>summary').click();
       await p.getByRole('button', { name: 'Chọn từ danh mục', exact: true }).click();
       await p
         .getByRole('button', { name: /Phường Thanh Khê/ })
@@ -318,7 +359,7 @@ try {
         .waitFor();
       await closeDialog(p);
       await p.getByRole('button', { name: 'Hủy', exact: true }).click();
-      await p.getByRole('button', { name: 'Bỏ bản nháp và rời màn hình', exact: true }).click();
+      assert.equal(await p.getByRole('dialog').count(), 0);
       await nav(p, 'Bản đồ');
       await p.getByRole('heading', { name: 'Bản đồ trong bộ lọc' }).waitFor();
       await p.screenshot({ path: resolve(output, '03-mobile-offline-map.png') });

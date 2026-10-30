@@ -1,5 +1,16 @@
 import { useEffect, useRef } from 'react';
-import { Edit3, Trash2, MapPin, Navigation, Plus } from 'lucide-react';
+import {
+  Edit3,
+  Trash2,
+  MapPin,
+  Navigation,
+  Plus,
+  ChevronRight,
+  Coffee,
+  Utensils,
+  Meh,
+  Smile,
+} from 'lucide-react';
 import type { ReviewItem } from '../lib/models.ts';
 import { formatDate, hasConfirmedLocation } from '../lib/models.ts';
 import { getQuotaStatus } from '../lib/frequency.ts';
@@ -23,6 +34,7 @@ export default function ReviewCard({
   onVisit,
   onDirections,
   onMap,
+  onInspect,
 }: {
   item: ReviewItem;
   index: number;
@@ -34,12 +46,16 @@ export default function ReviewCard({
   onVisit: () => void;
   onDirections: () => void;
   onMap: () => void;
+  onInspect?: () => void;
 }) {
   const details = useRef<HTMLDetailsElement>(null);
   useEffect(() => {
-    if (selected && details.current) {
+    if (selected && details.current && window.matchMedia('(max-width:1099px)').matches) {
       details.current.open = true;
-      details.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      details.current.scrollIntoView({
+        block: 'nearest',
+        behavior: window.matchMedia('(prefers-reduced-motion:reduce)').matches ? 'auto' : 'smooth',
+      });
     }
   }, [selected]);
   const quota = getQuotaStatus(item, undefined, undefined, now);
@@ -62,8 +78,13 @@ export default function ReviewCard({
       ];
   return (
     <MotionEffect delay={Math.min(index, 5) * 0.025} slideOffset={5} blurAmount="0px">
-      <details className="review-card theme-surface-card" ref={details}>
-        <summary>
+      <details className="review-card theme-surface-card" ref={details} data-selected={selected}>
+        <summary
+          onClick={(e) => {
+            onInspect?.();
+            if (window.matchMedia('(min-width:1100px)').matches) e.preventDefault();
+          }}
+        >
           <div className="card-main">
             <span aria-hidden="true">
               <CategoryScoreBadge category={item.category} score={item.totalScore} size="sm" />
@@ -75,20 +96,22 @@ export default function ReviewCard({
               </div>
               <div className="badges">
                 <span className={`badge ${food ? 'food-badge' : ''}`}>
+                  {food ? <Utensils aria-hidden="true" /> : <Coffee aria-hidden="true" />}
                   {food
                     ? item.foodType === 'streetfood'
-                      ? '🍜 Vỉa hè'
-                      : '🍜 Quán ngồi'
+                      ? 'Bình dân'
+                      : 'Quán ngồi'
                     : item.mode === 'takeaway'
-                      ? '🥤 Mang đi'
-                      : '🥤 Ngồi lại'}
+                      ? 'Mang đi'
+                      : 'Ngồi lại'}
                 </span>
                 <span className="badge">{item.priceK}k</span>
                 {item.isDemo && <span className="badge demo-badge">Minh họa</span>}
               </div>
               <p className="small address">
-                {[item.street, item.ward, item.city].filter(Boolean).join(' • ') ||
-                  'Chưa ghi địa chỉ'}
+                {[[item.address, item.street].filter(Boolean).join(' '), item.ward, item.city]
+                  .filter(Boolean)
+                  .join(' · ') || 'Chưa ghi địa chỉ'}
               </p>
             </div>
             <div className="card-score">
@@ -100,16 +123,26 @@ export default function ReviewCard({
             </div>
           </div>
           <div className="card-summary">
-            <StarRatingBadge score10={item.totalScore} />
-            <span className="small">
-              {quota.tier.label} · đã ghé {quota.used}/{quota.tier.quota}
+            <span className="verdict">
+              {item.totalScore >= 7.5 ? <Smile /> : <Meh />}
+              {tier.shortLabel}
             </span>
-            <span className="chevron" aria-hidden="true">
-              ⌄
-            </span>
+            <span className="small">{quota.tier.label}</span>
+            <ChevronRight className="chevron" aria-hidden="true" />
           </div>
         </summary>
         <div className="card-details stack">
+          <StarRatingBadge score10={item.totalScore} />
+          {item.placeResolution?.status === 'verified' && (
+            <a
+              className="source-link"
+              href={item.placeResolution.sourceUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Địa điểm đã đối chiếu Maps
+            </a>
+          )}
           <div className="score-breakdown">
             {parts.map(([label, value]) => (
               <div key={String(label)} className="split small">

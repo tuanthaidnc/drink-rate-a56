@@ -9,7 +9,19 @@ Sổ trải nghiệm cá nhân để chọn quán hợp gu, giá và vị trí; 
 - Tìm/lọc cùng một tập quán trong danh sách, bản đồ, vòng quay và thống kê quán. Chi tiêu chu kỳ được ghi rõ là toàn bộ quán thật.
 - Xuất JSON ở Thống kê. File gồm đánh giá, ảnh, lịch sử điểm, lượt ghé và tùy chọn; giữ một bản ngoài ứng dụng trước khi đổi máy hoặc xóa dữ liệu Chrome.
 - Khi hiện “Sẵn sàng dùng ngoại tuyến”, có thể mở lại các màn hình và lưu dữ liệu không cần mạng. Nền bản đồ, tra địa chỉ và Google Maps cần mạng.
-- Bản cập nhật hiện nút Cập nhật; lưu hoặc hủy bản nháp trước khi áp dụng. Giữ nguyên URL và ứng dụng đã cài để giữ cùng kho dữ liệu.
+- Bản cập nhật hiện nút Cập nhật; chỉ cần lưu hoặc hủy nếu đã sửa nội dung. Mở form nhưng chưa sửa, hoặc sửa rồi hoàn tác, có thể đổi tab ngay. Giữ nguyên URL và ứng dụng đã cài để giữ cùng kho dữ liệu.
+
+## Bản 14 · thiết kế và đối chiếu địa điểm
+
+Giao diện dùng hệ thống màu sáng/tối, khoảng cách, chữ và lớp bề mặt thống nhất; điện thoại có điều hướng dưới, máy tính có thanh bên và khung chi tiết. Các thành phần Button, Input, Field, Badge, Separator lấy từ [shadcn/ui](https://github.com/shadcn-ui/ui). Dialog, Slider, ToggleGroup và BottomNavigation dùng trực tiếp [Animate UI](https://github.com/imskyleen/animate-ui), gói `@animate-ui/react`; không chỉ đặt tên thư mục theo thư viện. Xem [DESIGN.md](DESIGN.md) về cấu trúc và lựa chọn thiết kế.
+
+- Nốt được đối chiếu bằng [liên kết Maps do chủ ứng dụng cung cấp](https://maps.app.goo.gl/TSXSAzECjtmbwCVC9): **Nốt Tea, 38 Phan Thanh, Thanh Khê, Đà Nẵng**, ghim **16.06528, 108.2083**. Chỉ cập nhật địa điểm, giữ điểm cá nhân **6,50** và lịch sử. Ghim GPS/thủ công đã xác nhận được giữ.
+- Bỏ mẫu **Bếp Trang** nguyên trạng theo yêu cầu. Nếu bản ghi có ảnh, lượt ghé, lịch sử điểm hoặc đã là trải nghiệm cá nhân thì giữ lại. Bản thô trước chuyển đổi và bản dự phòng vẫn có thể khôi phục.
+- Hồ sơ Maps **Quán Bánh Canh Thanh Hương, 227 Trần Phú** chỉ là ứng viên. Bản cũ ghi Phan Thanh nhưng không có nguồn xác thực; bỏ ghim giả định, giữ điểm minh họa riêng và cho kiểm tra/xác nhận địa điểm. Không tự coi ứng viên là quán người dùng đã ghé.
+
+Đối chiếu chạy tại chỗ khi mở dữ liệu cũ hoặc nhập bản sao cũ; không cần gửi dữ liệu lên máy chủ. Marker chuyển đổi giúp giữ chỉnh sửa địa chỉ về sau. Phiên bản cấu trúc dữ liệu vẫn là 13 để đọc được bản sao v13.
+
+Giấy phép: shadcn/ui MIT; Animate UI **MIT + Commons Clause**, cho phép tích hợp trong ứng dụng nhưng không bán/redistribute bộ thành phần nguyên gốc. Giữ thông báo gốc tại [public/licenses](public/licenses).
 
 ## Công thức đã chốt
 
@@ -24,11 +36,11 @@ Nốt mang đi: 31k, vị 7, lượng ít (4), ly 9 → **6,50/10**. Điểm gi�
 
 Tần suất theo từng quán: ≤40k hai lượt/tuần; quán ăn >40–80k một lượt/tuần, >80k một lượt/tháng; quán nước >40–80k hai lượt/tháng (gợi ý cách khoảng hai tuần), >80k hai lượt/năm. Đây là gợi ý; vẫn ghi được số lượt thực tế vượt gợi ý. Tuần từ thứ Hai, tháng từ ngày 5, năm từ ngày 5/1, theo `Asia/Ho_Chi_Minh` bất kể múi giờ thiết bị. Vòng quay không mở rộng bộ lọc khi còn 0 hoặc 1 quán.
 
-## Dữ liệu và chuyển đổi v12 → v13
+## Dữ liệu và chuyển đổi v12 → v14
 
 IndexedDB `not-food-drink-personal` lưu văn bản, ảnh và 20 bản dự phòng trước thay đổi. Mỗi lần ghi là một giao dịch; chỉ báo thành công khi giao dịch hoàn tất. Các cửa sổ đọc lại bản hiện tại trong giao dịch, đồng bộ qua BroadcastChannel; sửa đánh giá cũ có kiểm tra xung đột.
 
-Lần mở đầu đọc khóa localStorage mới nhất có tồn tại, kể cả `[]`. Chuỗi gốc được giữ nguyên và lưu thêm vào kho archives. Dữ liệu lỗi mở màn hình khôi phục, cho tải nguyên bản gốc, không tự thay bằng dữ liệu mẫu. Tọa độ cũ chuyển sang chưa xác nhận; không đoán ghim mới hoặc khoảng cách. Hai quán ăn mẫu đúng nguyên trạng v12 được đánh dấu minh họa; bản người dùng đã sửa được giữ là cá nhân. Không xóa các bản mẫu; người dùng có thể chấm lại hoặc bỏ riêng.
+Lần mở đầu đọc khóa localStorage mới nhất có tồn tại, kể cả `[]`. Chuỗi gốc được giữ nguyên và lưu thêm vào kho archives. Dữ liệu lỗi mở màn hình khôi phục, cho tải nguyên bản gốc, không tự thay bằng dữ liệu mẫu. Tọa độ cũ chưa có nguồn chuyển sang chưa xác nhận; chỉ remap Nốt theo nguồn Maps đã kiểm tra nêu trên. Các quán ăn mẫu đúng nguyên trạng v12 được nhận diện trước khi áp dụng việc bỏ mẫu Bếp Trang; bản người dùng đã sửa được giữ là cá nhân.
 
 Nhập JSON có kiểm tra toàn bộ cấu trúc, giá, ngày, điểm đầu vào, mã trùng, tọa độ và ảnh trước khi viết. Mặc định gộp và giữ quán đang có khi trùng mã. Thay toàn bộ cần xác nhận riêng, kể cả danh sách rỗng. Ảnh nhập được cấp mã mới để không phá ảnh trong dự phòng. Ảnh không còn tham chiếu trong dữ liệu hiện tại hoặc 20 dự phòng được thu hồi; ảnh khi phục hồi dữ liệu hỏng được giữ nguyên.
 

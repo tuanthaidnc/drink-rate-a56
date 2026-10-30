@@ -16,6 +16,7 @@ import {
   MAX_PHOTO_BYTES,
 } from './validation.ts';
 
+import { applyPlaceCorrections, needsPlaceCorrections } from './placeCorrections.ts';
 export const DB_NAME = 'not-food-drink-personal';
 export const LEGACY_KEYS = [
   'not_drink_food_reviews_v11',
@@ -134,10 +135,17 @@ export function readLegacy(
 }
 export async function loadDocument(): Promise<ReviewDocument> {
   const existing = await readCurrent();
-  if (existing) return existing;
+  if (existing)
+    return needsPlaceCorrections(existing)
+      ? commitDocument(
+          (current) => applyPlaceCorrections(current),
+          'Đối chiếu vị trí Nốt Tea và bỏ mẫu Bếp Trang',
+        )
+      : existing;
   const legacy = readLegacy();
-  const initial = emptyDocument();
+  let initial = emptyDocument();
   if (legacy) initial.reviews = legacy.reviews;
+  initial = applyPlaceCorrections(initial);
   const d = await db();
   // Recheck inside the write transaction: two opening tabs must not re-migrate over each other.
   return new Promise((resolve, reject) => {
@@ -209,7 +217,8 @@ export async function commitDocument(
             preserveAllPhotos = true;
           }
         }
-        const proposed = change(structuredClone(current));
+        const changed = change(structuredClone(current));
+        const proposed = needsPlaceCorrections(changed) ? applyPlaceCorrections(changed) : changed;
         result = {
           ...proposed,
           schemaVersion: SCHEMA_VERSION,

@@ -22,6 +22,10 @@ import { Dialog } from './components/Dialog.tsx';
 import FilterBar from './components/FilterBar.tsx';
 import ReviewCard from './components/ReviewCard.tsx';
 import DataTools from './components/DataTools.tsx';
+import AppNavigation from './components/AppNavigation.tsx';
+import ReviewInspector from './components/ReviewInspector.tsx';
+import PlaceReconciliation, { HistoricalPlaces } from './components/PlaceReconciliation.tsx';
+import { isRetiredBepTrangSample, THANH_HUONG_CANDIDATE } from './lib/placeCorrections.ts';
 import { useReviewStore } from './lib/useReviewStore.ts';
 import { useNow } from './lib/useNow.ts';
 import { usePwa } from './lib/usePwa.ts';
@@ -75,9 +79,11 @@ export default function App() {
     [filters, setFilters] = useState<Filters>({ ...DEFAULT_FILTERS });
   const [draft, setDraft] = useState<ReviewItem | null>(null),
     [editing, setEditing] = useState(false);
+  const [dirty, setDirty] = useState(false);
   const [sort, setSort] = useState('score'),
     [position, setPosition] = useState<Position | null>(null),
     [locating, setLocating] = useState(false);
+  const [reconciliation, setReconciliation] = useState(false);
   const [spin, setSpin] = useState(false),
     [formula, setFormula] = useState(false),
     [demo, setDemo] = useState(false);
@@ -91,7 +97,7 @@ export default function App() {
   const main = useRef<HTMLElement>(null),
     isForm = tab === 'review' && draft !== null;
   const formRef = useRef(isForm);
-  formRef.current = isForm;
+  formRef.current = isForm && dirty;
   const reduced = doc?.settings.reducedMotion === true;
   const navigate = useCallback((target: Tab, push = true) => {
     setTab(target);
@@ -99,6 +105,7 @@ export default function App() {
     main.current?.scrollTo({ top: 0 });
   }, []);
   const add = (p?: Position) => {
+    setDirty(!!p);
     setDraft({
       ...createReview(),
       ...(p
@@ -114,6 +121,7 @@ export default function App() {
     navigate('review');
   };
   const edit = (r: ReviewItem) => {
+    setDirty(false);
     setDraft(structuredClone(r));
     setEditing(!!doc?.reviews.some((x) => x.id === r.id));
     setDemo(false);
@@ -121,14 +129,20 @@ export default function App() {
   };
   const selectTab = (target: Tab) => {
     if (target === tab) return;
-    if (isForm && target !== tab) {
+    if (isForm && dirty && target !== tab) {
       setLeaveTo(target);
       return;
     }
     if (target === 'review') {
       if (!draft) add();
       else navigate(target);
-    } else navigate(target);
+    } else {
+      if (isForm) {
+        setDraft(null);
+        setDirty(false);
+      }
+      navigate(target);
+    }
   };
   useEffect(() => {
     history.replaceState({ notTab: 'places' }, '', location.href);
@@ -141,6 +155,8 @@ export default function App() {
         return;
       }
       const next = e.state?.notTab;
+      setDraft(null);
+      setDirty(false);
       setTab(next !== 'review' && tabs.some((t) => t.id === next) ? next : 'places');
     };
     window.addEventListener('popstate', pop);
@@ -151,9 +167,9 @@ export default function App() {
       e.preventDefault();
       e.returnValue = '';
     };
-    if (isForm) window.addEventListener('beforeunload', prevent);
+    if (isForm && dirty) window.addEventListener('beforeunload', prevent);
     return () => window.removeEventListener('beforeunload', prevent);
-  }, [isForm]);
+  }, [isForm, dirty]);
   useEffect(() => {
     syncStatusBarThemeColor(theme);
   }, [theme]);
@@ -216,6 +232,7 @@ export default function App() {
       ),
     [filtered, sort, position],
   );
+  const inspector = sorted.find((r) => r.id === selected) ?? sorted[0];
   const summary = describeFilters(filters),
     visitItem = reviews.find((r) => r.id === visitId);
   const locate = async () => {
@@ -283,6 +300,7 @@ export default function App() {
     );
     if (ok) {
       setDraft(null);
+      setDirty(false);
       setSelected(item.id);
       setFilters({ ...DEFAULT_FILTERS });
       navigate('places');
@@ -377,7 +395,9 @@ export default function App() {
   );
   const examples = demos.length
     ? demos
-    : validateReviews(DEMO_REVIEWS, true).map((r) => ({ ...r, isDemo: true }));
+    : validateReviews(DEMO_REVIEWS, true)
+        .filter((r) => !isRetiredBepTrangSample(r))
+        .map((r) => ({ ...r, isDemo: true }));
   return (
     <MotionConfig reducedMotion={reduced ? 'always' : 'user'}>
       <div className={`not-app ${typing && isForm ? 'is-typing' : ''}`}>
@@ -407,23 +427,20 @@ export default function App() {
                 }
                 aria-label={`Đổi sang giao diện ${theme === 'dark' ? 'sáng' : 'tối'}`}
               >
-                {theme === 'dark' ? <Moon size={16} /> : <Sun size={16} />}
+                {theme === 'dark' ? <Moon /> : <Sun />}
                 <span>{theme === 'dark' ? 'Tối' : 'Sáng'}</span>
-              </button>
-              <button className="button" disabled={!doc || isForm} onClick={() => setSpin(true)}>
-                <Shuffle size={16} />
-                <span>Ăn gì?</span>
               </button>
               <button
                 className="icon-button secondary"
                 aria-label="Xem công thức tính điểm"
                 onClick={() => setFormula(true)}
               >
-                <BookOpen size={20} />
+                <BookOpen />
               </button>
             </div>
           </div>
         </header>
+        {doc && <AppNavigation desktop value={tab} onChange={selectTab} />}
         <main id="main" ref={main} className="app-main" tabIndex={-1}>
           <div className="content-width stack">
             <div className="connection-status" role="status">
@@ -449,11 +466,11 @@ export default function App() {
             {pwa.waiting && (
               <div className="notice update-notice">
                 <span>
-                  Có phiên bản mới{isForm ? ' · hãy lưu hoặc hủy phần đang nhập trước.' : ''}
+                  Có phiên bản mới{dirty ? ' · hãy lưu hoặc hủy phần đang nhập trước.' : ''}
                 </span>
                 <button
                   className="button"
-                  disabled={isForm || store.busy || !!visitItem}
+                  disabled={dirty || store.busy || !!visitItem}
                   onClick={() => pwa.apply()}
                 >
                   <RefreshCw size={16} />
@@ -494,7 +511,36 @@ export default function App() {
                   </div>
                 )}
                 {!isForm && (
+                  <div className="page-heading">
+                    <div>
+                      <h1>
+                        {tab === 'places' ? (
+                          <>
+                            Quán xá <small>({filtered.length})</small>
+                          </>
+                        ) : tab === 'map' ? (
+                          'Bản đồ'
+                        ) : (
+                          'Thống kê'
+                        )}
+                      </h1>
+                      <p>
+                        {tab === 'places'
+                          ? 'Trải nghiệm của riêng bạn'
+                          : tab === 'map'
+                            ? 'Ghim đúng quán, tìm đúng nơi'
+                            : 'Nhìn lại gu ăn uống và chi tiêu'}
+                      </p>
+                    </div>
+                    <button className="button" onClick={() => setSpin(true)}>
+                      <Shuffle size={16} />
+                      Ăn gì?
+                    </button>
+                  </div>
+                )}
+                {!isForm && (
                   <FilterBar
+                    key={theme}
                     items={reviews}
                     filters={filters}
                     onChange={setFilters}
@@ -511,94 +557,105 @@ export default function App() {
                   }
                 >
                   {tab === 'places' && (
-                    <>
-                      <div className="split list-heading">
-                        <h1>
-                          Quán xá <small>({filtered.length})</small>
-                        </h1>
-                        <label className="sort-field">
-                          <span className="sr-only">Sắp xếp quán</span>
-                          <select
-                            aria-label="Sắp xếp quán"
-                            value={sort}
-                            onChange={(e) => {
-                              setSort(e.target.value);
-                              if (e.target.value === 'distance' && !position) void locate();
-                            }}
-                          >
-                            <option value="score">Điểm cao trước</option>
-                            <option value="taste">Ngon nhất trước</option>
-                            <option value="price">Giá thấp trước</option>
-                            <option value="recent">Mới cập nhật</option>
-                            <option value="distance">Gần GPS nhất</option>
-                          </select>
-                        </label>
-                      </div>
-                      {undo && (
-                        <div className="notice split">
-                          <span>Đã xóa {undo.name}.</span>
-                          <button
-                            className="text-button"
-                            disabled={store.busy}
-                            onClick={() => void restoreDeleted()}
-                          >
-                            Hoàn tác xóa quán
-                          </button>
+                    <div className="workspace-view">
+                      <div className="places-column stack">
+                        <div className="split list-heading">
+                          <label className="sort-field">
+                            <span className="sr-only">Sắp xếp quán</span>
+                            <select
+                              aria-label="Sắp xếp quán"
+                              value={sort}
+                              onChange={(e) => {
+                                setSort(e.target.value);
+                                if (e.target.value === 'distance' && !position) void locate();
+                              }}
+                            >
+                              <option value="score">Điểm cao trước</option>
+                              <option value="taste">Ngon nhất trước</option>
+                              <option value="price">Giá thấp trước</option>
+                              <option value="recent">Mới cập nhật</option>
+                              <option value="distance">Gần GPS nhất</option>
+                            </select>
+                          </label>
+                          <span className="list-count">{filtered.length} quán</span>
                         </div>
-                      )}
-                      {!personal.length ? (
-                        <section className="panel empty stack">
-                          <Coffee size={40} />
-                          <h2>Nhớ quán ngon, chọn dễ hơn</h2>
-                          <p>
-                            Chấm trải nghiệm thật đầu tiên của bạn. Điểm, giá và những lần quay lại
-                            sẽ giúp chọn quán lần sau.
-                          </p>
-                          <button className="button" onClick={() => add()}>
-                            <Plus size={18} />
-                            Chấm quán đầu tiên
-                          </button>
-                          <button className="text-button" onClick={() => setDemo(true)}>
-                            Xem cách hoạt động với quán minh họa
-                          </button>
-                        </section>
-                      ) : !sorted.length ? (
-                        <section className="panel empty stack">
-                          <h2>Chưa có quán khớp điều kiện</h2>
-                          <p>{summary}</p>
-                          <button
-                            className="button secondary"
-                            onClick={() => setFilters({ ...DEFAULT_FILTERS })}
-                          >
-                            Xóa bộ lọc
-                          </button>
-                        </section>
-                      ) : (
-                        sorted.map((item, index) => (
-                          <ReviewCard
-                            key={item.id}
-                            item={item}
-                            index={index}
-                            now={now}
-                            position={position}
-                            selected={item.id === selected}
-                            onEdit={() => edit(item)}
-                            onDelete={() => setDeleteItem(item)}
-                            onVisit={() => setVisitId(item.id)}
-                            onDirections={() => directions(item)}
-                            onMap={() => {
-                              setSelected(item.id);
-                              navigate('map');
-                            }}
-                          />
-                        ))
-                      )}
-                      {!!demos.length && (
-                        <button className="text-button" onClick={() => setDemo(true)}>
-                          Xem {demos.length} quán minh họa cũ · không dùng để gợi ý
-                        </button>
-                      )}
-                    </>
+                        {undo && (
+                          <div className="notice split">
+                            <span>Đã xóa {undo.name}.</span>
+                            <button
+                              className="text-button"
+                              disabled={store.busy}
+                              onClick={() => void restoreDeleted()}
+                            >
+                              Hoàn tác xóa quán
+                            </button>
+                          </div>
+                        )}
+                        {!personal.length ? (
+                          <section className="panel empty stack">
+                            <Coffee size={40} />
+                            <h2>Nhớ quán ngon, chọn dễ hơn</h2>
+                            <p>
+                              Chấm trải nghiệm thật đầu tiên của bạn. Điểm, giá và những lần quay
+                              lại sẽ giúp chọn quán lần sau.
+                            </p>
+                            <button className="button" onClick={() => add()}>
+                              <Plus size={18} />
+                              Chấm quán đầu tiên
+                            </button>
+                            <button className="text-button" onClick={() => setDemo(true)}>
+                              Xem cách hoạt động với quán minh họa
+                            </button>
+                          </section>
+                        ) : !sorted.length ? (
+                          <section className="panel empty stack">
+                            <h2>Chưa có quán khớp điều kiện</h2>
+                            <p>{summary}</p>
+                            <button
+                              className="button secondary"
+                              onClick={() => setFilters({ ...DEFAULT_FILTERS })}
+                            >
+                              Xóa bộ lọc
+                            </button>
+                          </section>
+                        ) : (
+                          sorted.map((item, index) => (
+                            <ReviewCard
+                              key={item.id}
+                              item={item}
+                              index={index}
+                              now={now}
+                              position={position}
+                              selected={item.id === selected}
+                              onInspect={() => setSelected(item.id)}
+                              onEdit={() => edit(item)}
+                              onDelete={() => setDeleteItem(item)}
+                              onVisit={() => setVisitId(item.id)}
+                              onDirections={() => directions(item)}
+                              onMap={() => {
+                                setSelected(item.id);
+                                navigate('map');
+                              }}
+                            />
+                          ))
+                        )}
+                        <HistoricalPlaces items={demos} onOpen={() => setReconciliation(true)} />
+                      </div>
+                      <ReviewInspector
+                        item={inspector}
+                        now={now}
+                        onEdit={() => inspector && edit(inspector)}
+                        onVisit={() => inspector && setVisitId(inspector.id)}
+                        onDelete={() => inspector && setDeleteItem(inspector)}
+                        onDirections={() => inspector && directions(inspector)}
+                        onMap={() => {
+                          if (inspector) {
+                            setSelected(inspector.id);
+                            navigate('map');
+                          }
+                        }}
+                      />
+                    </div>
                   )}
                   {tab === 'map' && (
                     <PlaceMap
@@ -624,7 +681,14 @@ export default function App() {
                       isTyping={typing}
                       existing={reviews}
                       onSave={saveReview}
-                      onCancel={() => setLeaveTo('places')}
+                      onDirtyChange={setDirty}
+                      onCancel={() => {
+                        if (dirty) setLeaveTo('places');
+                        else {
+                          setDraft(null);
+                          navigate('places');
+                        }
+                      }}
                     />
                   )}
                   {tab === 'insights' && (
@@ -653,19 +717,47 @@ export default function App() {
             </footer>
           </div>
         </main>
-        {doc && !(isForm && typing) && (
-          <nav className="bottom-dock" aria-label="Điều hướng chính">
-            {tabs.map(({ id, label, icon: Icon }) => (
-              <button
-                key={id}
-                aria-current={tab === id ? 'page' : undefined}
-                onClick={() => selectTab(id)}
-              >
-                <Icon size={19} />
-                <span>{label}</span>
-              </button>
-            ))}
-          </nav>
+        {doc && !(isForm && typing) && <AppNavigation value={tab} onChange={selectTab} />}
+        {reconciliation && doc && (
+          <PlaceReconciliation
+            items={reviews}
+            busy={store.busy}
+            onClose={() => setReconciliation(false)}
+            onEdit={(r) => {
+              setReconciliation(false);
+              edit(r);
+            }}
+            onConfirm={async (item) => {
+              const ok = await store.update(
+                (d) => ({
+                  ...d,
+                  reviews: d.reviews.map((r) =>
+                    r.id === item.id
+                      ? {
+                          ...r,
+                          ...THANH_HUONG_CANDIDATE,
+                          name: r.name,
+                          locationStatus: 'confirmed' as const,
+                          locationSource: 'research' as const,
+                          updatedAt: new Date().toISOString(),
+                          placeResolution: {
+                            ...r.placeResolution!,
+                            status: 'verified' as const,
+                            checkedAt: new Date().toISOString(),
+                          },
+                        }
+                      : r,
+                  ),
+                }),
+                'Xác nhận hồ sơ Maps Thanh Hương',
+              );
+              if (ok)
+                setMessage(
+                  'Đã đối chiếu địa điểm. Hãy chấm lại theo trải nghiệm của bạn trước khi dùng để gợi ý.',
+                );
+              return ok;
+            }}
+          />
         )}
         {message && (
           <div className="toast" role="status">
@@ -693,6 +785,7 @@ export default function App() {
                 onClick={() => {
                   const target = leaveTo;
                   setDraft(null);
+                  setDirty(false);
                   setLeaveTo(null);
                   navigate(target);
                 }}

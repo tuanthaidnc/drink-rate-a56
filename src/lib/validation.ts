@@ -59,6 +59,16 @@ function optionalText(v: unknown, label: string, max: number) {
 export function validateSettings(input: unknown): Settings {
   const x = object(input ?? {}, 'Cài đặt');
   return {
+    ...(x.placeCorrectionsVersion !== undefined
+      ? {
+          placeCorrectionsVersion: numeric(
+            x.placeCorrectionsVersion,
+            'Phiên bản địa điểm',
+            1,
+            1000,
+          ),
+        }
+      : {}),
     ...(x.monthlyBudgetK !== undefined
       ? { monthlyBudgetK: numeric(x.monthlyBudgetK, 'Ngân sách', 1, 10_000_000) }
       : {}),
@@ -190,7 +200,11 @@ export function validateReview(
         ? legacy
           ? 'legacy'
           : undefined
-        : choice(x.locationSource, ['manual', 'gps', 'legacy'] as const, 'Nguồn vị trí'),
+        : choice(
+            x.locationSource,
+            ['manual', 'gps', 'legacy', 'research'] as const,
+            'Nguồn vị trí',
+          ),
     accuracyM:
       x.accuracyM === undefined ? undefined : numeric(x.accuracyM, 'Độ chính xác GPS', 0, 100_000),
     visitLog,
@@ -230,6 +244,22 @@ export function validateReview(
       from,
       to,
       checkedAt: date(h.checkedAt, 'Ngày kiểm tra giờ mở cửa', now),
+    };
+  }
+  if (x.placeResolution !== undefined) {
+    const p = object(x.placeResolution, 'Đối chiếu địa điểm');
+    const source = text(p.sourceUrl, 'Nguồn địa điểm', 2000, true);
+    let valid = false;
+    try {
+      valid = new URL(source).protocol === 'https:';
+    } catch {}
+    if (!valid) throw new DataError('Nguồn địa điểm cần là liên kết HTTPS.');
+    record.placeResolution = {
+      status: choice(p.status, ['verified', 'candidate'] as const, 'Trạng thái đối chiếu'),
+      officialName: text(p.officialName, 'Tên trong hồ sơ', 200, true),
+      sourceUrl: source,
+      checkedAt: date(p.checkedAt, 'Ngày đối chiếu', now),
+      originalAddress: optionalText(p.originalAddress, 'Địa chỉ bản cũ', 800),
     };
   }
   record.totalScore = scoreReview(record);

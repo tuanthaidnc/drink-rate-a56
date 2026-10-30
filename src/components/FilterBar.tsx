@@ -1,3 +1,4 @@
+import * as ToggleGroup from '@animate-ui/react/primitives/radix-ui/toggle-group';
 import { useState } from 'react';
 import { Search, SlidersHorizontal, X, LocateFixed } from 'lucide-react';
 import { Dialog } from './Dialog.tsx';
@@ -49,7 +50,16 @@ export default function FilterBar({
   return (
     <>
       <div className="filters-header stack">
-        <div className="category-tabs" role="group" aria-label="Lọc loại quán">
+        <ToggleGroup.Root
+          type="single"
+          className="category-tabs"
+          aria-label="Lọc loại quán"
+          value={filters.category}
+          onValueChange={(value) => {
+            if (value)
+              onChange({ ...filters, category: value as Filters['category'], mode: 'ALL' });
+          }}
+        >
           {(
             [
               ['ALL', 'Tất cả'],
@@ -57,18 +67,14 @@ export default function FilterBar({
               ['food', 'Quán ăn'],
             ] as const
           ).map(([key, label]) => (
-            <button
-              key={key}
-              aria-pressed={filters.category === key}
-              onClick={() => onChange({ ...filters, category: key, mode: 'ALL' })}
-            >
+            <ToggleGroup.Item key={key} value={key}>
               {label}{' '}
               <small>
                 ({key === 'ALL' ? real.length : real.filter((r) => r.category === key).length})
               </small>
-            </button>
+            </ToggleGroup.Item>
           ))}
-        </div>
+        </ToggleGroup.Root>
         <div className="search-row">
           <label className="search-field">
             <Search size={17} />
@@ -94,13 +100,15 @@ export default function FilterBar({
             <span>Bộ lọc</span>
           </button>
         </div>
-        <button
-          className="scope-summary"
-          onClick={() => setOpen(true)}
-          aria-label={`Chỉnh bộ lọc: ${describeFilters(filters)}`}
-        >
-          {describeFilters(filters)}
-        </button>
+        {JSON.stringify(filters) !== JSON.stringify(DEFAULT_FILTERS) && (
+          <button
+            className="scope-summary"
+            onClick={() => setOpen(true)}
+            aria-label={`Chỉnh bộ lọc: ${describeFilters(filters)}`}
+          >
+            {describeFilters(filters)}
+          </button>
+        )}
       </div>
       {open && (
         <Dialog title="Chọn quán theo nhu cầu" onClose={() => setOpen(false)}>

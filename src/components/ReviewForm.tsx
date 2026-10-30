@@ -1,5 +1,12 @@
-import { lazy, Suspense, useMemo, useState } from 'react';
-import { Check, MapPin, Camera, X } from 'lucide-react';
+import { lazy, Suspense, useEffect, useId, useMemo, useState } from 'react';
+import { Button } from './ui/button.tsx';
+import { Input } from './ui/input.tsx';
+import { Textarea } from './ui/textarea.tsx';
+import { Field, FieldLabel, FieldGroup } from './ui/field.tsx';
+import * as ToggleGroup from '@animate-ui/react/primitives/radix-ui/toggle-group';
+import * as Slider from '@animate-ui/react/primitives/radix-ui/slider';
+import { reviewDraftSignature } from '../lib/reviewDraft.ts';
+import { Check, MapPin, Camera, X, Coffee, Utensils } from 'lucide-react';
 import type { ReviewItem, PhotoData, DrinkMode, FoodVenueType } from '../lib/models.ts';
 import { hasConfirmedLocation } from '../lib/models.ts';
 import { validateReview } from '../lib/validation.ts';
@@ -35,7 +42,7 @@ function ScoreSlider({
   value: number;
   onChange: (value: number) => void;
 }) {
-  const id = label.replace(/\s+/g, '-');
+  const id = useId();
   return (
     <label className="score-field" htmlFor={id}>
       <span className="split">
@@ -44,17 +51,25 @@ function ScoreSlider({
         </span>
         <output className="mono">{value.toFixed(1)}</output>
       </span>
-      <input
-        className="precision-slider"
-        id={id}
-        type="range"
-        min="1"
-        max="10"
-        step="0.5"
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        aria-valuetext={`${value} trên 10`}
-      />
+      <Slider.Root
+        className="rating-slider"
+        min={1}
+        max={10}
+        step={0.5}
+        value={[value]}
+        onValueChange={(values) => onChange(values[0])}
+        aria-label={label}
+      >
+        <Slider.Track className="rating-slider-track">
+          <Slider.Range className="rating-slider-range" />
+        </Slider.Track>
+        <Slider.Thumb
+          id={id}
+          className="rating-slider-thumb"
+          aria-label={label}
+          aria-valuetext={`${value} trên 10`}
+        />
+      </Slider.Root>
     </label>
   );
 }
@@ -67,6 +82,7 @@ export default function ReviewForm({
   existing,
   onSave,
   onCancel,
+  onDirtyChange,
 }: {
   initial: ReviewItem;
   isEdit: boolean;
@@ -81,28 +97,49 @@ export default function ReviewForm({
     expectedUpdatedAt: string,
   ) => Promise<boolean>;
   onCancel: () => void;
+  onDirtyChange: (dirty: boolean) => void;
 }) {
   const [draft, setDraft] = useState<ReviewItem>(() => structuredClone(initial));
   const [price, setPrice] = useState(String(initial.priceK));
-  const [reviewDate, setReviewDate] = useState(
-    dateInput(initial.reviewedAt ?? new Date().toISOString()),
-  );
+  const [reviewDate, setReviewDate] = useState(dateInput(initial.reviewedAt ?? initial.createdAt));
   const [error, setError] = useState('');
   const [location, setLocation] = useState(false);
   const [pinPicker, setPinPicker] = useState(false);
   const [photos, setPhotos] = useState<PhotoData[]>([]);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [firstVisit, setFirstVisit] = useState(false);
+  const baseline = useMemo(
+    () =>
+      reviewDraftSignature(
+        initial,
+        String(initial.priceK),
+        dateInput(initial.reviewedAt ?? initial.createdAt),
+      ),
+    [initial],
+  );
+  const signature = reviewDraftSignature(draft, price, reviewDate, firstVisit);
+  const dirty =
+    signature !== baseline || (!isEdit && !initial.isDemo && hasConfirmedLocation(initial));
+  useEffect(() => {
+    onDirtyChange(dirty);
+  }, [dirty, onDirtyChange]);
   const change = <K extends keyof ReviewItem>(key: K, value: ReviewItem[K]) =>
-    setDraft((r) => ({
-      ...r,
-      [key]: value,
-      ...(['city', 'ward', 'street', 'address'].includes(key) &&
-      r[key] !== value &&
-      r.locationStatus === 'confirmed'
-        ? { locationStatus: 'approximate' as const }
-        : {}),
-    }));
+    setDraft((r) => {
+      const next = { ...r, [key]: value };
+      if (['city', 'ward', 'street', 'address'].includes(key) && r[key] !== value) {
+        next.placeResolution = undefined;
+        if (next.locationStatus === 'confirmed') next.locationStatus = 'approximate';
+        const restored = (['city', 'ward', 'street', 'address', 'lat', 'lng'] as const).every(
+          (field) => (next[field] ?? '') === (initial[field] ?? ''),
+        );
+        if (restored) {
+          next.placeResolution = initial.placeResolution;
+          next.locationStatus = initial.locationStatus;
+          next.locationSource = initial.locationSource;
+        }
+      }
+      return next;
+    });
   const validPrice = Number.isFinite(Number(price)) && Number(price) >= 1 && Number(price) <= 2000;
   const score = useMemo(
     () => (validPrice ? scoreReview({ ...draft, priceK: Number(price) }) : null),
@@ -171,38 +208,34 @@ export default function ReviewForm({
         void submit();
       }}
     >
-      {!isTyping && (
-        <div className="live-score theme-surface-elevated">
-          <div className="split">
-            <div className="score-preview">
-              <CategoryScoreBadge category={draft.category} score={score ?? 0} size="sm" />
-              <div>
-                <strong className="score">
-                  {score?.toFixed(2) ?? '—'}
-                  <small>/10</small>
-                </strong>
-                {score !== null && <StarRatingBadge score10={score} />}
-                <p className="small">{tier?.verdict ?? 'Nhập mức giá hợp lệ để tính điểm'}</p>
-              </div>
-            </div>
-            <button
-              className="button"
-              type="button"
-              disabled={busy || photoBusy}
-              onClick={() => void submit()}
-            >
-              <Check size={17} />
-              {busy ? 'Đang lưu…' : isEdit ? 'Cập nhật' : 'Lưu quán'}
-            </button>
-          </div>
-        </div>
-      )}
-      <div className="split">
-        <h2>{isEdit ? 'Cập nhật trải nghiệm' : 'Chấm điểm quán'}</h2>
+      <div className="split form-title">
+        <h1>{isEdit ? 'Cập nhật trải nghiệm' : 'Chấm điểm quán'}</h1>
         <button type="button" className="text-button" onClick={onCancel}>
           Hủy
         </button>
       </div>
+      {!isTyping && (
+        <div className="live-score theme-surface-elevated">
+          <div className="split">
+            <div className="score-preview">
+              <div>
+                <span className="result-label">Kết quả dự kiến</span>
+                <strong className="score">
+                  {score?.toFixed(2) ?? '—'}
+                  <small>/10</small>
+                </strong>
+
+                <p className="small">{tier?.verdict ?? 'Nhập mức giá hợp lệ để tính điểm'}</p>
+              </div>
+            </div>
+            <Button type="button" disabled={busy || photoBusy} onClick={() => void submit()}>
+              <Check size={17} />
+              {busy ? 'Đang lưu…' : isEdit ? 'Cập nhật' : 'Lưu quán'}
+            </Button>
+          </div>
+        </div>
+      )}
+
       {initial.isDemo && (
         <p className="notice">
           Đây là quán minh họa. Khi lưu, bạn xác nhận các điểm mới là trải nghiệm của mình.
@@ -213,125 +246,146 @@ export default function ReviewForm({
           {error}
         </p>
       )}
-      <section className="panel">
-        <h3>Phân loại trải nghiệm</h3>
-        <div className="segmented" role="group" aria-label="Loại quán">
-          {(['drink', 'food'] as const).map((category) => (
-            <button
-              key={category}
-              type="button"
-              aria-pressed={draft.category === category}
-              onClick={() => {
+
+      <section className="panel stack">
+        <h3 className="form-section-heading">Thông tin quán</h3>
+        <FieldGroup>
+          <Field className="field" data-invalid={!!error && !draft.name.trim()}>
+            <FieldLabel htmlFor="shop-name-input">
+              Tên quán <small>· bắt buộc</small>
+            </FieldLabel>
+            <Input
+              id="shop-name-input"
+              value={draft.name}
+              onChange={(e) => change('name', e.target.value)}
+              maxLength={160}
+              required
+              aria-invalid={!!error && !draft.name.trim()}
+              placeholder={isFood ? 'Tên quán ăn bạn vừa thử' : 'Ví dụ: Nốt Tea'}
+            />
+          </Field>
+          <div className="stack">
+            <span className="form-help">Loại quán</span>
+            <ToggleGroup.Root
+              key={`category-${theme}`}
+              type="single"
+              className="segmented"
+              aria-label="Loại quán"
+              value={draft.category}
+              onValueChange={(category) => {
+                if (category !== 'drink' && category !== 'food') return;
                 change('category', category);
                 if (!isEdit) setPrice(category === 'food' ? '30' : '31');
               }}
             >
-              {category === 'drink' ? '🥤 Quán nước' : '🍜 Quán ăn'}
-            </button>
-          ))}
-        </div>
-      </section>
-      <section className="panel stack">
-        <label className="field">
-          <span>
-            Tên quán <small>· bắt buộc</small>
-          </span>
-          <input
-            id="shop-name-input"
-            value={draft.name}
-            onChange={(e) => change('name', e.target.value)}
-            maxLength={160}
-            required
-            placeholder={isFood ? 'Ví dụ: quán bánh canh bạn vừa ăn' : 'Ví dụ: Nốt'}
-          />
-        </label>
-        <div>
-          <div className="split">
-            <h3>Địa điểm</h3>
-            <button type="button" className="text-button" onClick={() => setLocation(true)}>
-              Chọn từ danh mục
-            </button>
+              {(['drink', 'food'] as const).map((category) => (
+                <ToggleGroup.Item key={category} value={category}>
+                  {category === 'drink' ? <Coffee /> : <Utensils />}
+                  {category === 'drink' ? 'Quán nước' : 'Quán ăn'}
+                </ToggleGroup.Item>
+              ))}
+            </ToggleGroup.Root>
           </div>
-          <button type="button" className="location-summary" onClick={() => setLocation(true)}>
-            <MapPin size={18} />
-            <span>
-              {draft.city || 'Chọn tỉnh/thành'}
-              <small>{draft.ward || 'Chọn phường/xã'}</small>
-            </span>
-          </button>
-        </div>
-        <label className="field">
-          <span>Đường / phố / kiệt</span>
-          <input
-            list="saved-streets"
-            value={draft.street}
-            onChange={(e) => change('street', e.target.value)}
-            maxLength={200}
-            placeholder="Chọn đường đã lưu hoặc nhập đường mới"
-          />
-          <datalist id="saved-streets">
-            {streetOptions.map((s) => (
-              <option key={s} value={s} />
-            ))}
-          </datalist>
-        </label>
-        <label className="field">
-          <span>
-            Số nhà / địa chỉ cụ thể <small>· không bắt buộc</small>
-          </span>
-          <input
-            value={draft.address ?? ''}
-            onChange={(e) => change('address', e.target.value)}
-            maxLength={300}
-            placeholder="Ví dụ: 31, kiệt 2…"
-          />
-        </label>
-        <button
-          type="button"
-          className="button secondary w-full"
-          onClick={() => setPinPicker(true)}
-        >
-          <MapPin size={18} />
-          {hasConfirmedLocation(draft)
-            ? 'Kiểm tra / chỉnh ghim đã xác nhận'
-            : 'Ghim vị trí chính xác trên bản đồ'}
-        </button>
-        <p className="small muted">
-          {hasConfirmedLocation(draft)
-            ? `Ghim đã xác nhận: ${draft.lat!.toFixed(5)}, ${draft.lng!.toFixed(5)}.`
-            : draft.lat !== null
-              ? 'Tọa độ cũ chỉ là ước tính; chưa dùng để lọc gần tôi.'
-              : 'Chưa có ghim. Bạn vẫn có thể lưu đánh giá và ghim sau.'}
-        </p>
-      </section>
-      <section className="panel">
-        <h3>{isFood ? 'Hình thức quán ăn' : 'Hình thức thưởng thức'}</h3>
-        <div className="segmented" role="group" aria-label="Hình thức">
-          {(isFood
-            ? [
-                ['streetfood', 'Vỉa hè / Bình dân', 'Ngon 40%'],
-                ['restaurant', 'Quán / Nhà hàng', 'Không gian 15%'],
-              ]
-            : [
-                ['takeaway', 'Take-away', 'Vị 50%'],
-                ['dinein', 'Ngồi lại', 'Không gian 20%'],
-              ]
-          ).map(([key, label, hint]) => (
+        </FieldGroup>
+
+        <details className="form-address">
+          <summary>
+            Địa điểm ·{' '}
+            {[draft.address, draft.street, draft.ward, draft.city].filter(Boolean).join(', ')}
+          </summary>
+          <div className="stack">
+            {' '}
+            <div>
+              <div className="split">
+                <h3>Địa điểm</h3>
+                <button type="button" className="text-button" onClick={() => setLocation(true)}>
+                  Chọn từ danh mục
+                </button>
+              </div>
+              <button type="button" className="location-summary" onClick={() => setLocation(true)}>
+                <MapPin size={18} />
+                <span>
+                  {draft.city || 'Chọn tỉnh/thành'}
+                  <small>{draft.ward || 'Chọn phường/xã'}</small>
+                </span>
+              </button>
+            </div>
+            <label className="field">
+              <span>Đường / phố / kiệt</span>
+              <Input
+                list="saved-streets"
+                value={draft.street}
+                onChange={(e) => change('street', e.target.value)}
+                maxLength={200}
+                placeholder="Chọn đường đã lưu hoặc nhập đường mới"
+              />
+              <datalist id="saved-streets">
+                {streetOptions.map((s) => (
+                  <option key={s} value={s} />
+                ))}
+              </datalist>
+            </label>
+            <label className="field">
+              <span>
+                Số nhà / địa chỉ cụ thể <small>· không bắt buộc</small>
+              </span>
+              <Input
+                value={draft.address ?? ''}
+                onChange={(e) => change('address', e.target.value)}
+                maxLength={300}
+                placeholder="Ví dụ: 31, kiệt 2…"
+              />
+            </label>
             <button
               type="button"
-              key={key}
-              aria-pressed={(isFood ? draft.foodType : draft.mode) === key}
-              onClick={() =>
-                isFood ? change('foodType', key as FoodVenueType) : change('mode', key as DrinkMode)
-              }
+              className="button secondary w-full"
+              onClick={() => setPinPicker(true)}
             >
-              {label}
-              <small>{hint}</small>
+              <MapPin size={18} />
+              {hasConfirmedLocation(draft)
+                ? 'Kiểm tra / chỉnh ghim đã xác nhận'
+                : 'Ghim vị trí chính xác trên bản đồ'}
             </button>
-          ))}
-        </div>
+            <p className="small muted">
+              {hasConfirmedLocation(draft)
+                ? `Ghim đã xác nhận: ${draft.lat!.toFixed(5)}, ${draft.lng!.toFixed(5)}.`
+                : draft.lat !== null
+                  ? 'Tọa độ cũ chỉ là ước tính; chưa dùng để lọc gần tôi.'
+                  : 'Chưa có ghim. Bạn vẫn có thể lưu đánh giá và ghim sau.'}
+            </p>
+          </div>
+        </details>
       </section>
       <section className="panel stack">
+        <h3 className="form-section-heading">Trải nghiệm</h3>
+        <span className="form-help">{isFood ? 'Hình thức quán ăn' : 'Hình thức thưởng thức'}</span>
+        <ToggleGroup.Root
+          key={`mode-${theme}`}
+          type="single"
+          className="segmented"
+          aria-label="Hình thức"
+          value={isFood ? draft.foodType : draft.mode}
+          onValueChange={(value) => {
+            if (!value) return;
+            if (isFood) change('foodType', value as FoodVenueType);
+            else change('mode', value as DrinkMode);
+          }}
+        >
+          {(isFood
+            ? [
+                ['streetfood', 'Bình dân / Vỉa hè'],
+                ['restaurant', 'Quán / Nhà hàng'],
+              ]
+            : [
+                ['takeaway', 'Mang đi'],
+                ['dinein', 'Ngồi lại'],
+              ]
+          ).map(([value, label]) => (
+            <ToggleGroup.Item key={value} value={value}>
+              {label}
+            </ToggleGroup.Item>
+          ))}
+        </ToggleGroup.Root>
         <ScoreSlider
           label={isFood ? 'Độ ngon món ăn' : 'Hương vị đồ uống'}
           weight={
@@ -353,7 +407,7 @@ export default function ReviewForm({
             </span>
             <strong>{priceScore ? `${priceScore.score.toFixed(1)}đ` : '—'}</strong>
           </span>
-          <input
+          <Input
             id="review-price"
             type="number"
             min="1"
@@ -441,9 +495,10 @@ export default function ReviewForm({
         )}
       </section>
       <section className="panel stack">
+        <h3 className="form-section-heading">Ghi nhớ lần trải nghiệm</h3>
         <label className="field">
           <span>Món nên gọi / món đã thử</span>
-          <input
+          <Input
             value={draft.dish ?? ''}
             maxLength={300}
             onChange={(e) => change('dish', e.target.value)}
@@ -454,7 +509,7 @@ export default function ReviewForm({
           <span>
             Nhóm món <small>· để tìm nhanh sau này</small>
           </span>
-          <input
+          <Input
             value={draft.cuisine ?? ''}
             maxLength={100}
             onChange={(e) => change('cuisine', e.target.value)}
@@ -463,7 +518,7 @@ export default function ReviewForm({
         </label>
         <label className="field">
           <span>Ghi chú trải nghiệm</span>
-          <textarea
+          <Textarea
             rows={3}
             value={draft.note}
             maxLength={5000}
@@ -473,7 +528,7 @@ export default function ReviewForm({
         </label>
         <label className="field">
           <span>Ngày đánh giá</span>
-          <input
+          <Input
             type="date"
             max={dateInput(new Date().toISOString())}
             value={reviewDate}
@@ -494,7 +549,7 @@ export default function ReviewForm({
       </section>
       <section className="panel stack">
         <div className="split">
-          <h3>
+          <h3 className="form-section-heading">
             Ảnh thực tế <small>· tối đa 3</small>
           </h3>
           <label className="button secondary file-button">
@@ -608,7 +663,7 @@ export default function ReviewForm({
               <div className="two-columns">
                 <label className="field">
                   <span>Giờ mở</span>
-                  <input
+                  <Input
                     type="time"
                     value={draft.openingHours.from}
                     onChange={(e) =>
@@ -622,7 +677,7 @@ export default function ReviewForm({
                 </label>
                 <label className="field">
                   <span>Giờ đóng</span>
-                  <input
+                  <Input
                     type="time"
                     value={draft.openingHours.to}
                     onChange={(e) =>
@@ -648,7 +703,7 @@ export default function ReviewForm({
           {error}
         </p>
       )}
-      <button type="submit" className="button w-full" disabled={busy || photoBusy}>
+      <Button type="submit" className="w-full" disabled={busy || photoBusy}>
         {busy
           ? 'Đang lưu trên thiết bị…'
           : initial.isDemo
@@ -656,7 +711,7 @@ export default function ReviewForm({
             : isEdit
               ? 'Lưu cập nhật quán'
               : 'Lưu đánh giá & vị trí'}
-      </button>
+      </Button>
       {location && (
         <LocationPicker
           city={draft.city}
@@ -669,6 +724,7 @@ export default function ReviewForm({
                 ...r,
                 ...value,
                 street: changed ? '' : r.street,
+                placeResolution: changed ? undefined : r.placeResolution,
                 locationStatus: changed && r.lat !== null ? 'approximate' : r.locationStatus,
               };
             })
@@ -693,6 +749,7 @@ export default function ReviewForm({
                 accuracyM: p.accuracyM,
                 locationStatus: 'confirmed',
                 locationSource: p.source,
+                placeResolution: undefined,
                 city: p.city ?? r.city,
                 ward: p.ward ?? r.ward,
                 street: p.street ?? r.street,

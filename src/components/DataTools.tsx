@@ -11,6 +11,7 @@ import {
   type Snapshot,
 } from '../lib/storage.ts';
 import { parseBackup, MAX_BACKUP_BYTES } from '../lib/validation.ts';
+import { isRetiredBepTrangSample } from '../lib/placeCorrections.ts';
 export default function DataTools({
   document: doc,
   backups,
@@ -209,6 +210,12 @@ export default function DataTools({
               {pending.media.length} ảnh. Có {pending.reviews.filter((r) => r.isDemo).length} quán
               minh họa được giữ riêng.
             </p>
+            {pending.reviews.some(isRetiredBepTrangSample) && (
+              <p className="notice">
+                Mẫu Bếp Trang chưa có trải nghiệm riêng sẽ được bỏ theo yêu cầu của bạn. Đánh giá,
+                ảnh và lượt ghé cá nhân vẫn được giữ.
+              </p>
+            )}
             <p className="small muted">
               Điểm được tính lại theo công thức đã chốt. Bản dữ liệu trước khi nhập sẽ được lưu dự
               phòng.

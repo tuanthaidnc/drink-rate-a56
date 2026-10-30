@@ -1,6 +1,6 @@
 export const SCHEMA_VERSION = 13 as const;
 export const SCORING_VERSION = '2026-10-v1' as const;
-export const APP_VERSION = '13.0.0';
+export const APP_VERSION = '14.0.0';
 export type PlaceCategory = 'drink' | 'food';
 export type DrinkMode = 'takeaway' | 'dinein';
 export type FoodVenueType = 'streetfood' | 'restaurant';
@@ -47,7 +47,14 @@ export interface ReviewItem {
   lat: number | null;
   lng: number | null;
   locationStatus: LocationStatus;
-  locationSource?: 'manual' | 'gps' | 'legacy';
+  locationSource?: 'manual' | 'gps' | 'legacy' | 'research';
+  placeResolution?: {
+    status: 'verified' | 'candidate';
+    officialName: string;
+    sourceUrl: string;
+    checkedAt: string;
+    originalAddress?: string;
+  };
   accuracyM?: number;
   mode: DrinkMode;
   volumeKey: VolumeKey;
@@ -66,6 +73,7 @@ export interface ReviewItem {
   scoringVersion: string;
 }
 export interface Settings {
+  placeCorrectionsVersion?: number;
   monthlyBudgetK?: number;
   reducedMotion?: boolean;
 }

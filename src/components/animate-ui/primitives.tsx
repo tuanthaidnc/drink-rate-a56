@@ -21,7 +21,7 @@ export type AppTheme = 'dark' | 'light';
  * 1. ANIMATE-UI: ThemeToggler with Circular View Transition API & Status Bar Sync
  * ========================================================================== */
 export function syncStatusBarThemeColor(nextTheme: AppTheme) {
-  const statusColor = nextTheme === 'light' ? '#ffffff' : '#0b111d';
+  const statusColor = nextTheme === 'light' ? '#ffffff' : '#101823';
   document.documentElement.setAttribute('data-theme', nextTheme);
   document.documentElement.style.colorScheme = nextTheme;
 
