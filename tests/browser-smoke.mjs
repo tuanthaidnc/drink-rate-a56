@@ -643,6 +643,13 @@ try {
         0,
         'Reduced motion must suppress click sparks',
       );
+      await p.emulateMedia({ reducedMotion: 'no-preference' });
+      await nav(p, 'Chấm điểm');
+      assert.ok(
+        await p.locator('.spark-stage canvas[aria-hidden="true"]').count(),
+        'Motion must resume when the preference is restored',
+      );
+      await nav(p, 'Quán xá');
       await assertNoOverflow(p);
       assert.deepEqual(errors, []);
       await writeFile(

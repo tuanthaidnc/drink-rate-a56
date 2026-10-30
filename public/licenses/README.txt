@@ -1,5 +1,4 @@
-NỐT UI v14
-NỐT UI v15 additions
+NỐT third-party notices
 
 React Bits: https://github.com/DavidHDev/react-bits
 Copyright (c) 2026 David Haz. MIT + Commons Clause: react-bits.txt

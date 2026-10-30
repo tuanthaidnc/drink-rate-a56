@@ -8,12 +8,14 @@ Sổ trải nghiệm cá nhân để chọn quán hợp gu, giá và vị trí; 
 - Ghi lượt ghé riêng với ngày, món và tiền thực trả. Tiền để trống được hiển thị là chưa biết, không suy từ giá chấm điểm.
 - Tìm/lọc cùng một tập quán trong danh sách, bản đồ, vòng quay và thống kê quán. Chi tiêu chu kỳ được ghi rõ là toàn bộ quán thật.
 - Xuất JSON ở Thống kê. File gồm đánh giá, ảnh, lịch sử điểm, lượt ghé và tùy chọn; giữ một bản ngoài ứng dụng trước khi đổi máy hoặc xóa dữ liệu Chrome.
-- Khi hiện “Sẵn sàng dùng ngoại tuyến”, có thể mở lại các màn hình và lưu dữ liệu không cần mạng. Nền bản đồ, tra địa chỉ và Google Maps cần mạng.
-- Bản cập nhật hiện nút Cập nhật; chỉ cần lưu hoặc hủy nếu đã sửa nội dung. Mở form nhưng chưa sửa, hoặc sửa rồi hoàn tác, có thể đổi tab ngay. Giữ nguyên URL và ứng dụng đã cài để giữ cùng kho dữ liệu.
+- Ứng dụng chuẩn bị các màn hình để mở và lưu dữ liệu không cần mạng; chỉ hiện biểu tượng khi ngoại tuyến hoặc cần thử lại. Nền bản đồ, tra địa chỉ và Google Maps cần mạng.
+- Bản cập nhật hiện biểu tượng ↻; chỉ cần lưu hoặc hủy nếu đã sửa nội dung. Mở form nhưng chưa sửa, hoặc sửa rồi hoàn tác, có thể đổi tab ngay. Giữ nguyên URL và ứng dụng đã cài để giữ cùng kho dữ liệu.
 
-## Bản 14 · thiết kế và đối chiếu địa điểm
+## Bản 15 · kinetic journal
 
-Giao diện dùng hệ thống màu sáng/tối, khoảng cách, chữ và lớp bề mặt thống nhất; điện thoại có điều hướng dưới, máy tính có thanh bên và khung chi tiết. Các thành phần Button, Input, Field, Badge, Separator lấy từ [shadcn/ui](https://github.com/shadcn-ui/ui). Dialog, Slider, ToggleGroup và BottomNavigation dùng trực tiếp [Animate UI](https://github.com/imskyleen/animate-ui), gói `@animate-ui/react`; không chỉ đặt tên thư mục theo thư viện. Xem [DESIGN.md](DESIGN.md) về cấu trúc và lựa chọn thiết kế.
+Nền mực, xanh acid, tím nhạt và điểm số dạng vòng tròn lớn. Điện thoại dùng dock nổi; máy tính dùng rail và khung tiêu chí. Bỏ lời giới thiệu, hướng dẫn thường trực và phiên bản khỏi UI. Giữ dữ liệu, nhãn thao tác và phản hồi lỗi cần thiết.
+
+[React Bits](https://github.com/DavidHDev/react-bits) cung cấp ClickSpark; [Motion Primitives](https://github.com/ibelick/motion-primitives) cung cấp AnimatedNumber và TransitionPanel đã điều chỉnh cho điểm thập phân và khả năng truy cập. [Animate UI](https://github.com/imskyleen/animate-ui) tiếp tục xử lý Dialog, Slider, ToggleGroup và BottomNavigation; các trường nhập/nút dựa trên [shadcn/ui](https://github.com/shadcn-ui/ui). Chuyển màn, thẻ mở rộng, số, vòng điểm, thanh tiêu chí và dock có chuyển động thật. Giảm chuyển động theo hệ thống/ứng dụng vẫn được tôn trọng và cập nhật ngay khi đổi tùy chọn. Xem [DESIGN.md](DESIGN.md) về nguồn, thời gian và cấu trúc.
 
 - Nốt được đối chiếu bằng [liên kết Maps do chủ ứng dụng cung cấp](https://maps.app.goo.gl/TSXSAzECjtmbwCVC9): **Nốt Tea, 38 Phan Thanh, Thanh Khê, Đà Nẵng**, ghim **16.06528, 108.2083**. Chỉ cập nhật địa điểm, giữ điểm cá nhân **6,50** và lịch sử. Ghim GPS/thủ công đã xác nhận được giữ.
 - Bỏ mẫu **Bếp Trang** nguyên trạng theo yêu cầu. Nếu bản ghi có ảnh, lượt ghé, lịch sử điểm hoặc đã là trải nghiệm cá nhân thì giữ lại. Bản thô trước chuyển đổi và bản dự phòng vẫn có thể khôi phục.
@@ -21,7 +23,7 @@ Giao diện dùng hệ thống màu sáng/tối, khoảng cách, chữ và lớp
 
 Đối chiếu chạy tại chỗ khi mở dữ liệu cũ hoặc nhập bản sao cũ; không cần gửi dữ liệu lên máy chủ. Marker chuyển đổi giúp giữ chỉnh sửa địa chỉ về sau. Phiên bản cấu trúc dữ liệu vẫn là 13 để đọc được bản sao v13.
 
-Giấy phép: shadcn/ui MIT; Animate UI **MIT + Commons Clause**, cho phép tích hợp trong ứng dụng nhưng không bán/redistribute bộ thành phần nguyên gốc. Giữ thông báo gốc tại [public/licenses](public/licenses).
+Giấy phép: shadcn/ui và Motion Primitives MIT; Animate UI và React Bits **MIT + Commons Clause**, được tích hợp như một phần của ứng dụng. Giữ thông báo gốc tại [public/licenses](public/licenses).
 
 ## Công thức đã chốt
 

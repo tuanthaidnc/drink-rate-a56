@@ -438,7 +438,7 @@ export default function App() {
     />
   );
   return (
-    <MotionConfig reducedMotion={reduced ? 'always' : 'user'}>
+    <MotionConfig reducedMotion={reduced || systemReduced ? 'always' : 'never'}>
       <ClickSpark
         className="spark-stage"
         sparkColor={['#d7ff3f', '#b8a4ff']}
