@@ -8,7 +8,7 @@ body,
   line-height: 1.6;
 }
 body {
-  touch-action: pan-x pan-y;
+  touch-action: pan-x pan-y pinch-zoom;
 }
 button,
 input,
@@ -94,7 +94,7 @@ a {
 }
 .two-columns {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
   gap: 12px;
   min-width: 0;
 }
@@ -116,6 +116,7 @@ a {
   max-width: 660px;
   margin: auto;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
@@ -509,6 +510,9 @@ fieldset {
   background: var(--bg-header);
   z-index: 15;
   box-shadow: 0 8px 25px #0002;
+}
+.live-score > .split {
+  flex-wrap: wrap;
 }
 .score-preview {
   display: flex;
