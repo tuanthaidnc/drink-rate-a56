@@ -79,6 +79,7 @@ const nav = async (p, label) => {
   const index = ['Quán xá', 'Bản đồ', 'Chấm điểm', 'Thống kê'].indexOf(label);
   await p
     .locator(`.app-scene[data-screen-index="${index}"]:not([aria-hidden="true"])`)
+    .or(p.getByRole('dialog', { name: 'Rời phần đang nhập?', exact: true }))
     .waitFor({ state: 'attached' });
 };
 const closeDialog = (p) => p.keyboard.press('Escape');
