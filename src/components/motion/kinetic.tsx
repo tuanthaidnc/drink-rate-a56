@@ -11,6 +11,7 @@ import {
   AnimatePresence,
   motion,
   useIsPresent,
+  usePresence,
   useSpring,
   useTransform,
   type SpringOptions,
@@ -82,8 +83,11 @@ const Scene = forwardRef<HTMLDivElement, { children: ReactNode; direction: numbe
   { children, direction },
   ref,
 ) {
-  const present = useIsPresent(),
-    quiet = useQuietMotion();
+  const [present, safeToRemove] = usePresence();
+  const quiet = useQuietMotion();
+  useEffect(() => {
+    if (!present && quiet) safeToRemove?.();
+  }, [present, quiet, safeToRemove]);
   return (
     <motion.div
       ref={ref}
@@ -107,20 +111,11 @@ export function TransitionPanel({
   activeIndex: number;
   children: ReactNode[];
 }) {
-  const quiet = useQuietMotion();
   const previous = useRef(activeIndex),
     direction = activeIndex >= previous.current ? 1 : -1;
   useEffect(() => {
     previous.current = activeIndex;
   }, [activeIndex]);
-  if (quiet)
-    return (
-      <div className="screen-stack">
-        <div className="app-scene" data-motion="scene">
-          {children[activeIndex]}
-        </div>
-      </div>
-    );
   return (
     <div className="screen-stack">
       <AnimatePresence initial={false} mode="popLayout">
