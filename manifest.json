@@ -6,8 +6,8 @@
   "start_url": "/drink-rate-a56/",
   "scope": "/drink-rate-a56/",
   "display": "standalone",
-  "background_color": "#0b111a",
-  "theme_color": "#101823",
+  "background_color": "#0b0d0c",
+  "theme_color": "#0b0d0c",
   "orientation": "portrait",
   "icons": [
     {
