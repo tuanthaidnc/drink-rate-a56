@@ -81,8 +81,10 @@ export default function ReviewCard({
       <details className="review-card theme-surface-card" ref={details} data-selected={selected}>
         <summary
           onClick={(e) => {
-            onInspect?.();
-            if (window.matchMedia('(min-width:1100px)').matches) e.preventDefault();
+            if (window.matchMedia('(min-width:1100px)').matches) {
+              e.preventDefault();
+              onInspect?.();
+            }
           }}
         >
           <div className="card-main">

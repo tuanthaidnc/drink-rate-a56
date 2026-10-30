@@ -160,8 +160,8 @@ try {
       await nav(p, 'Chấm điểm');
       await p.getByLabel('Tên quán').fill('Tên tạm');
       await p.getByLabel('Tên quán').fill('');
-      await p.getByRole('slider', { name: 'Hương vị', exact: true }).press('ArrowRight');
-      await p.getByRole('slider', { name: 'Hương vị', exact: true }).press('ArrowLeft');
+      await p.getByRole('slider', { name: 'Hương vị đồ uống', exact: true }).press('ArrowRight');
+      await p.getByRole('slider', { name: 'Hương vị đồ uống', exact: true }).press('ArrowLeft');
       await nav(p, 'Thống kê');
       assert.equal(await p.getByRole('dialog').count(), 0);
       await nav(p, 'Chấm điểm');
