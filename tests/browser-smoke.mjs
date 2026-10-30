@@ -71,11 +71,16 @@ async function setup({
   await page.getByRole('heading', { name: /Quán xá/ }).waitFor();
   return { context, page, errors };
 }
-const nav = (p, label) =>
-  p
+const nav = async (p, label) => {
+  await p
     .getByRole('navigation', { name: 'Điều hướng chính' })
     .getByRole('button', { name: label, exact: true })
     .click();
+  const index = ['Quán xá', 'Bản đồ', 'Chấm điểm', 'Thống kê'].indexOf(label);
+  await p
+    .locator(`.app-scene[data-screen-index="${index}"]:not([aria-hidden="true"])`)
+    .waitFor({ state: 'attached' });
+};
 const closeDialog = (p) => p.keyboard.press('Escape');
 const readDoc = (p) =>
   p.evaluate(
@@ -668,6 +673,139 @@ try {
         ),
       );
       await p.screenshot({ path: resolve(output, '08-kinetic-ui.png') });
+    },
+  );
+  await scenario(
+    'rapid tab changes never retain old screens; average contrast and dial geometry survive every breakpoint',
+    async () => {
+      const fixture = Array.from({ length: 5 }, (_, i) => ({
+        ...INITIAL_REVIEWS[0],
+        id: `layout-${i}`,
+        isDemo: false,
+        name:
+          i === 0
+            ? 'Quán có tên rất dài để kiểm tra bố cục trên điện thoại nhỏ'
+            : `Quán kiểm thử ${i + 1}`,
+        taste: [7, 8, 6, 9, 7.5][i],
+      }));
+      const { page: p, errors } = await setup({
+        legacy: JSON.stringify(fixture),
+        reducedMotion: 'no-preference',
+      });
+      const results = [];
+      for (const width of [320, 360, 393, 412, 768, 1365]) {
+        await p.setViewportSize({ width, height: width > 1100 ? 900 : 852 });
+        const navigation = p.getByRole('navigation', {
+          name: width >= 1100 ? 'Điều hướng máy tính' : 'Điều hướng chính',
+          exact: true,
+        });
+        for (const label of [
+          'Thống kê',
+          'Quán xá',
+          'Bản đồ',
+          'Thống kê',
+          'Quán xá',
+          'Chấm điểm',
+          'Quán xá',
+          'Thống kê',
+        ]) {
+          await navigation.getByRole('button', { name: label, exact: true }).click();
+          await p.waitForTimeout(30);
+          assert.ok(
+            (await p.locator('.app-scene').count()) <= 1,
+            'Never paint two app routes in one frame',
+          );
+        }
+        await p.locator('.app-scene[data-screen-index="3"]:not([aria-hidden="true"])').waitFor();
+        await p.waitForTimeout(500);
+        assert.equal(await p.locator('.app-scene').count(), 1);
+        assert.equal(
+          await p.locator('.app-scene[inert]').count(),
+          0,
+          'Every old screen must unmount',
+        );
+        const value = await p.locator('[data-stat="average"]').innerText();
+        const expected = (await readDoc(p)).reviews.reduce((sum, r) => sum + r.totalScore, 0) / 5;
+        assert.equal(value, expected.toFixed(1));
+        const contrast = await p.locator('[data-stat="average"]').evaluate((element) => {
+          const luminance = (color) => {
+            const rgb = color
+              .match(/[\d.]+/g)
+              .slice(0, 3)
+              .map(Number)
+              .map((v) => {
+                const n = v / 255;
+                return n <= 0.04045 ? n / 12.92 : ((n + 0.055) / 1.055) ** 2.4;
+              });
+            return rgb[0] * 0.2126 + rgb[1] * 0.7152 + rgb[2] * 0.0722;
+          };
+          const fg = luminance(getComputedStyle(element).color),
+            bg = luminance(getComputedStyle(element.parentElement).backgroundColor);
+          return (Math.max(fg, bg) + 0.05) / (Math.min(fg, bg) + 0.05);
+        });
+        assert.ok(contrast >= 4.5, `Average score contrast ${contrast}`);
+        await assertNoOverflow(p);
+        if ([393, 1365].includes(width))
+          await p.screenshot({ path: resolve(output, `09-stats-${width}.png`) });
+        await navigation.getByRole('button', { name: 'Quán xá', exact: true }).click();
+        await p.locator('.app-scene[data-screen-index="0"]:not([aria-hidden="true"])').waitFor();
+        await p.waitForTimeout(550);
+        const circles = await p.locator('.score-dial').evaluateAll((elements) =>
+          elements
+            .filter((e) => e.getBoundingClientRect().width > 0)
+            .map((e) => {
+              const r = e.getBoundingClientRect(),
+                matrix = e.querySelector('svg').getScreenCTM();
+              return {
+                width: r.width,
+                height: r.height,
+                scaleX: Math.hypot(matrix.a, matrix.b),
+                scaleY: Math.hypot(matrix.c, matrix.d),
+              };
+            }),
+        );
+        for (const circle of circles) {
+          assert.ok(Math.abs(circle.width - circle.height) < 1, JSON.stringify(circle));
+          assert.ok(
+            Math.abs(circle.scaleX - circle.scaleY) < 0.01,
+            'SVG circle may not stretch into an ellipse',
+          );
+        }
+        await navigation.getByRole('button', { name: 'Chấm điểm', exact: true }).click();
+        await p.getByLabel('Tên quán', { exact: true }).waitFor();
+        await p.waitForTimeout(350);
+        const formCircle = await p.locator('.dial-mini').boundingBox();
+        assert.ok(Math.abs(formCircle.width - formCircle.height) < 1);
+        await assertNoOverflow(p);
+        if (width === 393) await p.screenshot({ path: resolve(output, '10-form-393.png') });
+        await navigation.getByRole('button', { name: 'Quán xá', exact: true }).click();
+        await p.locator('.app-scene[data-screen-index="0"]:not([aria-hidden="true"])').waitFor();
+        results.push({
+          width,
+          average: value,
+          contrast,
+          circles: circles.length,
+          routes: 1,
+          formCircle,
+        });
+      }
+      await p.setViewportSize({ width: 393, height: 852 });
+      await p.getByRole('button', { name: 'Đổi sang giao diện sáng', exact: true }).click();
+      await nav(p, 'Thống kê');
+      assert.equal(
+        await p
+          .locator('.stat-average')
+          .evaluate(
+            (e) => getComputedStyle(e).color === getComputedStyle(e.querySelector('strong')).color,
+          ),
+        true,
+      );
+      await p.screenshot({ path: resolve(output, '11-stats-light-393.png') });
+      assert.deepEqual(errors, []);
+      await writeFile(
+        resolve(output, 'layout-regression.json'),
+        JSON.stringify({ pass: true, results }, null, 2),
+      );
     },
   );
 } finally {

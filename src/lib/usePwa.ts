@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { isNativeApp } from './platform.ts';
 export function usePwa() {
   const [online, setOnline] = useState(navigator.onLine),
-    [ready, setReady] = useState(false),
+    [ready, setReady] = useState(isNativeApp),
     [waiting, setWaiting] = useState(false),
     [error, setError] = useState('');
   const registration = useRef<ServiceWorkerRegistration | null>(null),
     applying = useRef(false),
     alive = useRef(true);
   const check = useCallback(async () => {
-    if (import.meta.env.DEV) return;
+    if (import.meta.env.DEV || isNativeApp) return;
     if (!('serviceWorker' in navigator)) {
       setError('Trình duyệt chưa hỗ trợ chuẩn bị ngoại tuyến.');
       return;

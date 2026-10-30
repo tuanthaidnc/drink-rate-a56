@@ -1,9 +1,19 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { ReviewDocument, ReviewItem } from '../lib/models.ts';
 import { formatDate } from '../lib/models.ts';
 import { getCycleRange, getMonthCycleInfo } from '../lib/frequency.ts';
 import { getDrinkPriceScore, getFoodPriceScore, VOLUME_OPTIONS } from '../lib/scoring.ts';
 function Scatter({ items }: { items: ReviewItem[] }) {
+  const svg = useRef<SVGSVGElement>(null);
+  const [width, setWidth] = useState(320);
+  useEffect(() => {
+    if (!svg.current) return;
+    const observer = new ResizeObserver(([entry]) =>
+      setWidth(Math.max(240, Math.round(entry.contentRect.width))),
+    );
+    observer.observe(svg.current);
+    return () => observer.disconnect();
+  }, [items.length > 0]);
   const [id, setId] = useState<string>();
   const selected = items.find((r) => r.id === id);
   const maxPrice = Math.max(40, ...items.map((r) => r.priceK));
@@ -15,7 +25,8 @@ function Scatter({ items }: { items: ReviewItem[] }) {
         <>
           <svg
             className="scatter"
-            viewBox="0 0 420 265"
+            ref={svg}
+            viewBox={`0 0 ${width} 265`}
             role="img"
             aria-label="Biểu đồ giá theo trục ngang và điểm trải nghiệm theo trục dọc"
           >
@@ -24,7 +35,7 @@ function Scatter({ items }: { items: ReviewItem[] }) {
                 <line
                   x1="37"
                   y1={220 - n * 18}
-                  x2="405"
+                  x2={width - 15}
                   y2={220 - n * 18}
                   stroke="var(--border-card)"
                 />
@@ -35,11 +46,11 @@ function Scatter({ items }: { items: ReviewItem[] }) {
             ))}
             <line x1="37" x2="37" y1="40" y2="220" stroke="var(--text-muted)" />
             {[0, 0.25, 0.5, 0.75, 1].map((f) => (
-              <text key={f} x={37 + f * 355} y="240" textAnchor="middle">
+              <text key={f} x={37 + f * (width - 52)} y="240" textAnchor="middle">
                 {Math.round(maxPrice * f)}k
               </text>
             ))}
-            <text x="220" y="260" textAnchor="middle">
+            <text x={width / 2} y="260" textAnchor="middle">
               Giá một phần
             </text>
             <text x="39" y="23">
@@ -48,7 +59,7 @@ function Scatter({ items }: { items: ReviewItem[] }) {
             {items.map((r) => (
               <circle
                 key={r.id}
-                cx={37 + (r.priceK / maxPrice) * 355}
+                cx={37 + (r.priceK / maxPrice) * (width - 52)}
                 cy={220 - r.totalScore * 18}
                 r={r.id === id ? 8 : 6}
                 fill={r.category === 'food' ? 'var(--food-accent)' : 'var(--chart-fill)'}
@@ -256,9 +267,9 @@ export default function Insights({
           <span className="small muted">Quán trong bộ lọc</span>
           <strong>{items.length}</strong>
         </div>
-        <div className="panel">
+        <div className="panel stat-average">
           <span className="small muted">Điểm trung bình</span>
-          <strong>{items.length ? average.toFixed(1) : '—'}</strong>
+          <strong data-stat="average">{items.length ? average.toFixed(1) : '—'}</strong>
         </div>
         <div className="panel">
           <span className="small muted">Giá một phần TB</span>

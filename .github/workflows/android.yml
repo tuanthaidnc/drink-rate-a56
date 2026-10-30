@@ -1,0 +1,57 @@
+name: NỐT Android
+on:
+  push:
+    branches: [main, 'codex/**']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.15.0'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+      - run: npm ci
+      - run: npm run android:sync
+      - run: chmod +x android/gradlew
+      - name: Build release and instrumentation APKs
+        run: cd android && ./gradlew assembleRelease assembleDebug assembleDebugAndroidTest lintRelease --no-daemon
+      - name: Enable KVM for the isolated emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: false
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
+          script: |
+            adb logcat -c
+            cd android && ./gradlew connectedDebugAndroidTest --no-daemon
+      - name: Collect native proof and signing utility
+        if: always()
+        run: |
+          mkdir -p /tmp/not-android/qa
+          cp android/app/build/outputs/apk/release/*.apk /tmp/not-android/ 2>/dev/null || true
+          cp "$ANDROID_HOME/build-tools/36.0.0/lib/apksigner.jar" /tmp/not-android/ 2>/dev/null || true
+          adb pull /sdcard/Android/data/com.tuanthaidnc.notfood/files/qa /tmp/not-android/ 2>/dev/null || true
+          adb logcat -d > /tmp/not-android/logcat.txt 2>/dev/null || true
+          cp -r android/app/build/outputs/androidTest-results /tmp/not-android/ 2>/dev/null || true
+          cp android/app/build/reports/lint-results-release.html /tmp/not-android/ 2>/dev/null || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-release-and-proof
+          path: /tmp/not-android

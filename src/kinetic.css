@@ -98,7 +98,7 @@ h3,
 }
 h1 {
   font-size: 40px;
-  letter-spacing: -1.9px;
+  letter-spacing: -0.035em;
   line-height: 1.1;
 }
 h2 {
@@ -161,6 +161,9 @@ h2 {
   width: 100%;
   min-width: 0;
   transform-origin: 50% 0;
+}
+.app-scene[inert] {
+  pointer-events: none;
 }
 .places-column {
   gap: 18px;
@@ -405,8 +408,12 @@ h2 {
   place-items: center;
   position: relative;
   flex: none;
+  aspect-ratio: 1;
+  align-self: center;
+  box-sizing: border-box;
 }
 .score-dial svg {
+  display: block;
   position: absolute;
   inset: 0;
   width: 100%;
@@ -417,7 +424,7 @@ h2 {
   stroke-linecap: round;
 }
 .dial-track {
-  stroke: var(--slider-track);
+  stroke: color-mix(in srgb, var(--text-primary) 28%, var(--bg-card));
 }
 .dial-fill {
   stroke: var(--chart-fill);
@@ -1060,12 +1067,76 @@ h2 {
   font-size: 32px;
   letter-spacing: -1px;
 }
-.stat-grid .panel:nth-child(2) {
+.stat-grid .stat-average {
   background: var(--accent);
   color: var(--accent-fg);
 }
-.stat-grid .panel:nth-child(2) .muted {
-  color: #334200;
+.stat-grid .stat-average strong,
+.stat-grid .stat-average .muted {
+  color: var(--accent-fg);
+}
+.stat-grid .panel {
+  min-width: 0;
+  justify-content: space-between;
+}
+.stat-grid .small {
+  font-size: 12px;
+  line-height: 1.45;
+}
+.stat-grid strong {
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+}
+.scatter text {
+  font-size: 12px;
+}
+@media (max-width: 500px) {
+  .stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .stat-grid .stat-average {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    flex-direction: row;
+    align-items: center;
+  }
+  .stat-grid .stat-average strong {
+    font-size: 36px;
+  }
+}
+[data-platform='android'] .header-actions .icon-button,
+[data-platform='android'] .header-actions .theme-toggle,
+[data-platform='android'] .form-title .text-button {
+  width: 48px;
+  height: 48px;
+  min-height: 48px;
+}
+[data-platform='android'] .review-form input,
+[data-platform='android'] .review-form select,
+[data-platform='android'] .review-form button,
+[data-platform='android'] .segmented button {
+  min-height: 48px;
+}
+@media (max-width: 1099px) {
+  [data-platform='android'] .not-app {
+    grid-template-rows: calc(80px + env(safe-area-inset-top)) minmax(0, 1fr);
+  }
+  [data-platform='android'] .app-header {
+    padding-top: calc(15px + env(safe-area-inset-top));
+  }
+  [data-platform='android'] .not-app[data-form='true'] {
+    grid-template-rows: 0 minmax(0, 1fr);
+  }
+  [data-platform='android'] .not-app[data-form='true'] .app-header {
+    padding: 0;
+  }
+  [data-platform='android'] .not-app[data-form='true'] .app-main {
+    padding-top: calc(14px + env(safe-area-inset-top));
+  }
+  [data-platform='android'] .live-score {
+    top: env(safe-area-inset-top);
+  }
 }
 .insights-page {
   gap: 22px;

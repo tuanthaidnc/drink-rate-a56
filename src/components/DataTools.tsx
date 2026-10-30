@@ -57,11 +57,11 @@ export default function DataTools({
       const backup = await makeBackup(doc);
       const raw = JSON.stringify(backup, null, 2);
       parseBackup(raw);
-      downloadBlob(
+      const exported = await downloadBlob(
         new Blob([raw], { type: 'application/json' }),
         `not-sao-luu-${new Date().toISOString().slice(0, 10)}.json`,
       );
-      onMessage('Đã xuất JSON');
+      if (exported) onMessage('Đã xuất JSON');
     } catch (e) {
       setLocalError((e as Error).message);
     } finally {
@@ -116,10 +116,10 @@ export default function DataTools({
         <button
           className="button secondary"
           onClick={() =>
-            downloadBlob(
+            void downloadBlob(
               new Blob([error.raw!], { type: 'application/json' }),
               `not-du-lieu-goc-can-khoi-phuc-${new Date().toISOString().slice(0, 10)}.json`,
-            )
+            ).catch((e: Error) => setLocalError(e.message))
           }
         >
           Tải nguyên dữ liệu gốc để giữ lại

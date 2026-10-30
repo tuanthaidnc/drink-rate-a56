@@ -1,6 +1,11 @@
 node_modules/
 dist/
 build/
+build-android/
+*.jks
+*.keystore
+*.apk
+*.aab
 output/
 test-results/
 playwright-report/

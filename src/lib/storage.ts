@@ -383,13 +383,33 @@ export async function recoverLegacyFile(): Promise<{ raw: string; source: string
     throw e;
   }
 }
-export function downloadBlob(blob: Blob, fileName: string) {
+export async function downloadBlob(blob: Blob, fileName: string): Promise<boolean> {
+  if ((await import('@capacitor/core')).Capacitor.isNativePlatform()) {
+    const [{ Filesystem, Directory, Encoding }, { Share }] = await Promise.all([
+      import('@capacitor/filesystem'),
+      import('@capacitor/share'),
+    ]);
+    const file = await Filesystem.writeFile({
+      path: fileName,
+      data: await blob.text(),
+      directory: Directory.Cache,
+      encoding: Encoding.UTF8,
+    });
+    try {
+      await Share.share({ title: fileName, files: [file.uri], dialogTitle: 'Lưu bản sao NỐT' });
+      return true;
+    } catch (error) {
+      if (/cancel/i.test((error as Error).message)) return false;
+      throw error;
+    }
+  }
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
   a.download = fileName;
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 30_000);
+  return true;
 }
 function publishChange() {
   if (typeof BroadcastChannel === 'undefined') return;

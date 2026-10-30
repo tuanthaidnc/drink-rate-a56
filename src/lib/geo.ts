@@ -1,4 +1,5 @@
 import { hasConfirmedLocation, type ReviewItem, normalizeSearch } from './models.ts';
+import { isNativeApp } from './platform.ts';
 export interface Position {
   lat: number;
   lng: number;
@@ -17,7 +18,22 @@ export function directionsUrl(item: ReviewItem): string {
     return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${item.lat},${item.lng}`)}&travelmode=two-wheeler`;
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([item.name, item.address, item.street, item.ward, item.city, 'Việt Nam'].filter(Boolean).join(', '))}`;
 }
-export function getCurrentPosition(): Promise<Position> {
+export async function getCurrentPosition(): Promise<Position> {
+  if (isNativeApp) {
+    try {
+      const { Geolocation } = await import('@capacitor/geolocation');
+      const permission = await Geolocation.checkPermissions();
+      if (permission.coarseLocation !== 'granted') await Geolocation.requestPermissions();
+      const p = await Geolocation.getCurrentPosition({
+        enableHighAccuracy: true,
+        timeout: 10_000,
+        maximumAge: 30_000,
+      });
+      return { lat: p.coords.latitude, lng: p.coords.longitude, accuracyM: p.coords.accuracy };
+    } catch {
+      throw new Error('Chưa lấy được GPS. Kiểm tra quyền vị trí hoặc ghim thủ công.');
+    }
+  }
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
       reject(new Error('Thiết bị chưa hỗ trợ định vị. Bạn có thể ghim thủ công.'));

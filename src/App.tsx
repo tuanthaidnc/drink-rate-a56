@@ -36,6 +36,7 @@ import { applyPlaceCorrections, THANH_HUONG_CANDIDATE } from './lib/placeCorrect
 import { useReviewStore } from './lib/useReviewStore.ts';
 import { useNow } from './lib/useNow.ts';
 import { usePwa } from './lib/usePwa.ts';
+import { isNativeApp, minimizeNativeApp } from './lib/platform.ts';
 import {
   emptyDocument,
   hasConfirmedLocation,
@@ -152,6 +153,20 @@ export default function App() {
       navigate(target);
     }
   };
+  useEffect(() => {
+    if (!isNativeApp) return;
+    const back = () => {
+      if (document.querySelector('[role="dialog"]')) {
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      } else if (tab !== 'places') {
+        selectTab('places');
+      } else {
+        void minimizeNativeApp();
+      }
+    };
+    window.addEventListener('not-native-back', back);
+    return () => window.removeEventListener('not-native-back', back);
+  });
   useEffect(() => {
     history.replaceState({ notTab: 'places' }, '', location.href);
     const pop = (e: PopStateEvent) => {

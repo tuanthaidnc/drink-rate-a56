@@ -11,7 +11,7 @@ Sổ trải nghiệm cá nhân để chọn quán hợp gu, giá và vị trí; 
 - Ứng dụng chuẩn bị các màn hình để mở và lưu dữ liệu không cần mạng; chỉ hiện biểu tượng khi ngoại tuyến hoặc cần thử lại. Nền bản đồ, tra địa chỉ và Google Maps cần mạng.
 - Bản cập nhật hiện biểu tượng ↻; chỉ cần lưu hoặc hủy nếu đã sửa nội dung. Mở form nhưng chưa sửa, hoặc sửa rồi hoàn tác, có thể đổi tab ngay. Giữ nguyên URL và ứng dụng đã cài để giữ cùng kho dữ liệu.
 
-## Bản 15 · kinetic journal
+## Giao diện và chuyển động
 
 Nền mực, xanh acid, tím nhạt và điểm số dạng vòng tròn lớn. Điện thoại dùng dock nổi; máy tính dùng rail và khung tiêu chí. Bỏ lời giới thiệu, hướng dẫn thường trực và phiên bản khỏi UI. Giữ dữ liệu, nhãn thao tác và phản hồi lỗi cần thiết.
 
@@ -66,3 +66,13 @@ Build vào **build/** để tách khỏi thư mục dist cũ từng chứa check
 Triển khai bằng commit nối tiếp lên `gh-pages`, không force push. Giữ bản bundle Git trước nâng cấp và commit triển khai cũ để quay lại nếu cần. Kiểm tra build hash trong `version.json`, giao diện, chuyển đổi dữ liệu và ngoại tuyến sau khi Pages báo hoàn tất.
 
 Kiểm thử mô phỏng Chrome không thay thế việc chạy trực tiếp trên Samsung A56; GPS, bàn phím One UI, biểu tượng launcher và hành vi nút Back cần xác nhận trên máy thật.
+
+## Android
+
+`npm run android:sync` tạo build dành riêng cho Capacitor ở `build-android/`, rồi đồng bộ sang `android/`. Cần JDK 21, Android SDK 36 và Gradle wrapper để build: `cd android && ./gradlew assembleRelease`. Workflow NỐT Android tạo APK release chưa ký, chạy lint và instrumentation trên Android API 35; artifact gồm kết quả, ảnh emulator và công cụ apksigner từ Android SDK. Khóa release được giữ riêng trên máy chủ ứng dụng, không đưa lên Git hoặc artifact CI.
+
+APK chứa tài nguyên web/font/danh mục để khởi động ngoại tuyến ngay lần đầu, không dùng service worker. MapLibre, bản đồ và tra địa chỉ vẫn cần mạng. Dùng một bản release ký cùng khóa để cập nhật về sau. Đây là APK hybrid Capacitor; không khẳng định hiệu năng bằng ứng dụng Compose hoặc 120 fps từ việc build thành công.
+
+Chuyển từ Chrome: xuất JSON trong Tùy chọn/Thống kê, lưu file, mở APK rồi nhập file đó bằng luồng gộp/khôi phục hiện có. Kiểm tra số quán, ảnh và lượt ghé trước khi ngừng dùng bản cũ; không cần xóa hay gỡ PWA. Hai bản không tự đồng bộ. Xuất trong APK mở hộp chia sẻ hệ thống để chọn nơi lưu; nhập dùng bộ chọn file Android.
+
+Android chọn mode cùng độ phân giải có tần số cao tối đa 120 Hz nếu được thiết bị cung cấp và gửi yêu cầu frame rate cho WebView từ API 35. Android vẫn quyết định theo màn hình, cấu hình, pin và nhiệt. Cần đo trên A56 thật để xác nhận; emulator không chứng minh 120 Hz.

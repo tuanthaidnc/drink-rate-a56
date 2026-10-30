@@ -10,6 +10,7 @@ import {
 } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { Capacitor, SystemBars, SystemBarsStyle } from '@capacitor/core';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -24,6 +25,11 @@ export function syncStatusBarThemeColor(nextTheme: AppTheme) {
   const statusColor = nextTheme === 'light' ? '#ffffff' : '#0b0d0c';
   document.documentElement.setAttribute('data-theme', nextTheme);
   document.documentElement.style.colorScheme = nextTheme;
+  if (Capacitor.isNativePlatform()) {
+    void SystemBars.setStyle({
+      style: nextTheme === 'light' ? SystemBarsStyle.Light : SystemBarsStyle.Dark,
+    }).catch(() => {});
+  }
 
   const metas = document.querySelectorAll('meta[name="theme-color"]');
   if (metas.length > 0) {

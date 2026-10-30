@@ -4,9 +4,9 @@ import tailwindcss from '@tailwindcss/vite';
 import { pwaPlugin } from './scripts/pwa-plugin.ts';
 import { fileURLToPath, URL } from 'node:url';
 
-export default defineConfig({
-  base: '/drink-rate-a56/',
-  build: { outDir: 'build' },
+export default defineConfig(({ mode }) => ({
+  base: mode === 'android' ? '/' : '/drink-rate-a56/',
+  build: { outDir: mode === 'android' ? 'build-android' : 'build' },
   resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
-  plugins: [react(), tailwindcss(), pwaPlugin()],
-});
+  plugins: [react(), tailwindcss(), ...(mode === 'android' ? [] : [pwaPlugin()])],
+}));

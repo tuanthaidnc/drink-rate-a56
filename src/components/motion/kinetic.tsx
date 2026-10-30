@@ -11,7 +11,6 @@ import {
   AnimatePresence,
   motion,
   useIsPresent,
-  usePresence,
   useSpring,
   useTransform,
   type SpringOptions,
@@ -21,6 +20,11 @@ export const MotionPreference = createContext(false);
 let systemQuery: MediaQueryList | undefined;
 const motionListeners = new Set<() => void>();
 const notifyMotion = () => motionListeners.forEach((notify) => notify());
+let nativeReducedMotion = false;
+export function setNativeReducedMotion(value: boolean) {
+  nativeReducedMotion = value;
+  notifyMotion();
+}
 function queryMotion() {
   return (systemQuery ??= window.matchMedia('(prefers-reduced-motion: reduce)'));
 }
@@ -35,7 +39,7 @@ function subscribeMotion(notify: () => void) {
 export function useSystemReducedMotion() {
   return useSyncExternalStore(
     subscribeMotion,
-    () => queryMotion().matches,
+    () => queryMotion().matches || nativeReducedMotion,
     () => false,
   );
 }
@@ -79,31 +83,30 @@ export function AnimatedNumber({
 }
 
 // Adapted from motion-primitives transition-panel.tsx. Exiting screens are inert.
-const Scene = forwardRef<HTMLDivElement, { children: ReactNode; direction: number }>(function Scene(
-  { children, direction },
-  ref,
-) {
-  const [present, safeToRemove] = usePresence();
-  const quiet = useQuietMotion();
-  useEffect(() => {
-    if (!present && quiet) safeToRemove?.();
-  }, [present, quiet, safeToRemove]);
-  return (
-    <motion.div
-      ref={ref}
-      className="app-scene"
-      data-motion="scene"
-      aria-hidden={!present}
-      inert={!present || undefined}
-      initial={quiet ? false : { opacity: 0, x: direction * 36, y: 8, filter: 'blur(5px)' }}
-      animate={{ opacity: 1, x: 0, y: 0, filter: 'blur(0px)' }}
-      exit={quiet ? { opacity: 0 } : { opacity: 0, x: direction * -24, y: -6, filter: 'blur(4px)' }}
-      transition={{ duration: quiet ? 0 : 0.36, ease: [0.22, 1, 0.36, 1] }}
-    >
-      {children}
-    </motion.div>
-  );
-});
+const Scene = forwardRef<HTMLDivElement, { children: ReactNode; direction: number; index: number }>(
+  function Scene({ children, direction, index }, ref) {
+    // usePresence registers a manual exit participant. It must not be used here:
+    // motion.div owns completion, otherwise its parent leaves old screens mounted.
+    const present = useIsPresent();
+    const quiet = useQuietMotion();
+    return (
+      <motion.div
+        ref={ref}
+        className="app-scene"
+        data-motion="scene"
+        data-screen-index={index}
+        aria-hidden={!present}
+        inert={!present || undefined}
+        initial={quiet ? false : { opacity: 0.6, x: direction * 18 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: quiet ? 0 : direction * -8 }}
+        transition={{ duration: quiet ? 0 : present ? 0.24 : 0.12, ease: [0.22, 1, 0.36, 1] }}
+      >
+        {children}
+      </motion.div>
+    );
+  },
+);
 export function TransitionPanel({
   activeIndex,
   children,
@@ -111,28 +114,17 @@ export function TransitionPanel({
   activeIndex: number;
   children: ReactNode[];
 }) {
-  const quiet = useQuietMotion();
-  // Freeze the wrapper for the lifetime of a route. Changing the preference
-  // must never reparent/remount the form that owns an unsaved draft.
-  const mode = useRef({ index: activeIndex, animated: !quiet });
-  if (mode.current.index !== activeIndex) mode.current = { index: activeIndex, animated: !quiet };
+  // Keep the same ownership tree when the motion preference changes so an
+  // in-progress form never remounts. Waiting prevents two routes sharing a frame.
   const previous = useRef(activeIndex),
     direction = activeIndex >= previous.current ? 1 : -1;
   useEffect(() => {
     previous.current = activeIndex;
   }, [activeIndex]);
-  if (!mode.current.animated)
-    return (
-      <div className="screen-stack">
-        <Scene key={activeIndex} direction={direction}>
-          {children[activeIndex]}
-        </Scene>
-      </div>
-    );
   return (
     <div className="screen-stack">
-      <AnimatePresence initial={false} mode="popLayout">
-        <Scene key={activeIndex} direction={direction}>
+      <AnimatePresence initial={false} mode="wait">
+        <Scene key={activeIndex} index={activeIndex} direction={direction}>
           {children[activeIndex]}
         </Scene>
       </AnimatePresence>
@@ -158,7 +150,13 @@ export function ScoreDial({
       style={{ width: size, height: size }}
       data-motion="dial"
     >
-      <svg viewBox="0 0 120 120" aria-hidden="true">
+      <svg
+        viewBox="0 0 120 120"
+        width="120"
+        height="120"
+        preserveAspectRatio="xMidYMid meet"
+        aria-hidden="true"
+      >
         <circle className="dial-track" cx="60" cy="60" r="54" />
         <motion.circle
           className="dial-fill"

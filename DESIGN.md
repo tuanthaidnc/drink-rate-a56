@@ -1,4 +1,4 @@
-# NỐT · Kinetic journal v15
+# NỐT · Kinetic journal
 
 Một sổ quán cá nhân với điểm, giá và địa chỉ làm nội dung chính. Giao diện bỏ lời chào, mô tả cách dùng, phiên bản, trạng thái ngoại tuyến bình thường và hướng dẫn lặp lại. Nhãn thao tác, dữ liệu, lỗi lưu, cảnh báo bỏ thay đổi thực sự và xác nhận thay thế bản sao vẫn còn.
 
@@ -19,7 +19,7 @@ Một sổ quán cá nhân với điểm, giá và địa chỉ làm nội dung 
 
 | Thao tác       | Chuyển động                                            |
 | -------------- | ------------------------------------------------------ |
-| Đổi tab        | Trượt 36px, opacity và blur, 360ms; màn hình cũ inert  |
+| Đổi tab        | Fade-through: thoát 120ms, vào 240ms, trượt 18px; chỉ một màn; gỡ DOM khi thoát |
 | Hiện thẻ quán  | Trượt/scale/blur 450ms, trễ tối đa 375ms cho danh sách |
 | Mở thẻ         | Chiều cao tự nhiên và opacity 380ms                    |
 | Điểm           | Vòng vẽ 950ms; số chạy bằng spring 120/22              |
@@ -29,6 +29,10 @@ Một sổ quán cá nhân với điểm, giá và địa chỉ làm nội dung 
 | Hộp thoại      | Hiện/ẩn 280ms và nền mờ; trả focus sau đóng            |
 
 Giữ tùy chọn giảm chuyển động của hệ thống và ứng dụng. Không quảng bá FPS hoặc độ mượt trên A56 khi chưa đo trên thiết bị thật. Kiểm thử trình duyệt phải đo được nhiều vị trí chuyển màn và nhiều giá trị trung gian của điểm; kiểm tra canvas chạm và việc tắt hiệu ứng khi giảm chuyển động.
+
+Điểm trung bình dùng foreground tối trên nền acid, được kiểm tra tương phản từ style đã render. Điện thoại đặt điểm trung bình trên hàng riêng; số quán và giá nằm dưới. Vòng điểm giữ box vuông, SVG preserveAspectRatio và vòng nền đủ rõ. Biểu đồ dùng viewBox theo kích thước thực để chữ trục không bị thu nhỏ theo cả ảnh.
+
+Rà soát theo [Impeccable](https://github.com/pbakaus/impeccable), commit `02523aec3e4c4580102d996d1b6a71fbe062e03f`: audit, polish, optimize và craft-floor. Detector là một phần kiểm tra, không thay thế ảnh render, thao tác thật và kiểm tra hồi quy. Android giữ nhận diện và bố cục web, thêm insets, mục tiêu chạm, IME, Back và tôn trọng tắt hoạt ảnh hệ thống.
 
 ## Các điều chỉnh có chủ ý so với ảnh concept
 
