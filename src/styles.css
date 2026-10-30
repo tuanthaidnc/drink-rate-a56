@@ -382,7 +382,32 @@ a:hover {
   border-radius: 10px;
   font-family: var(--font-app);
   font-size: 13px;
+  font-weight: 700;
   cursor: pointer;
+}
+[data-slot='button'][data-variant='default'] {
+  background: var(--accent);
+  color: var(--accent-fg);
+  border: 1px solid transparent;
+}
+[data-slot='button'][data-variant='outline'] {
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-elevated);
+}
+[data-slot='button'][data-variant='secondary'] {
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+}
+[data-slot='button'][data-variant='destructive'] {
+  background: var(--destructive);
+  color: white;
+}
+[data-slot='button'][data-variant='link'] {
+  color: var(--accent);
+}
+[data-slot='button']:hover {
+  filter: brightness(0.97);
 }
 [data-slot='badge'] {
   font-family: var(--font-app);
@@ -905,7 +930,7 @@ meter::-webkit-meter-optimum-value {
   gap: 10px;
   font-size: 15px;
   letter-spacing: -0.3px;
-  margin-bottom: 14px;
+  margin-bottom: 0;
 }
 .form-section-heading::before {
   counter-increment: form-step;
@@ -934,7 +959,7 @@ meter::-webkit-meter-optimum-value {
   margin-bottom: 4px;
 }
 .live-score > .split {
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 .score-preview {
   display: flex;
@@ -942,6 +967,8 @@ meter::-webkit-meter-optimum-value {
   gap: 10px;
   border-left: 2px solid var(--accent);
   padding-left: 12px;
+  flex: 1;
+  min-width: 0;
 }
 .score-preview .score {
   font-size: 30px;
@@ -957,8 +984,9 @@ meter::-webkit-meter-optimum-value {
   font-weight: 700;
   color: var(--text-secondary);
 }
-.live-score .button {
+.live-score [data-slot='button'] {
   min-height: 42px;
+  padding: 10px 12px;
 }
 .field {
   display: flex;

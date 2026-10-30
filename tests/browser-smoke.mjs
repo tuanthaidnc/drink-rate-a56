@@ -114,6 +114,26 @@ async function assertNoOverflow(p) {
   }));
   assert.ok(x.scroll <= x.width && x.main <= x.client + 1, JSON.stringify(x));
 }
+async function assertButtonContrast(p, name) {
+  const ratio = await p.getByRole('button', { name, exact: true }).evaluate((el) => {
+    const luminance = (color) => {
+      const rgb = color
+        .match(/[\d.]+/g)
+        .slice(0, 3)
+        .map(Number)
+        .map((n) => {
+          const s = n / 255;
+          return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+        });
+      return rgb[0] * 0.2126 + rgb[1] * 0.7152 + rgb[2] * 0.0722;
+    };
+    const style = getComputedStyle(el),
+      a = luminance(style.color),
+      b = luminance(style.backgroundColor);
+    return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+  });
+  assert.ok(ratio >= 4.5, `${name}: text contrast ${ratio.toFixed(2)} must meet 4.5:1`);
+}
 async function importText(p, text) {
   await p.getByLabel('Chọn file JSON để khôi phục').setInputFiles({
     name: 'backup.json',
@@ -155,6 +175,10 @@ try {
       const p = primary.page;
       await nav(p, 'Chấm điểm');
       await p.getByRole('heading', { name: 'Chấm điểm quán', exact: true }).waitFor();
+      await assertButtonContrast(p, 'Lưu quán');
+      await p.getByRole('button', { name: 'Đổi sang giao diện sáng', exact: true }).click();
+      await assertButtonContrast(p, 'Lưu quán');
+      await p.getByRole('button', { name: 'Đổi sang giao diện tối', exact: true }).click();
       await nav(p, 'Bản đồ');
       assert.equal(await p.getByRole('dialog').count(), 0);
       await nav(p, 'Chấm điểm');
@@ -305,7 +329,9 @@ try {
       );
       await p.screenshot({ path: resolve(output, '02-mobile-light-filters.png') });
       await closeDialog(p);
-      await p.waitForFunction(() => document.querySelector('.search-row > button') === document.activeElement);
+      await p.waitForFunction(
+        () => document.querySelector('.search-row > button') === document.activeElement,
+      );
       assert.equal(
         await p
           .getByRole('button', { name: 'Bộ lọc', exact: true })
