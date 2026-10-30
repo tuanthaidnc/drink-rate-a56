@@ -1873,6 +1873,11 @@ th {
   .review-inspector .score-breakdown {
     gap: 18px;
   }
+  .review-inspector .criterion meter {
+    flex: none;
+    height: 7px;
+    min-height: 7px;
+  }
   .review-inspector .text-button {
     font-size: 11px;
   }

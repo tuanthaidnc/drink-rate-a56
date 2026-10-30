@@ -305,6 +305,7 @@ try {
       );
       await p.screenshot({ path: resolve(output, '02-mobile-light-filters.png') });
       await closeDialog(p);
+      await p.waitForFunction(() => document.querySelector('.search-row > button') === document.activeElement);
       assert.equal(
         await p
           .getByRole('button', { name: 'Bộ lọc', exact: true })
