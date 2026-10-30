@@ -1,4 +1,4 @@
-import { MapPin, Map, Plus, ChartColumn } from 'lucide-react';
+import { Store, Map, Plus, ChartColumn } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useQuietMotion } from './motion/kinetic.tsx';
 import {
@@ -8,7 +8,7 @@ import {
 } from '@animate-ui/react/primitives/bottom-navigation';
 export type AppTab = 'places' | 'map' | 'review' | 'insights';
 export const NAV_ITEMS = [
-  { id: 'places', label: 'Quán xá', icon: MapPin },
+  { id: 'places', label: 'Quán xá', icon: Store },
   { id: 'map', label: 'Bản đồ', icon: Map },
   { id: 'review', label: 'Chấm điểm', icon: Plus },
   { id: 'insights', label: 'Thống kê', icon: ChartColumn },

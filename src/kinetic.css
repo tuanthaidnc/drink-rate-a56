@@ -303,6 +303,29 @@ h2 {
   border-color: var(--accent);
   background: var(--bg-card);
 }
+.review-card::before,
+.review-card::after {
+  content: '';
+  position: absolute;
+  top: 74px;
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--border-card);
+  border-radius: 50%;
+  background: var(--bg-canvas);
+  z-index: 1;
+  pointer-events: none;
+}
+.review-card::before {
+  left: -8px;
+}
+.review-card::after {
+  right: -8px;
+}
+.review-card[data-selected='true']::before,
+.review-card[data-selected='true']::after {
+  border-color: var(--accent);
+}
 .review-summary {
   display: block;
   width: 100%;
@@ -1180,7 +1203,7 @@ h2 {
     margin: 0;
   }
   .page-heading h1 {
-    font-size: 47px;
+    font-size: 52px;
     letter-spacing: -2.4px;
   }
   .page-heading h1 small {
@@ -1218,6 +1241,10 @@ h2 {
   }
   .review-card {
     border-radius: 19px;
+  }
+  .review-card::before,
+  .review-card::after {
+    top: 46px;
   }
   .review-summary {
     padding: 17px 15px 0;
@@ -1289,7 +1316,7 @@ h2 {
     width: 100%;
   }
   .review-inspector h2 {
-    font-size: 36px;
+    font-size: 40px;
     line-height: 1.12;
     font-weight: 800;
     letter-spacing: -1.6px;
@@ -1359,7 +1386,7 @@ h2 {
     aspect-ratio: 1;
   }
   .inspector-visual .dial-value {
-    font-size: 57px;
+    font-size: 64px;
     letter-spacing: -3px;
   }
   .inspector-visual .dial-value small {

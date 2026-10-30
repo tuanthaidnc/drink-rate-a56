@@ -51,7 +51,7 @@ function Scatter({ items }: { items: ReviewItem[] }) {
                 cx={37 + (r.priceK / maxPrice) * 355}
                 cy={220 - r.totalScore * 18}
                 r={r.id === id ? 8 : 6}
-                fill={r.category === 'food' ? 'var(--food-accent)' : 'var(--accent)'}
+                fill={r.category === 'food' ? 'var(--food-accent)' : 'var(--chart-fill)'}
                 stroke="var(--bg-card)"
                 strokeWidth="2"
                 tabIndex={0}
