@@ -1,5 +1,4 @@
-@import "tailwindcss";
-@import "leaflet/dist/leaflet.css";
+@import 'tailwindcss';
 
 :root {
   --vvh: 100dvh;
@@ -11,7 +10,7 @@
  *    Tách bạch rõ ràng 3 lớp: Nền (#080C14) -> Thẻ (#111827) -> Ô nhập/Nút (#1E293B)
  * ========================================================================== */
 :root,
-[data-theme="dark"] {
+[data-theme='dark'] {
   --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 
@@ -44,7 +43,7 @@
  * 2. CLEAN & FRESH LIGHT THEME (COOL ALABASTER SLATE + EMERALD MINT)
  *    Tách bạch rõ ràng: Nền (#EEF2F6) -> Thẻ trắng (#FFFFFF) -> Ô nhập (#F1F5F9)
  * ========================================================================== */
-[data-theme="light"] {
+[data-theme='light'] {
   --bg-canvas: #eef2f6;
   --bg-header: #ffffff;
   --bg-card: #ffffff;
@@ -199,7 +198,7 @@ body,
 }
 
 /* Precision Range Slider with Zero-Clip Inner-Box Ring Thumb */
-input[type="range"].precision-slider {
+input[type='range'].precision-slider {
   -webkit-appearance: none;
   appearance: none;
   display: block;
@@ -212,7 +211,7 @@ input[type="range"].precision-slider {
   cursor: pointer;
 }
 
-input[type="range"].precision-slider::-webkit-slider-thumb {
+input[type='range'].precision-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
   box-sizing: border-box;
@@ -222,16 +221,18 @@ input[type="range"].precision-slider::-webkit-slider-thumb {
   background: var(--accent);
   border: 2.5px solid var(--accent);
   box-shadow: inset 0 0 0 3px var(--bg-card);
-  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.15s ease;
+  transition:
+    transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 0.15s ease;
 }
 
-input[type="range"].precision-slider::-webkit-slider-thumb:active {
+input[type='range'].precision-slider::-webkit-slider-thumb:active {
   transform: scale(1.15);
   background: var(--accent-bright);
   border-color: var(--accent-bright);
 }
 
-input[type="range"].precision-slider::-moz-range-thumb {
+input[type='range'].precision-slider::-moz-range-thumb {
   box-sizing: border-box;
   width: 24px;
   height: 24px;
@@ -272,7 +273,7 @@ input[type="range"].precision-slider::-moz-range-thumb {
   background: var(--bg-canvas) !important;
 }
 
-[data-theme="dark"] .leaflet-tile-pane {
+[data-theme='dark'] .leaflet-tile-pane {
   filter: invert(90%) hue-rotate(185deg) brightness(96%) contrast(92%);
 }
 

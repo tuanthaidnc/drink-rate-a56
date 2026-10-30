@@ -40,11 +40,15 @@ export function syncStatusBarThemeColor(nextTheme: AppTheme) {
 export function applyThemeWithTransition(
   nextTheme: AppTheme,
   setThemeState: (t: AppTheme) => void,
-  originEvent?: React.MouseEvent<HTMLElement>
+  originEvent?: React.MouseEvent<HTMLElement>,
 ) {
   const applyDom = () => {
     syncStatusBarThemeColor(nextTheme);
-    localStorage.setItem('not_app_theme_v8', nextTheme);
+    try {
+      localStorage.setItem('not_app_theme_v8', nextTheme);
+    } catch {
+      /* Theme remains usable if optional preferences cannot be persisted. */
+    }
     setThemeState(nextTheme);
   };
 
@@ -52,7 +56,11 @@ export function applyThemeWithTransition(
     startViewTransition?: (cb: () => void) => { ready: Promise<void> };
   };
 
-  if (!doc.startViewTransition) {
+  if (
+    !doc.startViewTransition ||
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches ||
+    document.documentElement.dataset.reducedMotion === 'true'
+  ) {
     applyDom();
     return;
   }
@@ -61,7 +69,7 @@ export function applyThemeWithTransition(
   const y = originEvent ? originEvent.clientY : 28;
   const endRadius = Math.hypot(
     Math.max(x, window.innerWidth - x),
-    Math.max(y, window.innerHeight - y)
+    Math.max(y, window.innerHeight - y),
   );
 
   const transition = doc.startViewTransition(() => {
@@ -74,16 +82,13 @@ export function applyThemeWithTransition(
     .then(() => {
       document.documentElement.animate(
         {
-          clipPath: [
-            `circle(0px at ${x}px ${y}px)`,
-            `circle(${endRadius}px at ${x}px ${y}px)`,
-          ],
+          clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${endRadius}px at ${x}px ${y}px)`],
         },
         {
           duration: 500,
           easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
           pseudoElement: '::view-transition-new(root)',
-        }
+        },
       );
     })
     .catch(() => {});
@@ -116,9 +121,7 @@ export function Shine({
   ...props
 }: ShineProps) {
   const [shineKey, setShineKey] = React.useState(0);
-  const [glarePos, setGlarePos] = React.useState<{ x: number; y: number } | null>(
-    null
-  );
+  const [glarePos, setGlarePos] = React.useState<{ x: number; y: number } | null>(null);
   const boxRef = React.useRef<HTMLDivElement>(null);
 
   const triggerShine = (clientX?: number, clientY?: number) => {
@@ -285,13 +288,7 @@ export function CountingNumber({
 /* ============================================================================
  * 5A. ENTERTAINING INTERACTIVE DRINK CUP (Boba Pearls + Floating Ice + Shake!)
  * ========================================================================== */
-export function LiquidScoreCup({
-  score,
-  size = 'md',
-}: {
-  score: number;
-  size?: 'sm' | 'md';
-}) {
+export function LiquidScoreCup({ score, size = 'md' }: { score: number; size?: 'sm' | 'md' }) {
   const [shakeKey, setShakeKey] = React.useState(0);
   const pct = Math.min(96, Math.max(16, (score / 10) * 100));
   const dims = size === 'sm' ? 'w-10 h-11 rounded-xl' : 'w-12 h-14 rounded-2xl';
@@ -315,7 +312,7 @@ export function LiquidScoreCup({
       whileTap={{ scale: 0.88, rotate: -12 }}
       className={cn(
         'relative overflow-hidden shrink-0 border-2 border-[var(--border-active)] bg-[#07111e] shadow-md flex items-center justify-center select-none cursor-pointer',
-        dims
+        dims,
       )}
       title="Chạm để lắc ly nước!"
     >
@@ -412,13 +409,7 @@ export function LiquidScoreCup({
 /* ============================================================================
  * 5B. ENTERTAINING INTERACTIVE FOOD BOWL (Steaming Noodles + Chopsticks Toss!)
  * ========================================================================== */
-export function SteamingFoodBowl({
-  score,
-  size = 'md',
-}: {
-  score: number;
-  size?: 'sm' | 'md';
-}) {
+export function SteamingFoodBowl({ score, size = 'md' }: { score: number; size?: 'sm' | 'md' }) {
   const [tossKey, setTossKey] = React.useState(0);
   const pct = Math.min(92, Math.max(24, (score / 10) * 95));
   const dims = size === 'sm' ? 'w-10 h-11 rounded-xl' : 'w-12 h-14 rounded-2xl';
@@ -443,7 +434,7 @@ export function SteamingFoodBowl({
       whileTap={{ scale: 0.88, rotate: 10 }}
       className={cn(
         'relative overflow-hidden shrink-0 border-2 border-[#f97316]/75 bg-[#160d08] shadow-md flex items-center justify-center select-none cursor-pointer',
-        dims
+        dims,
       )}
       title="Chạm để trộn tô đồ ăn!"
     >
@@ -468,10 +459,7 @@ export function SteamingFoodBowl({
           preserveAspectRatio="none"
           className="absolute -top-2.5 left-0 w-[200%] h-3 animate-liquid-wave"
         >
-          <path
-            d="M0,7 C15,14 45,0 60,7 C75,14 105,0 120,7 L120,14 L0,14 Z"
-            fill="#fde68a"
-          />
+          <path d="M0,7 C15,14 45,0 60,7 C75,14 105,0 120,7 L120,14 L0,14 Z" fill="#fde68a" />
         </svg>
 
         {/* Floating Soft-Boiled Egg & Scallion Herb Toppings */}
@@ -572,7 +560,7 @@ export function StarRatingBadge({
     <div
       className={cn(
         'inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-500/15 border border-amber-400/35 text-amber-400 font-mono text-[11px] font-bold',
-        className
+        className,
       )}
     >
       <div className="flex items-center gap-0.2 text-[11px] leading-none">
@@ -583,7 +571,7 @@ export function StarRatingBadge({
               key={i}
               className={cn(
                 'transition-transform',
-                active ? 'text-[#fbbf24]' : 'text-slate-500/40'
+                active ? 'text-[#fbbf24]' : 'text-slate-500/40',
               )}
             >
               ★
@@ -591,12 +579,8 @@ export function StarRatingBadge({
           );
         })}
       </div>
-      <span className="text-[var(--text-primary)] font-extrabold">
-        {stars.toFixed(1)}
-      </span>
-      {showFiveScale && (
-        <span className="text-[9px] text-[var(--text-muted)]">/5</span>
-      )}
+      <span className="text-[var(--text-primary)] font-extrabold">{stars.toFixed(1)}</span>
+      {showFiveScale && <span className="text-[9px] text-[var(--text-muted)]">/5</span>}
     </div>
   );
 }
@@ -637,7 +621,7 @@ export function LiquidButton({
       }
       className={cn(
         'relative overflow-hidden cursor-pointer select-none theme-surface-elevated',
-        className
+        className,
       )}
       {...props}
     >
@@ -656,7 +640,8 @@ type Ripple = {
   particles: { angle: number; dist: number; size: number; color: string }[];
 };
 
-export type RippleButtonProps = HTMLMotionProps<'button'> & {
+export type RippleButtonProps = Omit<HTMLMotionProps<'button'>, 'children'> & {
+  children?: React.ReactNode;
   tapScale?: number;
   rippleColor?: string;
 };
@@ -701,7 +686,7 @@ export function RippleButton({
       }
       onClick?.(event);
     },
-    [onClick]
+    [onClick],
   );
 
   return (
@@ -794,7 +779,7 @@ export function MotionSegmented<T extends string>({
 }: MotionSegmentedProps<T>) {
   const activeIndex = Math.max(
     0,
-    options.findIndex((o) => o.value === value)
+    options.findIndex((o) => o.value === value),
   );
   const count = options.length;
 
@@ -804,7 +789,7 @@ export function MotionSegmented<T extends string>({
       data-slot="tabs-list"
       className={cn(
         'relative grid p-1 rounded-2xl theme-surface-elevated overflow-hidden',
-        className
+        className,
       )}
       style={{ gridTemplateColumns: `repeat(${count}, minmax(0, 1fr))` }}
     >
@@ -835,15 +820,13 @@ export function MotionSegmented<T extends string>({
               isActive
                 ? 'text-[var(--text-primary)] font-extrabold'
                 : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]',
-              itemClassName
+              itemClassName,
             )}
           >
             <div className="flex items-center justify-center gap-1 leading-snug">
               {opt.icon && (
                 <motion.span
-                  animate={
-                    isActive ? { scale: [1, 1.2, 1], rotate: [0, -8, 8, 0] } : {}
-                  }
+                  animate={isActive ? { scale: [1, 1.2, 1], rotate: [0, -8, 8, 0] } : {}}
                   transition={{ duration: 0.4 }}
                   className="shrink-0"
                 >
@@ -852,11 +835,7 @@ export function MotionSegmented<T extends string>({
               )}
               <span className="whitespace-nowrap">{opt.label}</span>
             </div>
-            {opt.badge && (
-              <div className="mt-0.5 leading-tight whitespace-nowrap">
-                {opt.badge}
-              </div>
-            )}
+            {opt.badge && <div className="mt-0.5 leading-tight whitespace-nowrap">{opt.badge}</div>}
           </motion.button>
         );
       })}
@@ -891,9 +870,7 @@ export function AnimatedProgress({
         <span className="text-[var(--text-secondary)] flex items-center gap-1.5">
           <span>{label}</span>
           {weightLabel && (
-            <span className="font-mono text-[10px] text-[var(--text-muted)]">
-              {weightLabel}
-            </span>
+            <span className="font-mono text-[10px] text-[var(--text-muted)]">{weightLabel}</span>
           )}
         </span>
         <span className="font-mono text-xs font-bold text-[var(--text-primary)] tabular-nums">
@@ -923,15 +900,9 @@ export function AnimatedProgress({
 /* ============================================================================
  * 10. ANIMATE-UI: AutoHeight Collapse (Zero Layout Jump & Zero Thumb Clipping)
  * ========================================================================== */
-export function AutoHeight({
-  isOpen,
-  children,
-}: {
-  isOpen: boolean;
-  children: React.ReactNode;
-}) {
+export function AutoHeight({ isOpen, children }: { isOpen: boolean; children: React.ReactNode }) {
   return (
-    <div className={cn('collapse-grid', isOpen && 'is-open')}>
+    <div hidden={!isOpen} inert={!isOpen} className={cn('collapse-grid', isOpen && 'is-open')}>
       <div className="collapse-inner">{children}</div>
     </div>
   );
@@ -943,20 +914,14 @@ export function AutoHeight({
 export function AmbientGlowBackground({ theme }: { theme: AppTheme }) {
   if (theme === 'light') {
     return (
-      <div
-        aria-hidden="true"
-        className="pointer-events-none fixed inset-0 -z-10 overflow-hidden"
-      >
+      <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
         <div className="absolute -top-32 left-1/2 -translate-x-1/2 h-72 w-[420px] rounded-full bg-[#10b981]/10 blur-[100px]" />
       </div>
     );
   }
 
   return (
-    <div
-      aria-hidden="true"
-      className="pointer-events-none fixed inset-0 -z-10 overflow-hidden"
-    >
+    <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
       <div className="absolute -top-36 left-1/2 -translate-x-1/2 h-72 w-[420px] rounded-full bg-[#10b981]/[0.08] blur-[110px]" />
     </div>
   );

@@ -10,12 +10,7 @@
 
 export type FreqPeriod = 'week' | 'month' | 'year';
 export type FreqTierKey =
-  | 'food_daily'
-  | 'food_weekly'
-  | 'food_monthly'
-  | 'drink_daily'
-  | 'drink_biweekly'
-  | 'drink_rare';
+  'food_daily' | 'food_weekly' | 'food_monthly' | 'drink_daily' | 'drink_biweekly' | 'drink_rare';
 
 export interface FreqTier {
   key: FreqTierKey;
@@ -53,8 +48,8 @@ export const FREQ_TIERS: Record<FreqTierKey, FreqTier> = {
     key: 'food_weekly',
     label: '1 lần/tuần',
     shortTitle: 'Ăn 1 lần/tuần',
-    hint: 'Món ăn 40–80k • Có thể ăn 1 lần trong tuần',
-    recommendation: 'Món ăn 40–80k • Có thể ăn 1 lần trong tuần',
+    hint: 'Món ăn >40–80k • Có thể ăn 1 lần trong tuần',
+    recommendation: 'Món ăn >40–80k • Có thể ăn 1 lần trong tuần',
     priceRangeLabel: '40–80k',
     emoji: '📅',
     period: 'week',
@@ -96,10 +91,10 @@ export const FREQ_TIERS: Record<FreqTierKey, FreqTier> = {
   },
   drink_biweekly: {
     key: 'drink_biweekly',
-    label: '1 lần/2 tuần',
+    label: '1–2 lần/tháng',
     shortTitle: '1–2 lần/tháng',
-    hint: 'Nước 40–80k • Uống 1–2 lần/tháng (1 lần/2 tuần)',
-    recommendation: 'Nước 40–80k • Uống 1–2 lần/tháng (1 lần/2 tuần)',
+    hint: 'Nước >40–80k • Tối đa 2 lượt/chu kỳ tháng, gợi ý cách nhau khoảng 2 tuần',
+    recommendation: 'Nước >40–80k • Tối đa 2 lượt/chu kỳ tháng, gợi ý cách nhau khoảng 2 tuần',
     priceRangeLabel: '40–80k',
     emoji: '🗓️',
     period: 'month',
@@ -130,7 +125,7 @@ export type FrequencyTier = FreqTier;
 
 export function getFreqTier(
   categoryOrItem: 'food' | 'drink' | { category?: 'food' | 'drink'; priceK?: number },
-  maybePriceK?: number
+  maybePriceK?: number,
 ): FreqTier {
   let cat: 'food' | 'drink' = 'drink';
   let price = 0;
@@ -154,38 +149,41 @@ export function getFreqTier(
 }
 
 const DAY = 24 * 60 * 60 * 1000;
-const startOfDay = (d: Date) =>
-  new Date(d.getFullYear(), d.getMonth(), d.getDate());
-
-/**
- * Tính chu kỳ hiện tại:
- * - 'week': Thứ Hai → Chủ Nhật
- * - 'month': Bắt đầu từ ngày 05 hằng tháng → hết ngày 04 tháng kế tiếp
- * - 'year': Bắt đầu từ 05/01 hằng năm → 04/01 năm kế tiếp
- */
+export function localDayParts(now = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(now);
+  const get = (type: string) => Number(parts.find((p) => p.type === type)!.value);
+  return { year: get('year'), month: get('month') - 1, day: get('day') };
+}
+const civilDate = (y: number, m: number, d: number) => new Date(Date.UTC(y, m, d) - 7 * 3600_000);
+const startOfDay = (d: Date) => {
+  const p = localDayParts(d);
+  return civilDate(p.year, p.month, p.day);
+};
+/** All personal cycles use Asia/Ho_Chi_Minh, independently of the device timezone. */
 export function getCycleRange(period: FreqPeriod, now = new Date()) {
-  const today = startOfDay(now);
+  const { year: y, month: m, day: d } = localDayParts(now);
   if (period === 'week') {
-    const dow = (today.getDay() + 6) % 7; // Thứ Hai = 0
-    const start = new Date(today.getTime() - dow * DAY);
-    return { start, end: new Date(start.getTime() + 7 * DAY) };
+    const dow = (new Date(Date.UTC(y, m, d)).getUTCDay() + 6) % 7;
+    return { start: civilDate(y, m, d - dow), end: civilDate(y, m, d - dow + 7) };
   }
   if (period === 'month') {
-    const y = today.getFullYear();
-    const m = today.getMonth();
-    const start =
-      today.getDate() >= 5 ? new Date(y, m, 5) : new Date(y, m - 1, 5);
-    const end = new Date(start.getFullYear(), start.getMonth() + 1, 5);
-    return { start, end };
+    const month = d >= 5 ? m : m - 1;
+    return { start: civilDate(y, month, 5), end: civilDate(y, month + 1, 5) };
   }
-  const y = today.getFullYear();
-  const jan5 = new Date(y, 0, 5);
-  const start = today >= jan5 ? jan5 : new Date(y - 1, 0, 5);
-  return { start, end: new Date(start.getFullYear() + 1, 0, 5) };
+  const year = m === 0 && d < 5 ? y - 1 : y;
+  return { start: civilDate(year, 0, 5), end: civilDate(year + 1, 0, 5) };
 }
-
-const fmt = (d: Date) =>
-  `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+const fmt = (date: Date) =>
+  new Intl.DateTimeFormat('vi-VN', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    day: '2-digit',
+    month: '2-digit',
+  }).format(date);
 
 export interface QuotaStatus {
   tier: FreqTier;
@@ -200,12 +198,10 @@ export interface QuotaStatus {
 
 export function getQuotaStatus(
   categoryOrItem:
-    | 'food'
-    | 'drink'
-    | { category?: 'food' | 'drink'; priceK?: number; visits?: string[] },
+    'food' | 'drink' | { category?: 'food' | 'drink'; priceK?: number; visits?: string[] },
   maybePriceK?: number,
   maybeVisits?: string[],
-  now = new Date()
+  now = new Date(),
 ): QuotaStatus {
   let cat: 'food' | 'drink' = 'drink';
   let price = 0;
@@ -225,11 +221,10 @@ export function getQuotaStatus(
   const { start, end } = getCycleRange(tier.period, now);
   const used = visits.filter((v) => {
     const t = new Date(v).getTime();
-    return !Number.isNaN(t) && t >= start.getTime() && t < end.getTime();
+    return !Number.isNaN(t) && t >= start.getTime() && t < end.getTime() && t <= now.getTime();
   }).length;
   const remaining = Math.max(0, tier.quota - used);
-  const periodName =
-    tier.period === 'week' ? 'tuần' : tier.period === 'month' ? 'tháng' : 'năm';
+  const periodName = tier.period === 'week' ? 'tuần' : tier.period === 'month' ? 'tháng' : 'năm';
   const lastDay = new Date(end.getTime() - DAY);
   const resetText =
     tier.period === 'week'
@@ -249,7 +244,7 @@ export function getQuotaStatus(
     statusBadgeText:
       remaining > 0
         ? `Còn ${remaining}/${tier.quota} lượt/${periodName}`
-        : `Đủ ${tier.quota}/${tier.quota} lượt ${periodName}`,
+        : `Đã ghé ${used}/${tier.quota} lượt ${periodName}`,
   };
 }
 
@@ -259,7 +254,7 @@ export function getMonthCycleInfo(now = new Date()) {
   const totalDays = Math.max(1, Math.round((end.getTime() - start.getTime()) / DAY));
   const elapsedDays = Math.max(
     1,
-    Math.min(totalDays, Math.round((startOfDay(now).getTime() - start.getTime()) / DAY) + 1)
+    Math.min(totalDays, Math.round((startOfDay(now).getTime() - start.getTime()) / DAY) + 1),
   );
   return {
     label: `${fmt(start)} → ${fmt(lastDay)}`,
@@ -271,7 +266,7 @@ export function getMonthCycleInfo(now = new Date()) {
 
 /** Trọng số thông minh cho Vòng quay Quyết định: ưu tiên quán điểm cao + còn nhiều lượt + tần suất phù hợp */
 export function spinWeight(score10: number, q: QuotaStatus) {
-  if (!q.available) return 0;
+  if (!q.available || !Number.isFinite(score10) || score10 < 0 || score10 > 10) return 0;
   const scoreFactor = Math.pow(Math.max(0.5, score10 - 4.8), 2.1);
   const freshness = 0.55 + 0.45 * (q.remaining / q.tier.quota);
   return Math.max(0.05, scoreFactor * freshness * q.tier.spinBoost);
