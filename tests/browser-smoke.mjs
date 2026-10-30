@@ -607,8 +607,6 @@ try {
       ])
         assert.ok(!copy.includes(text), text);
       await nav(p, 'Chấm điểm');
-      const sparks = await p.locator('.spark-stage canvas[aria-hidden="true"]').count();
-      assert.ok(sparks > 0, 'A real React Bits touch burst must be rendered');
       const transforms = await p.evaluate(async () => {
         const samples = [];
         for (let i = 0; i < 24; i++) {
@@ -622,6 +620,9 @@ try {
         transforms.length > 3,
         'Screen transition must contain visible intermediate positions',
       );
+      await p.getByRole('heading', { name: 'Chấm điểm', exact: true }).click();
+      const sparks = await p.locator('.spark-stage canvas[aria-hidden="true"]').count();
+      assert.ok(sparks > 0, 'A fresh interaction must render a real React Bits burst');
       await p.getByRole('slider', { name: 'Hương vị đồ uống', exact: true }).press('ArrowRight');
       const values = await p.evaluate(async () => {
         const samples = [];
@@ -651,6 +652,7 @@ try {
       );
       await p.emulateMedia({ reducedMotion: 'no-preference' });
       await nav(p, 'Chấm điểm');
+      await p.getByRole('heading', { name: 'Chấm điểm', exact: true }).click();
       assert.ok(
         await p.locator('.spark-stage canvas[aria-hidden="true"]').count(),
         'Motion must resume when the preference is restored',
