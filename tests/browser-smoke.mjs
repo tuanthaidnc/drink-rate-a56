@@ -41,13 +41,18 @@ async function scenario(name, run) {
     await writeFile(resolve(output, 'browser-results.json'), JSON.stringify(results, null, 2));
   }
 }
-async function setup({ legacy, viewport = { width: 393, height: 852 }, offline = false } = {}) {
+async function setup({
+  legacy,
+  viewport = { width: 393, height: 852 },
+  offline = false,
+  reducedMotion = 'reduce',
+} = {}) {
   const context = await browser.newContext({
     viewport,
     isMobile: viewport.width < 600,
     hasTouch: viewport.width < 600,
     timezoneId: 'America/Los_Angeles',
-    reducedMotion: 'reduce',
+    reducedMotion,
     offline,
   });
   contexts.push(context);
@@ -174,11 +179,15 @@ try {
     async () => {
       const p = primary.page;
       await nav(p, 'Chấm điểm');
-      await p.getByRole('heading', { name: 'Chấm điểm quán', exact: true }).waitFor();
+      await p.getByRole('heading', { name: 'Chấm điểm', exact: true }).waitFor();
       await assertButtonContrast(p, 'Lưu quán');
+      await nav(p, 'Quán xá');
       await p.getByRole('button', { name: 'Đổi sang giao diện sáng', exact: true }).click();
+      await nav(p, 'Chấm điểm');
       await assertButtonContrast(p, 'Lưu quán');
+      await nav(p, 'Quán xá');
       await p.getByRole('button', { name: 'Đổi sang giao diện tối', exact: true }).click();
+      await nav(p, 'Chấm điểm');
       await nav(p, 'Bản đồ');
       assert.equal(await p.getByRole('dialog').count(), 0);
       await nav(p, 'Chấm điểm');
@@ -197,13 +206,13 @@ try {
       await p.getByLabel('Tên quán').fill('');
       await nav(p, 'Quán xá');
       assert.equal(await p.getByRole('dialog').count(), 0);
-      await p.locator('.review-card>summary').click();
+      await p.locator('.review-card>.review-summary').click();
       await p.getByRole('button', { name: 'Sửa đánh giá', exact: true }).click();
       await nav(p, 'Thống kê');
       assert.equal(await p.getByRole('dialog').count(), 0);
       await nav(p, 'Quán xá');
-      if (await p.locator('.review-card').evaluate((el) => el.open))
-        await p.locator('.review-card>summary').click();
+      if (await p.locator('.review-card').evaluate((el) => el.dataset.expanded === 'true'))
+        await p.locator('.review-card>.review-summary').click();
     },
   );
   await scenario(
@@ -218,7 +227,7 @@ try {
       await p.getByRole('button', { name: 'CHỌN', exact: true }).click();
       await p.getByRole('button', { name: 'Chọn quán này', exact: true }).click();
       assert.equal((await readDoc(p)).reviews[0].visitLog.length, 0);
-      await p.locator('.review-card>summary').click();
+      await p.locator('.review-card>.review-summary').click();
     },
   );
   await scenario('shared category filter drives list, map, insights and spin', async () => {
@@ -228,7 +237,7 @@ try {
     await nav(p, 'Bản đồ');
     await p.getByText('0 quán · 0 ghim xác nhận', { exact: true }).waitFor();
     await nav(p, 'Thống kê');
-    await p.getByRole('heading', { name: 'Thống kê theo bộ lọc' }).waitFor();
+    await p.locator('.stat-grid').waitFor();
     assert.equal(await p.locator('.stat-grid .panel').first().locator('strong').innerText(), '0');
     await p.getByRole('button', { name: 'Ăn gì?', exact: true }).click();
     await p.getByText('0 quán hợp lệ, còn lượt gợi ý', { exact: true }).waitFor();
@@ -245,7 +254,7 @@ try {
     await nav(p, 'Chấm điểm');
     await p.getByLabel('Tên quán').fill('Quán kiểm thử riêng');
     await p.locator('#review-price').fill('-10');
-    await p.getByRole('heading', { name: 'Chấm điểm quán', exact: true }).click();
+    await p.getByRole('heading', { name: 'Chấm điểm', exact: true }).click();
     await p.getByRole('button', { name: 'Lưu quán', exact: true }).click();
     await p.getByRole('alert').first().waitFor();
     assert.deepEqual(await readDoc(p), before);
@@ -289,7 +298,7 @@ try {
     const p = primary.page;
     await nav(p, 'Thống kê');
     const downloading = p.waitForEvent('download');
-    await p.getByRole('button', { name: 'Xuất bản sao JSON', exact: true }).click();
+    await p.getByRole('button', { name: 'Xuất JSON', exact: true }).click();
     const download = await downloading;
     await download.saveAs(resolve(output, 'roundtrip-backup.json'));
     const backup = JSON.parse(await readFile(await download.path(), 'utf8'));
@@ -308,7 +317,7 @@ try {
     await p.reload();
     await nav(p, 'Thống kê');
     assert.equal((await readDoc(p)).reviews.length, 0);
-    await p.getByText(/Bản dự phòng tự động trên thiết bị/).click();
+    await p.getByText(/Dự phòng/).click();
     await p.getByRole('button').filter({ hasText: 'Khôi phục JSON (thay thế)' }).first().click();
     await p.getByRole('button', { name: 'Khôi phục bản này', exact: true }).click();
     await eventuallyDoc(p, (d) => d.reviews.length === 3);
@@ -350,9 +359,7 @@ try {
       await p.getByRole('button', { name: 'Chấm quán đầu tiên', exact: true }).waitFor();
       await p.reload();
       assert.equal((await readDoc(p)).reviews.length, 0);
-      await p
-        .getByRole('button', { name: 'Xem cách hoạt động với quán minh họa', exact: true })
-        .click();
+      await p.getByRole('button', { name: 'Quán minh họa', exact: true }).click();
       const examples = p.getByRole('dialog', { name: 'Quán minh họa' });
       await examples.getByRole('heading', { name: 'Nốt Tea', exact: true }).waitFor();
       assert.equal(await examples.getByText(/Bếp Trang/).count(), 0);
@@ -363,9 +370,7 @@ try {
         .click();
       await p.locator('.form-address>summary').click();
       assert.equal(await p.getByLabel('Đường / phố / kiệt').inputValue(), '');
-      await p
-        .getByText('Chưa có ghim. Bạn vẫn có thể lưu đánh giá và ghim sau.', { exact: true })
-        .waitFor();
+      await p.getByText('Chưa ghim', { exact: true }).waitFor();
       await p.getByRole('button', { name: 'Hủy', exact: true }).click();
       assert.equal(await p.getByRole('dialog').count(), 0);
       const c = await browser.newContext();
@@ -387,14 +392,14 @@ try {
     'precache is complete; offline reload and every lazy screen keep data',
     async () => {
       const { page: p, context, errors } = await setup({ legacy: JSON.stringify(INITIAL_REVIEWS) });
-      await p.getByText('Sẵn sàng dùng ngoại tuyến', { exact: true }).waitFor({ timeout: 45000 });
+      await p.locator('[data-offline-ready="true"]').waitFor({ timeout: 45000 });
       const before = await readDoc(p);
       await context.setOffline(true);
       await p.reload();
       await p.getByRole('heading', { name: 'Quán xá (1)', exact: true }).waitFor();
       assert.deepEqual(await readDoc(p), before);
       await nav(p, 'Thống kê');
-      await p.getByRole('heading', { name: 'Thống kê theo bộ lọc' }).waitFor();
+      await p.locator('.stat-grid').waitFor();
       await nav(p, 'Chấm điểm');
       await p.locator('.form-address>summary').click();
       await p.getByRole('button', { name: 'Chọn từ danh mục', exact: true }).click();
@@ -451,7 +456,7 @@ try {
       assert.equal(before.reviews[0].photoIds.length, 1);
       await nav(p, 'Thống kê');
       const dl = p.waitForEvent('download');
-      await p.getByRole('button', { name: 'Xuất bản sao JSON', exact: true }).click();
+      await p.getByRole('button', { name: 'Xuất JSON', exact: true }).click();
       const backup = JSON.parse(await readFile(await (await dl).path(), 'utf8'));
       assert.equal(backup.media.length, 1);
       assert.ok(backup.media[0].dataUrl.startsWith('data:image/webp;base64,'));
@@ -486,8 +491,8 @@ try {
         true,
       );
       await nav(p, 'Quán xá');
-      if (!(await p.locator('.review-card').evaluate((el) => el.open)))
-        await p.locator('.review-card>summary').click();
+      if (!(await p.locator('.review-card').evaluate((el) => el.dataset.expanded === 'true')))
+        await p.locator('.review-card>.review-summary').click();
       await p.locator('.review-card img').waitFor();
       await p.screenshot({ path: resolve(output, '05-photo-review.png') });
     },
@@ -515,10 +520,7 @@ try {
       await p.getByText('Chưa lưu thay đổi.', { exact: true }).waitFor();
       assert.deepEqual(await readDoc(p), before);
       assert.equal(await p.getByLabel('Tên quán').inputValue(), 'Bản nháp khi hết dung lượng');
-      assert.equal(
-        await p.getByText('Đã lưu trải nghiệm trên thiết bị.', { exact: true }).count(),
-        0,
-      );
+      assert.equal(await p.getByText('Đã lưu', { exact: true }).count(), 0);
       await p.evaluate(() => {
         IDBDatabase.prototype.transaction = window.__idbTransaction;
       });
@@ -536,7 +538,7 @@ try {
       await b.goto(base);
       await b.getByRole('navigation').waitFor();
       for (const p of [a, b]) {
-        await p.locator('.review-card>summary').click();
+        await p.locator('.review-card>.review-summary').click();
         await p.getByRole('button', { name: 'Lượt ghé & tiền', exact: true }).click();
       }
       await a.getByLabel(/Tiền thực trả/).fill('20');
@@ -583,6 +585,84 @@ try {
     await p.screenshot({ path: resolve(output, '06-confirmed-map.png') });
     assert.deepEqual(errors, []);
   });
+  await scenario(
+    'motion is visibly active, scoring rolls, touch sparks run only on interaction, copy stays compact',
+    async () => {
+      const { page: p, errors } = await setup({
+        legacy: JSON.stringify(INITIAL_REVIEWS),
+        reducedMotion: 'no-preference',
+      });
+      const copy = await p.locator('main').innerText();
+      for (const text of [
+        'Trải nghiệm của riêng bạn',
+        'Sẵn sàng dùng ngoại tuyến',
+        'Cách chấm điểm',
+        'NỐT 15.0.0',
+      ])
+        assert.ok(!copy.includes(text), text);
+      await nav(p, 'Chấm điểm');
+      const sparks = await p.locator('.spark-stage canvas[aria-hidden="true"]').count();
+      assert.ok(sparks > 0, 'A real React Bits touch burst must be rendered');
+      const transforms = await p.evaluate(async () => {
+        const samples = [];
+        for (let i = 0; i < 24; i++) {
+          await new Promise(requestAnimationFrame);
+          const el = document.querySelector('.app-scene:not([aria-hidden="true"])');
+          if (el) samples.push(getComputedStyle(el).transform);
+        }
+        return [...new Set(samples)];
+      });
+      assert.ok(
+        transforms.length > 3,
+        'Screen transition must contain visible intermediate positions',
+      );
+      await p.getByRole('slider', { name: 'Hương vị đồ uống', exact: true }).press('ArrowRight');
+      const values = await p.evaluate(async () => {
+        const samples = [];
+        for (let i = 0; i < 40; i++) {
+          await new Promise(requestAnimationFrame);
+          samples.push(
+            document.querySelector('.live-score .score [data-motion="number"] [aria-hidden="true"]')
+              ?.textContent,
+          );
+        }
+        return [...new Set(samples)];
+      });
+      assert.ok(values.filter(Boolean).length > 2, 'Score must roll through intermediate values');
+      assert.equal(
+        (await readDoc(p)).reviews[0].totalScore,
+        6.5,
+        'Draft animation must not alter stored scores',
+      );
+      await p.emulateMedia({ reducedMotion: 'reduce' });
+      await p.waitForFunction(() => document.querySelectorAll('.spark-stage canvas').length === 0);
+      await p.getByRole('button', { name: 'Hủy', exact: true }).click();
+      await p.getByRole('button', { name: 'Bỏ bản nháp và rời màn hình', exact: true }).click();
+      assert.equal(
+        await p.locator('.spark-stage canvas').count(),
+        0,
+        'Reduced motion must suppress click sparks',
+      );
+      await assertNoOverflow(p);
+      assert.deepEqual(errors, []);
+      await writeFile(
+        resolve(output, 'motion-results.json'),
+        JSON.stringify(
+          {
+            pass: true,
+            distinctScreenFrames: transforms.length,
+            distinctScoreValues: values.length,
+            touchSparks: sparks,
+            reducedMotionRespected: true,
+            compactCopy: true,
+          },
+          null,
+          2,
+        ),
+      );
+      await p.screenshot({ path: resolve(output, '08-kinetic-ui.png') });
+    },
+  );
 } finally {
   for (const c of contexts) await c.close();
   await browser.close();

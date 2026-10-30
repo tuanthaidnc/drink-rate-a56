@@ -104,7 +104,7 @@ export default function VisitManager({
               onChange={(e) => setSpent(e.target.value)}
               placeholder="Để trống nếu chưa nhớ"
             />
-            <small>Ứng dụng không lấy giá đánh giá để đoán tiền bạn đã trả.</small>
+            
           </label>
           <label className="field">
             <span>Món đã gọi</span>
@@ -150,7 +150,7 @@ export default function VisitManager({
           </div>
         )}
         <h3>Lịch sử ({item.visitLog.length})</h3>
-        {!item.visitLog.length && <p className="muted">Chưa ghi lượt ghé nào.</p>}
+        {!item.visitLog.length && <p className="muted">0 lượt</p>}
         {[...item.visitLog]
           .sort((a, b) => b.visitedAt.localeCompare(a.visitedAt))
           .map((v) => (

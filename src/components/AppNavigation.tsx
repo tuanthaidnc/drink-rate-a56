@@ -1,4 +1,6 @@
 import { MapPin, Map, Plus, ChartColumn } from 'lucide-react';
+import { motion } from 'motion/react';
+import { useQuietMotion } from './motion/kinetic.tsx';
 import {
   BottomNavigation,
   BottomNavigationItem,
@@ -20,6 +22,7 @@ export default function AppNavigation({
   onChange: (tab: AppTab) => void;
   desktop?: boolean;
 }) {
+  const quiet = useQuietMotion();
   return (
     <BottomNavigation
       value={value}
@@ -35,7 +38,28 @@ export default function AppNavigation({
             aria-current={value === id ? 'page' : undefined}
             data-active={value === id}
           >
-            <Icon />
+            {value === id && (
+              <motion.span
+                className="nav-indicator"
+                layoutId={desktop ? 'rail-active' : 'dock-active'}
+                transition={{
+                  type: 'spring',
+                  stiffness: 360,
+                  damping: 25,
+                  duration: quiet ? 0 : undefined,
+                }}
+              />
+            )}
+            <motion.span
+              className="nav-icon"
+              animate={{
+                rotate: value === id && id === 'review' ? 90 : 0,
+                y: value === id ? -2 : 0,
+              }}
+              transition={{ type: 'spring', stiffness: 360, damping: 20 }}
+            >
+              <Icon />
+            </motion.span>
             <BottomNavigationLabel>{label}</BottomNavigationLabel>
           </button>
         </BottomNavigationItem>

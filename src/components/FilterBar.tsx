@@ -63,13 +63,17 @@ export default function FilterBar({
           {(
             [
               ['ALL', 'Tất cả'],
-              ['drink', 'Quán nước'],
-              ['food', 'Quán ăn'],
+              ['drink', 'Nước'],
+              ['food', 'Ăn'],
             ] as const
           ).map(([key, label]) => (
-            <ToggleGroup.Item key={key} value={key}>
+            <ToggleGroup.Item
+              key={key}
+              value={key}
+              aria-label={`${key === 'ALL' ? 'Tất cả' : key === 'drink' ? 'Quán nước' : 'Quán ăn'} (${key === 'ALL' ? real.length : real.filter((r) => r.category === key).length})`}
+            >
               {label}{' '}
-              <small>
+              <small className="sr-only">
                 ({key === 'ALL' ? real.length : real.filter((r) => r.category === key).length})
               </small>
             </ToggleGroup.Item>
@@ -83,7 +87,7 @@ export default function FilterBar({
               type="search"
               value={filters.search}
               onChange={(e) => set('search', e.target.value)}
-              placeholder="Tìm quán, món, đường…"
+              placeholder="Tìm quán…"
             />
             {filters.search && (
               <button
@@ -97,7 +101,7 @@ export default function FilterBar({
           </label>
           <button className="button secondary" onClick={() => setOpen(true)}>
             <SlidersHorizontal size={17} />
-            <span>Bộ lọc</span>
+            <span className="sr-only">Bộ lọc</span>
           </button>
         </div>
         {JSON.stringify(filters) !== JSON.stringify(DEFAULT_FILTERS) && (
@@ -113,9 +117,6 @@ export default function FilterBar({
       {open && (
         <Dialog title="Chọn quán theo nhu cầu" onClose={() => setOpen(false)}>
           <div className="stack">
-            <p className="small muted">
-              Bộ lọc này dùng chung cho danh sách, bản đồ, vòng quay và thống kê quán.
-            </p>
             <div className="two-columns">
               <label className="field">
                 <span>Tỉnh / thành phố đã lưu</span>
@@ -218,12 +219,11 @@ export default function FilterBar({
                   <option value="10">Trong 10 km</option>
                 </select>
               </label>
-              <p className="small muted">
-                {position
-                  ? `Đã lấy GPS${position.accuracyM ? `, sai số khoảng ${Math.round(position.accuracyM)} m` : ''}.`
-                  : 'Chỉ áp dụng khoảng cách sau khi lấy GPS.'}{' '}
-                Quán chưa có ghim xác nhận được loại khi lọc khoảng cách.
-              </p>
+              {position && (
+                <span className="small muted">
+                  GPS{position.accuracyM ? ` ±${Math.round(position.accuracyM)}m` : ''}
+                </span>
+              )}
             </div>
             <label className="check">
               <input
@@ -241,9 +241,7 @@ export default function FilterBar({
               />
               Đang mở theo giờ tôi đã kiểm tra
             </label>
-            <p className="small muted">
-              Khi lọc đang mở, quán chưa ghi giờ hoặc giờ đã hơn 30 ngày chưa kiểm tra sẽ được loại.
-            </p>
+            <></>
             <label className="field">
               <span>Tránh quán vừa ghé</span>
               <select

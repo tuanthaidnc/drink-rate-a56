@@ -61,9 +61,7 @@ export default function DataTools({
         new Blob([raw], { type: 'application/json' }),
         `not-sao-luu-${new Date().toISOString().slice(0, 10)}.json`,
       );
-      onMessage(
-        'Đã tạo file sao lưu gồm đánh giá, ảnh và lịch sử ghé. Hãy giữ file ở nơi khác ứng dụng.',
-      );
+      onMessage('Đã xuất JSON');
     } catch (e) {
       setLocalError((e as Error).message);
     } finally {
@@ -77,10 +75,7 @@ export default function DataTools({
   return (
     <section className="panel stack">
       <h3>Sao lưu & khôi phục</h3>
-      <p className="small muted">
-        Dữ liệu ở trên thiết bị này. Bản dự phòng tự động giúp hoàn tác; file JSON có cả ảnh giúp
-        chuyển máy và lưu một bản bên ngoài ứng dụng.
-      </p>
+      <></>
       <div className="button-row">
         <button
           className="button secondary"
@@ -88,11 +83,11 @@ export default function DataTools({
           onClick={() => void exportData()}
         >
           <Download size={17} />
-          {working ? 'Đang tạo file…' : 'Xuất bản sao JSON'}
+          {working ? 'Đang tạo file…' : 'Xuất JSON'}
         </button>
         <label className={`button secondary file-button ${busy ? 'disabled' : ''}`}>
           <Upload size={17} />
-          Khôi phục JSON
+          Nhập JSON
           <input
             type="file"
             accept="application/json,.json"
@@ -136,11 +131,8 @@ export default function DataTools({
         </p>
       )}
       <details className="disclosure">
-        <summary>Bản dự phòng tự động trên thiết bị ({backups.length})</summary>
-        <p className="small muted">
-          Giữ tối đa 20 bản trước các thay đổi. Bản cũ không bị ảnh hưởng khi nhập ảnh có mã trùng.
-          Xóa dữ liệu website cũng xóa các bản dự phòng này.
-        </p>
+        <summary>Dự phòng ({backups.length})</summary>
+        <></>
         <div className="stack">
           {backups.map((s) => (
             <button className="backup-row" key={s.id} disabled={busy} onClick={() => setRestore(s)}>
@@ -150,20 +142,13 @@ export default function DataTools({
               </small>
             </button>
           ))}
-          {!backups.length && <p className="muted small">Chưa có bản dự phòng tự động.</p>}
+          {!backups.length && <p className="muted small">0 bản</p>}
         </div>
       </details>
       <details className="disclosure">
         <summary>Lưu trữ & chuyển động</summary>
         <div className="stack">
-          <p className="small muted">
-            {size !== null
-              ? `Bộ nhớ website đang dùng khoảng ${(size / 1024 / 1024).toFixed(1)} MB. `
-              : ''}
-            {persistent === true
-              ? 'Trình duyệt đã cho phép lưu bền vững.'
-              : 'Hãy giữ file sao lưu riêng, kể cả khi đã cài ứng dụng.'}
-          </p>
+          <></>
           {persistent !== true && (
             <button
               className="button secondary"
@@ -182,7 +167,7 @@ export default function DataTools({
               }}
             >
               <ShieldCheck size={17} />
-              Đề nghị giữ dữ liệu bền vững
+              Giữ dữ liệu bền vững
             </button>
           )}
           <label className="check">
@@ -198,28 +183,21 @@ export default function DataTools({
       </details>
       {pending && (
         <Dialog
-          title="Kiểm tra trước khi khôi phục"
+          title="Nhập dữ liệu"
           onClose={() => {
             if (!busy) setPending(null);
           }}
         >
           <div className="stack">
             <p>
-              File hợp lệ: <strong>{pending.reviews.length} quán</strong>,{' '}
+              File: <strong>{pending.reviews.length} quán</strong>,{' '}
               {pending.reviews.reduce((n, r) => n + r.visitLog.length, 0)} lượt ghé,{' '}
-              {pending.media.length} ảnh. Có {pending.reviews.filter((r) => r.isDemo).length} quán
-              minh họa được giữ riêng.
+              {pending.media.length} ảnh.
             </p>
             {pending.reviews.some(isRetiredBepTrangSample) && (
-              <p className="notice">
-                Mẫu Bếp Trang chưa có trải nghiệm riêng sẽ được bỏ theo yêu cầu của bạn. Đánh giá,
-                ảnh và lượt ghé cá nhân vẫn được giữ.
-              </p>
+              <span className="small muted">Loại mẫu Bếp Trang</span>
             )}
-            <p className="small muted">
-              Điểm được tính lại theo công thức đã chốt. Bản dữ liệu trước khi nhập sẽ được lưu dự
-              phòng.
-            </p>
+            <></>
             {doc && (
               <fieldset>
                 <legend>Cách khôi phục</legend>
@@ -270,7 +248,7 @@ export default function DataTools({
                 onClick={async () => {
                   if (await onImport(pending, mode)) {
                     setPending(null);
-                    onMessage('Khôi phục thành công; bản dữ liệu trước đó vẫn ở mục dự phòng.');
+                    onMessage('Đã khôi phục');
                   }
                 }}
               >

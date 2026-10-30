@@ -15,11 +15,6 @@ export function HistoricalPlaces({ items, onOpen }: { items: ReviewItem[]; onOpe
   if (!items.length) return null;
   return (
     <section className="historical-places stack">
-      <div className="split">
-        <h2>Hồ sơ cũ</h2>
-        <Info size={16} />
-      </div>
-      <p className="small muted">Điểm minh họa không dùng để gợi ý.</p>
       {items.map((r) => (
         <button className="historical-row" key={r.id} onClick={onOpen}>
           <span className="venue-symbol">
@@ -28,18 +23,12 @@ export function HistoricalPlaces({ items, onOpen }: { items: ReviewItem[]; onOpe
           <span>
             <strong>{r.name}</strong>
             <small>
-              {r.placeResolution?.status === 'verified'
-                ? 'Đã đối chiếu địa điểm · Minh họa'
-                : 'Cần xác nhận địa điểm · Minh họa'}
+              {r.placeResolution?.status === 'verified' ? 'Đã xác nhận' : 'Chờ xác nhận'}
             </small>
           </span>
           <ChevronRight />
         </button>
       ))}
-      <Button variant="outline" onClick={onOpen}>
-        <Link2 data-icon="inline-start" />
-        Đối chiếu địa điểm
-      </Button>
     </section>
   );
 }
@@ -59,10 +48,7 @@ export default function PlaceReconciliation({
   return (
     <Dialog title="Đối chiếu địa điểm" onClose={onClose}>
       <div className="stack">
-        <p className="small muted">
-          Địa chỉ và ghim được đối chiếu riêng với điểm trải nghiệm của bạn. Dữ liệu mẫu Bếp Trang
-          đã được bỏ theo yêu cầu.
-        </p>
+        <></>
         {items
           .filter((r) => r.placeResolution)
           .map((r) => (
@@ -87,16 +73,13 @@ export default function PlaceReconciliation({
                 </>
               ) : (
                 <>
-                  <p className="small">Hồ sơ gần khớp được tìm thấy trên Maps:</p>
+                  <p className="small">Ứng viên</p>
                   <p>
                     <strong>{candidate.officialName}</strong>
                     <br />
                     {candidate.address} {candidate.street}, {candidate.ward}, {candidate.city}
                   </p>
-                  <p className="small muted">
-                    Chưa có bằng chứng đây chính là quán trong bản cũ. Ghim cũ đã được bỏ vì không
-                    có nguồn xác thực.
-                  </p>
+                  <></>
                   <a
                     className="source-link"
                     href={candidate.sourceUrl}
@@ -104,20 +87,16 @@ export default function PlaceReconciliation({
                     rel="noreferrer"
                   >
                     <MapPin />
-                    Kiểm tra địa chỉ và ảnh trên Maps
+                    Maps
                   </a>
                   <Button disabled={busy} onClick={() => void onConfirm(r)}>
-                    Đúng quán này, dùng địa điểm này
+                    Dùng địa chỉ này
                   </Button>
                 </>
               )}
-              {r.isDemo && (
-                <p className="small muted">
-                  Điểm và ghi chú cũ là minh họa. Chấm lại để đưa quán vào lựa chọn cá nhân.
-                </p>
-              )}
+              {r.isDemo && <></>}
               <Button variant="outline" onClick={() => onEdit(r)}>
-                Chấm lại / sửa thông tin
+                Chấm điểm
               </Button>
             </section>
           ))}

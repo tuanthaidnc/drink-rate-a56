@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
-  <meta id="app-theme-color" name="theme-color" content="#101823" />
+  <meta id="app-theme-color" name="theme-color" content="#0b0d0c" />
   <script>
     (function () {
       try {
         var saved = localStorage.getItem('not_app_theme_v8') || 'dark';
         var isLight = saved === 'light';
-        var color = isLight ? '#ffffff' : '#101823';
+        var color = isLight ? '#ffffff' : '#0b0d0c';
         document.documentElement.setAttribute('data-theme', isLight ? 'light' : 'dark');
         document.documentElement.style.colorScheme = isLight ? 'light' : 'dark';
         var meta = document.getElementById('app-theme-color');

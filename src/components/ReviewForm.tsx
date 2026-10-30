@@ -1,3 +1,4 @@
+import { AnimatedNumber, ScoreDial } from './motion/kinetic.tsx';
 import { lazy, Suspense, useEffect, useId, useMemo, useState } from 'react';
 import { Button } from './ui/button.tsx';
 import { Input } from './ui/input.tsx';
@@ -6,7 +7,18 @@ import { Field, FieldLabel, FieldGroup } from './ui/field.tsx';
 import * as ToggleGroup from '@animate-ui/react/primitives/radix-ui/toggle-group';
 import * as Slider from '@animate-ui/react/primitives/radix-ui/slider';
 import { reviewDraftSignature } from '../lib/reviewDraft.ts';
-import { Check, MapPin, Camera, X, Coffee, Utensils } from 'lucide-react';
+import {
+  Check,
+  MapPin,
+  Camera,
+  X,
+  Coffee,
+  Utensils,
+  Package,
+  Armchair,
+  Sparkles,
+  ArrowLeft,
+} from 'lucide-react';
 import type { ReviewItem, PhotoData, DrinkMode, FoodVenueType } from '../lib/models.ts';
 import { hasConfirmedLocation } from '../lib/models.ts';
 import { validateReview } from '../lib/validation.ts';
@@ -43,13 +55,38 @@ function ScoreSlider({
   onChange: (value: number) => void;
 }) {
   const id = useId();
+  const shortLabel =
+    (
+      {
+        'Hương vị đồ uống': 'Vị',
+        'Độ ngon món ăn': 'Ngon',
+        'Chất lượng & khẩu phần': 'Chất lượng',
+        'Độ sạch sẽ': 'Sạch',
+        'Chất liệu vỏ ly': 'Ly',
+        'Không gian quán': 'Không gian',
+      } as Record<string, string>
+    )[label] ?? label;
+  const Icon = label.includes('vỏ')
+    ? Package
+    : label.includes('Không gian')
+      ? Armchair
+      : label.includes('sạch')
+        ? Sparkles
+        : label.includes('món')
+          ? Utensils
+          : Coffee;
   return (
     <label className="score-field" htmlFor={id}>
+      <span className="criterion-orb" aria-hidden="true">
+        <Icon />
+      </span>
       <span className="split">
-        <span>
-          {label} <small>({weight}%)</small>
+        <span className="criterion-label">
+          {shortLabel} <small>{weight}%</small>
         </span>
-        <output className="mono">{value.toFixed(1)}</output>
+        <output className="mono">
+          <AnimatedNumber value={value} />
+        </output>
       </span>
       <Slider.Root
         className="rating-slider"
@@ -209,38 +246,35 @@ export default function ReviewForm({
       }}
     >
       <div className="split form-title">
-        <h1>{isEdit ? 'Cập nhật trải nghiệm' : 'Chấm điểm quán'}</h1>
-        <button type="button" className="text-button" onClick={onCancel}>
-          Hủy
+        <button type="button" className="text-button" aria-label="Hủy" onClick={onCancel}>
+          <ArrowLeft />
         </button>
+        <h1>{isEdit ? 'Sửa đánh giá' : 'Chấm điểm'}</h1>
       </div>
       {!isTyping && (
         <div className="live-score theme-surface-elevated">
           <div className="split">
             <div className="score-preview">
-              <div>
-                <span className="result-label">Kết quả dự kiến</span>
-                <strong className="score">
-                  {score?.toFixed(2) ?? '—'}
-                  <small>/10</small>
-                </strong>
-
-                <p className="small">{tier?.verdict ?? 'Nhập mức giá hợp lệ để tính điểm'}</p>
-              </div>
+              <ScoreDial value={score ?? 0} size={56} className="dial-mini" decimals={2} />
+              <strong className="score">
+                {score === null ? '—' : <AnimatedNumber value={score} decimals={2} />}
+                <small>/10</small>
+              </strong>
             </div>
-            <Button type="button" disabled={busy || photoBusy} onClick={() => void submit()}>
+            <Button
+              type="button"
+              aria-label={isEdit ? 'Cập nhật đánh giá' : 'Lưu quán'}
+              disabled={busy || photoBusy}
+              onClick={() => void submit()}
+            >
               <Check size={17} />
-              {busy ? 'Đang lưu…' : isEdit ? 'Cập nhật' : 'Lưu quán'}
+              {busy ? '…' : 'Lưu'}
             </Button>
           </div>
         </div>
       )}
 
-      {initial.isDemo && (
-        <p className="notice">
-          Đây là quán minh họa. Khi lưu, bạn xác nhận các điểm mới là trải nghiệm của mình.
-        </p>
-      )}
+      {initial.isDemo && <span className="badge demo-badge">Minh họa</span>}
       {error && (
         <p role="alert" className="alert">
           {error}
@@ -248,12 +282,9 @@ export default function ReviewForm({
       )}
 
       <section className="panel stack">
-        <h3 className="form-section-heading">Thông tin quán</h3>
         <FieldGroup>
           <Field className="field" data-invalid={!!error && !draft.name.trim()}>
-            <FieldLabel htmlFor="shop-name-input">
-              Tên quán <small>· bắt buộc</small>
-            </FieldLabel>
+            <FieldLabel htmlFor="shop-name-input">Tên quán</FieldLabel>
             <Input
               id="shop-name-input"
               value={draft.name}
@@ -261,33 +292,94 @@ export default function ReviewForm({
               maxLength={160}
               required
               aria-invalid={!!error && !draft.name.trim()}
-              placeholder={isFood ? 'Tên quán ăn bạn vừa thử' : 'Ví dụ: Nốt Tea'}
+              placeholder="Tên quán"
             />
           </Field>
-          <div className="stack">
-            <span className="form-help">Loại quán</span>
-            <ToggleGroup.Root
-              key={`category-${theme}`}
-              type="single"
-              className="segmented"
-              aria-label="Loại quán"
-              value={draft.category}
-              onValueChange={(category) => {
-                if (category !== 'drink' && category !== 'food') return;
-                change('category', category);
-                if (!isEdit) setPrice(category === 'food' ? '30' : '31');
-              }}
-            >
-              {(['drink', 'food'] as const).map((category) => (
-                <ToggleGroup.Item key={category} value={category}>
-                  {category === 'drink' ? <Coffee /> : <Utensils />}
-                  {category === 'drink' ? 'Quán nước' : 'Quán ăn'}
-                </ToggleGroup.Item>
-              ))}
-            </ToggleGroup.Root>
+
+          <div className="form-pricing">
+            <label className="field price-field">
+              <span className="split">
+                <span>Giá (k)</span>
+                <strong>{priceScore ? `${priceScore.score.toFixed(1)}đ` : '—'}</strong>
+              </span>
+              <Input
+                id="review-price"
+                type="number"
+                min="1"
+                max="2000"
+                step="0.5"
+                inputMode="decimal"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+              />
+            </label>
+            <div className="form-category">
+              <span className="form-help">Danh mục</span>
+              <ToggleGroup.Root
+                key={`category-${theme}`}
+                type="single"
+                className="segmented"
+                aria-label="Loại quán"
+                value={draft.category}
+                onValueChange={(category) => {
+                  if (category !== 'drink' && category !== 'food') return;
+                  change('category', category);
+                  if (!isEdit) setPrice(category === 'food' ? '30' : '31');
+                }}
+              >
+                {(['drink', 'food'] as const).map((category) => (
+                  <ToggleGroup.Item key={category} value={category}>
+                    {category === 'drink' ? <Coffee /> : <Utensils />}
+                    {category === 'drink' ? 'Nước' : 'Ăn'}
+                  </ToggleGroup.Item>
+                ))}
+              </ToggleGroup.Root>
+            </div>
           </div>
         </FieldGroup>
+        <details className="price-quick">
+          <summary>Khoảng giá</summary>{' '}
+          <div className="price-presets">
+            {presets.map((p) => (
+              <button
+                type="button"
+                key={p.value}
+                className="button secondary"
+                onClick={() => setPrice(String(p.value))}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+        </details>
 
+        <ToggleGroup.Root
+          key={`mode-${theme}`}
+          type="single"
+          className="segmented"
+          aria-label="Hình thức"
+          value={isFood ? draft.foodType : draft.mode}
+          onValueChange={(value) => {
+            if (!value) return;
+            if (isFood) change('foodType', value as FoodVenueType);
+            else change('mode', value as DrinkMode);
+          }}
+        >
+          {(isFood
+            ? [
+                ['streetfood', 'Bình dân / Vỉa hè'],
+                ['restaurant', 'Quán / Nhà hàng'],
+              ]
+            : [
+                ['takeaway', 'Mang đi'],
+                ['dinein', 'Ngồi lại'],
+              ]
+          ).map(([value, label]) => (
+            <ToggleGroup.Item key={value} value={value}>
+              {label}
+            </ToggleGroup.Item>
+          ))}
+        </ToggleGroup.Root>
         <details className="form-address">
           <summary>
             Địa điểm ·{' '}
@@ -317,7 +409,7 @@ export default function ReviewForm({
                 value={draft.street}
                 onChange={(e) => change('street', e.target.value)}
                 maxLength={200}
-                placeholder="Chọn đường đã lưu hoặc nhập đường mới"
+                placeholder="Tên đường"
               />
               <datalist id="saved-streets">
                 {streetOptions.map((s) => (
@@ -326,14 +418,12 @@ export default function ReviewForm({
               </datalist>
             </label>
             <label className="field">
-              <span>
-                Số nhà / địa chỉ cụ thể <small>· không bắt buộc</small>
-              </span>
+              <span>Số nhà</span>
               <Input
                 value={draft.address ?? ''}
                 onChange={(e) => change('address', e.target.value)}
                 maxLength={300}
-                placeholder="Ví dụ: 31, kiệt 2…"
+                placeholder="Số nhà"
               />
             </label>
             <button
@@ -342,50 +432,17 @@ export default function ReviewForm({
               onClick={() => setPinPicker(true)}
             >
               <MapPin size={18} />
-              {hasConfirmedLocation(draft)
-                ? 'Kiểm tra / chỉnh ghim đã xác nhận'
-                : 'Ghim vị trí chính xác trên bản đồ'}
+              {hasConfirmedLocation(draft) ? 'Chỉnh ghim' : 'Ghim vị trí'}
             </button>
-            <p className="small muted">
+            <span className="small muted">
               {hasConfirmedLocation(draft)
-                ? `Ghim đã xác nhận: ${draft.lat!.toFixed(5)}, ${draft.lng!.toFixed(5)}.`
-                : draft.lat !== null
-                  ? 'Tọa độ cũ chỉ là ước tính; chưa dùng để lọc gần tôi.'
-                  : 'Chưa có ghim. Bạn vẫn có thể lưu đánh giá và ghim sau.'}
-            </p>
+                ? `${draft.lat!.toFixed(5)}, ${draft.lng!.toFixed(5)}`
+                : 'Chưa ghim'}
+            </span>
           </div>
         </details>
       </section>
       <section className="panel stack">
-        <h3 className="form-section-heading">Trải nghiệm</h3>
-        <span className="form-help">{isFood ? 'Hình thức quán ăn' : 'Hình thức thưởng thức'}</span>
-        <ToggleGroup.Root
-          key={`mode-${theme}`}
-          type="single"
-          className="segmented"
-          aria-label="Hình thức"
-          value={isFood ? draft.foodType : draft.mode}
-          onValueChange={(value) => {
-            if (!value) return;
-            if (isFood) change('foodType', value as FoodVenueType);
-            else change('mode', value as DrinkMode);
-          }}
-        >
-          {(isFood
-            ? [
-                ['streetfood', 'Bình dân / Vỉa hè'],
-                ['restaurant', 'Quán / Nhà hàng'],
-              ]
-            : [
-                ['takeaway', 'Mang đi'],
-                ['dinein', 'Ngồi lại'],
-              ]
-          ).map(([value, label]) => (
-            <ToggleGroup.Item key={value} value={value}>
-              {label}
-            </ToggleGroup.Item>
-          ))}
-        </ToggleGroup.Root>
         <ScoreSlider
           label={isFood ? 'Độ ngon món ăn' : 'Hương vị đồ uống'}
           weight={
@@ -400,48 +457,7 @@ export default function ReviewForm({
           value={draft.taste}
           onChange={(v) => change('taste', v)}
         />
-        <label className="field">
-          <span className="split">
-            <span>
-              Giá một phần <small>· nghìn đồng (k)</small>
-            </span>
-            <strong>{priceScore ? `${priceScore.score.toFixed(1)}đ` : '—'}</strong>
-          </span>
-          <Input
-            id="review-price"
-            type="number"
-            min="1"
-            max="2000"
-            step="0.5"
-            inputMode="decimal"
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-            aria-describedby="price-help"
-          />
-          <small id="price-help">
-            Ví dụ 31 = 31.000đ. Đây là giá để chấm điểm; tiền thực trả được ghi riêng ở mỗi lượt
-            ghé.
-          </small>
-        </label>
-        <div className="price-presets">
-          {presets.map((p) => (
-            <button
-              type="button"
-              key={p.value}
-              className="button secondary"
-              onClick={() => setPrice(String(p.value))}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
-        {validPrice && (
-          <div className="frequency-hint">
-            <strong>{freq.label}</strong>
-            <p className="small">{freq.hint}</p>
-            <small>Gợi ý theo từng quán · tuần từ thứ Hai, tháng từ ngày 5 · giờ Việt Nam.</small>
-          </div>
-        )}
+
         {isFood ? (
           <>
             <ScoreSlider
@@ -461,7 +477,7 @@ export default function ReviewForm({
           <>
             <div>
               <h3>
-                Thể tích đồ uống <small>(20%)</small>
+                Lượng <small>20%</small>
               </h3>
               <div className="volume-options">
                 {VOLUME_OPTIONS.map((v) => (
@@ -495,25 +511,24 @@ export default function ReviewForm({
         )}
       </section>
       <section className="panel stack">
-        <h3 className="form-section-heading">Ghi nhớ lần trải nghiệm</h3>
         <label className="field">
           <span>Món nên gọi / món đã thử</span>
           <Input
             value={draft.dish ?? ''}
             maxLength={300}
             onChange={(e) => change('dish', e.target.value)}
-            placeholder="Ví dụ: trà sữa ô long ít đường"
+            placeholder="Món đã thử"
           />
         </label>
         <label className="field">
           <span>
-            Nhóm món <small>· để tìm nhanh sau này</small>
+            Nhóm món <small></small>
           </span>
           <Input
             value={draft.cuisine ?? ''}
             maxLength={100}
             onChange={(e) => change('cuisine', e.target.value)}
-            placeholder="Ví dụ: mì Quảng, cà phê, đồ chay…"
+            placeholder="Nhóm món"
           />
         </label>
         <label className="field">
@@ -523,7 +538,7 @@ export default function ReviewForm({
             value={draft.note}
             maxLength={5000}
             onChange={(e) => change('note', e.target.value)}
-            placeholder="Điều bạn muốn nhớ khi quay lại…"
+            placeholder="Ghi chú"
           />
         </label>
         <label className="field">
@@ -543,14 +558,14 @@ export default function ReviewForm({
               checked={firstVisit}
               onChange={(e) => setFirstVisit(e.target.checked)}
             />
-            Ghi nhận đã ghé hôm nay khi lưu (chưa ghi tiền thực trả)
+            Đã ghé hôm nay
           </label>
         )}
       </section>
       <section className="panel stack">
         <div className="split">
-          <h3 className="form-section-heading">
-            Ảnh thực tế <small>· tối đa 3</small>
+          <h3>
+            Ảnh <small>{draft.photoIds.length}/3</small>
           </h3>
           <label className="button secondary file-button">
             <Camera size={17} />
@@ -583,9 +598,7 @@ export default function ReviewForm({
             />
           </label>
         </div>
-        <p className="small muted">
-          Ảnh được nén và lưu trên thiết bị, đi kèm khi xuất bản sao JSON.
-        </p>
+
         <div className="photo-grid">
           {draft.photoIds.map((id, index) => (
             <div className="photo-item" key={id}>
@@ -613,9 +626,7 @@ export default function ReviewForm({
         </div>
       </section>
       <details className="panel disclosure">
-        <summary>
-          Giờ mở cửa tôi đã kiểm tra <small>· không bắt buộc</small>
-        </summary>
+        <summary>Giờ mở cửa</summary>
         <div className="stack">
           <label className="check">
             <input
@@ -635,7 +646,7 @@ export default function ReviewForm({
                 )
               }
             />
-            Lưu giờ mở cửa để lọc khi cần
+            Đã kiểm tra
           </label>
           {draft.openingHours && (
             <>
@@ -690,10 +701,6 @@ export default function ReviewForm({
                   />
                 </label>
               </div>
-              <p className="small muted">
-                Giờ do bạn ghi, theo giờ Việt Nam; hãy kiểm tra lại khi quay lại. Sau 30 ngày ứng
-                dụng coi thông tin này là chưa chắc chắn.
-              </p>
             </>
           )}
         </div>

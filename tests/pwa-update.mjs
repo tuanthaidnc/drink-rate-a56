@@ -104,7 +104,7 @@ try {
     p.waitForEvent('load'),
     p.getByRole('button', { name: 'Cập nhật', exact: true }).click(),
   ]);
-  await p.getByText('Sẵn sàng dùng ngoại tuyến', { exact: true }).waitFor();
+  await p.locator('[data-offline-ready="true"]').waitFor();
   assert.equal(await p.evaluate(() => localStorage.getItem('not_drink_food_reviews_v11')), raw);
   assert.equal(await p.evaluate(() => caches.has('another-personal-project-keep')), true);
   assert.equal(await p.evaluate(() => caches.has('drink-reviewer-v12-clean-map')), false);
@@ -114,9 +114,7 @@ try {
   await p.evaluate(async () => {
     await (await navigator.serviceWorker.getRegistration()).update();
   });
-  await p
-    .getByText('Chưa tải đủ bản dùng ngoại tuyến. Hãy thử lại khi mạng ổn định.')
-    .waitFor({ timeout: 45000 });
+  await p.locator('[data-pwa-error="true"]').waitFor({ timeout: 45000 });
   assert.equal(await p.getByRole('button', { name: 'Cập nhật', exact: true }).count(), 0);
   assert.equal(await p.evaluate(() => caches.has('not-drink-rate-a56-qa-update-2')), false);
   failAsset = false;

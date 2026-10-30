@@ -1,5 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { MotionConfig } from 'motion/react';
+import { MotionConfig, useReducedMotion } from 'motion/react';
+import ClickSpark from './components/motion/ClickSpark.tsx';
+import { MotionPreference, TransitionPanel } from './components/motion/kinetic.tsx';
 import {
   MapPin,
   Map,
@@ -7,11 +9,12 @@ import {
   ChartColumn,
   Moon,
   Sun,
-  BookOpen,
   Shuffle,
   Coffee,
   RefreshCw,
   WifiOff,
+  Settings2,
+  CircleAlert,
 } from 'lucide-react';
 import {
   applyThemeWithTransition,
@@ -30,7 +33,6 @@ import { useReviewStore } from './lib/useReviewStore.ts';
 import { useNow } from './lib/useNow.ts';
 import { usePwa } from './lib/usePwa.ts';
 import {
-  APP_VERSION,
   emptyDocument,
   hasConfirmedLocation,
   newId,
@@ -86,7 +88,7 @@ export default function App() {
     [locating, setLocating] = useState(false);
   const [reconciliation, setReconciliation] = useState(false);
   const [spin, setSpin] = useState(false),
-    [formula, setFormula] = useState(false),
+    [toolsOpen, setToolsOpen] = useState(false),
     [demo, setDemo] = useState(false);
   const [visitId, setVisitId] = useState<string | null>(null),
     [deleteItem, setDeleteItem] = useState<ReviewItem | null>(null);
@@ -100,6 +102,7 @@ export default function App() {
   const formRef = useRef(isForm);
   formRef.current = isForm && dirty;
   const reduced = doc?.settings.reducedMotion === true;
+  const systemReduced = useReducedMotion();
   const navigate = useCallback((target: Tab, push = true) => {
     setTab(target);
     if (push) history.pushState({ notTab: target }, '', location.href);
@@ -203,7 +206,7 @@ export default function App() {
   }, []);
   useEffect(() => {
     if (!message) return;
-    const timer = setTimeout(() => setMessage(''), 9000);
+    const timer = setTimeout(() => setMessage(''), 3500);
     return () => clearTimeout(timer);
   }, [message]);
   const reviews = doc?.reviews ?? [],
@@ -305,7 +308,7 @@ export default function App() {
       setSelected(item.id);
       setFilters({ ...DEFAULT_FILTERS });
       navigate('places');
-      setMessage(editing ? 'Đã lưu cập nhật trên thiết bị.' : 'Đã lưu trải nghiệm trên thiết bị.');
+      setMessage('Đã lưu');
     }
     return ok;
   };
@@ -400,550 +403,512 @@ export default function App() {
         ...emptyDocument(),
         reviews: validateReviews(DEMO_REVIEWS, true),
       }).reviews.map((r) => ({ ...r, isDemo: true }));
+  const heading = (
+    <div className="page-heading">
+      <h1>
+        {tab === 'places' ? (
+          <>
+            Quán xá <small>({filtered.length})</small>
+          </>
+        ) : tab === 'map' ? (
+          'Bản đồ'
+        ) : (
+          'Thống kê'
+        )}
+      </h1>
+      <button className="button spin-trigger" onClick={() => setSpin(true)}>
+        <Shuffle />
+        <span>Ăn gì?</span>
+      </button>
+    </div>
+  );
+  const controls = (
+    <FilterBar
+      key={theme}
+      items={reviews}
+      filters={filters}
+      onChange={setFilters}
+      position={position}
+      onLocate={() => void locate()}
+      locating={locating}
+    />
+  );
   return (
     <MotionConfig reducedMotion={reduced ? 'always' : 'user'}>
-      <div className={`not-app ${typing && isForm ? 'is-typing' : ''}`}>
-        <header className="app-header">
-          <div className="header-inner">
-            <a
-              className="brand"
-              href="#main"
-              onClick={(e) => {
-                e.preventDefault();
-                selectTab('places');
-              }}
-            >
-              <span className="brand-icon">
-                <Coffee size={22} />
-              </span>
-              <span>
-                <strong>NỐT</strong>
-                <small>FOOD & DRINK</small>
-              </span>
-            </a>
-            <div className="header-actions">
-              <button
-                className="button secondary theme-toggle"
-                onClick={(e) =>
-                  applyThemeWithTransition(theme === 'dark' ? 'light' : 'dark', setTheme, e)
-                }
-                aria-label={`Đổi sang giao diện ${theme === 'dark' ? 'sáng' : 'tối'}`}
-              >
-                {theme === 'dark' ? <Moon /> : <Sun />}
-                <span>{theme === 'dark' ? 'Tối' : 'Sáng'}</span>
-              </button>
-              <button
-                className="icon-button secondary"
-                aria-label="Xem công thức tính điểm"
-                onClick={() => setFormula(true)}
-              >
-                <BookOpen />
-              </button>
-            </div>
-          </div>
-        </header>
-        {doc && <AppNavigation desktop value={tab} onChange={selectTab} />}
-        <main id="main" ref={main} className="app-main" tabIndex={-1}>
-          <div className="content-width stack">
-            <div className="connection-status" role="status">
-              {!pwa.online ? (
-                <>
-                  <WifiOff size={14} />
-                  Ngoại tuyến · vẫn lưu trên thiết bị
-                </>
-              ) : pwa.ready ? (
-                'Sẵn sàng dùng ngoại tuyến'
-              ) : (
-                'Đang chuẩn bị bản dùng ngoại tuyến…'
-              )}
-            </div>
-            {pwa.error && (
-              <p className="notice small">
-                {pwa.error}
-                <button className="text-button" onClick={() => void pwa.retry()}>
-                  Thử chuẩn bị lại
-                </button>
-              </p>
-            )}
-            {pwa.waiting && (
-              <div className="notice update-notice">
-                <span>
-                  Có phiên bản mới{dirty ? ' · hãy lưu hoặc hủy phần đang nhập trước.' : ''}
-                </span>
-                <button
-                  className="button"
-                  disabled={dirty || store.busy || !!visitItem}
-                  onClick={() => pwa.apply()}
+      <ClickSpark
+        className="spark-stage"
+        sparkColor={['#d7ff3f', '#b8a4ff']}
+        sparkRadius={26}
+        sparkCount={7}
+        sparkSize={8}
+        duration={460}
+        ring
+        disabled={reduced || systemReduced === true}
+      >
+        <MotionPreference.Provider value={reduced}>
+          <div
+            className={`not-app ${typing && isForm ? 'is-typing' : ''}`}
+            data-offline-ready={pwa.ready}
+            data-form={isForm}
+            data-pwa-error={!!pwa.error}
+          >
+            <header className="app-header">
+              <div className="header-inner">
+                <a
+                  className="brand"
+                  href="#main"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    selectTab('places');
+                  }}
                 >
-                  <RefreshCw size={16} />
-                  Cập nhật
-                </button>
-              </div>
-            )}
-            {store.loading ? (
-              <p role="status" className="empty">
-                Đang mở dữ liệu cá nhân…
-              </p>
-            ) : !doc ? (
-              <>
-                <section className="panel stack">
-                  <h1>Cần khôi phục dữ liệu</h1>
-                  <p role="alert" className="alert">
-                    {store.error?.message ?? 'Chưa thể mở kho dữ liệu.'}
-                  </p>
-                  <p>
-                    Dữ liệu cũ được giữ nguyên. Chọn file sao lưu hoặc bản dự phòng bên dưới, hoặc
-                    thử mở lại kho.
-                  </p>
-                  <button className="button secondary" onClick={() => void store.reload()}>
-                    Thử mở lại
+                  <span>
+                    <strong>NỐT</strong>
+                  </span>
+                </a>
+                <div className="header-actions">
+                  <button
+                    className="button secondary theme-toggle"
+                    onClick={(e) =>
+                      applyThemeWithTransition(theme === 'dark' ? 'light' : 'dark', setTheme, e)
+                    }
+                    aria-label={`Đổi sang giao diện ${theme === 'dark' ? 'sáng' : 'tối'}`}
+                  >
+                    {theme === 'dark' ? <Moon /> : <Sun />}
                   </button>
-                </section>
-                {dataTools}
-              </>
-            ) : (
-              <>
-                {store.error && (
-                  <div className="alert" role="alert">
-                    <strong>Chưa lưu thay đổi.</strong>
-                    <p>{store.error.message}</p>
-                    <button className="text-button" onClick={store.clearError}>
-                      Đóng thông báo
-                    </button>
-                  </div>
-                )}
-                {!isForm && (
-                  <div className="page-heading">
-                    <div>
-                      <h1>
-                        {tab === 'places' ? (
-                          <>
-                            Quán xá <small>({filtered.length})</small>
-                          </>
-                        ) : tab === 'map' ? (
-                          'Bản đồ'
-                        ) : (
-                          'Thống kê'
-                        )}
-                      </h1>
-                      <p>
-                        {tab === 'places'
-                          ? 'Trải nghiệm của riêng bạn'
-                          : tab === 'map'
-                            ? 'Ghim đúng quán, tìm đúng nơi'
-                            : 'Nhìn lại gu ăn uống và chi tiêu'}
-                      </p>
-                    </div>
-                    <button className="button" onClick={() => setSpin(true)}>
-                      <Shuffle size={16} />
-                      Ăn gì?
-                    </button>
-                  </div>
-                )}
-                {!isForm && (
-                  <FilterBar
-                    key={theme}
-                    items={reviews}
-                    filters={filters}
-                    onChange={setFilters}
-                    position={position}
-                    onLocate={() => void locate()}
-                    locating={locating}
-                  />
-                )}
-                <Suspense
-                  fallback={
-                    <p className="empty" role="status">
-                      Đang mở màn hình…
-                    </p>
-                  }
-                >
-                  {tab === 'places' && (
-                    <div className="workspace-view">
-                      <div className="places-column stack">
-                        <div className="split list-heading">
-                          <label className="sort-field">
-                            <span className="sr-only">Sắp xếp quán</span>
-                            <select
-                              aria-label="Sắp xếp quán"
-                              value={sort}
-                              onChange={(e) => {
-                                setSort(e.target.value);
-                                if (e.target.value === 'distance' && !position) void locate();
-                              }}
-                            >
-                              <option value="score">Điểm cao trước</option>
-                              <option value="taste">Ngon nhất trước</option>
-                              <option value="price">Giá thấp trước</option>
-                              <option value="recent">Mới cập nhật</option>
-                              <option value="distance">Gần GPS nhất</option>
-                            </select>
-                          </label>
-                          <span className="list-count">{filtered.length} quán</span>
-                        </div>
-                        {undo && (
-                          <div className="notice split">
-                            <span>Đã xóa {undo.name}.</span>
-                            <button
-                              className="text-button"
-                              disabled={store.busy}
-                              onClick={() => void restoreDeleted()}
-                            >
-                              Hoàn tác xóa quán
-                            </button>
-                          </div>
-                        )}
-                        {!personal.length ? (
-                          <section className="panel empty stack">
-                            <Coffee size={40} />
-                            <h2>Nhớ quán ngon, chọn dễ hơn</h2>
-                            <p>
-                              Chấm trải nghiệm thật đầu tiên của bạn. Điểm, giá và những lần quay
-                              lại sẽ giúp chọn quán lần sau.
-                            </p>
-                            <button className="button" onClick={() => add()}>
-                              <Plus size={18} />
-                              Chấm quán đầu tiên
-                            </button>
-                            <button className="text-button" onClick={() => setDemo(true)}>
-                              Xem cách hoạt động với quán minh họa
-                            </button>
-                          </section>
-                        ) : !sorted.length ? (
-                          <section className="panel empty stack">
-                            <h2>Chưa có quán khớp điều kiện</h2>
-                            <p>{summary}</p>
-                            <button
-                              className="button secondary"
-                              onClick={() => setFilters({ ...DEFAULT_FILTERS })}
-                            >
-                              Xóa bộ lọc
-                            </button>
-                          </section>
-                        ) : (
-                          sorted.map((item, index) => (
-                            <ReviewCard
-                              key={item.id}
-                              item={item}
-                              index={index}
-                              now={now}
-                              position={position}
-                              selected={item.id === selected}
-                              onInspect={() => setSelected(item.id)}
-                              onEdit={() => edit(item)}
-                              onDelete={() => setDeleteItem(item)}
-                              onVisit={() => setVisitId(item.id)}
-                              onDirections={() => directions(item)}
-                              onMap={() => {
-                                setSelected(item.id);
-                                navigate('map');
-                              }}
-                            />
-                          ))
-                        )}
-                        <HistoricalPlaces items={demos} onOpen={() => setReconciliation(true)} />
-                      </div>
-                      <ReviewInspector
-                        item={inspector}
-                        now={now}
-                        onEdit={() => inspector && edit(inspector)}
-                        onVisit={() => inspector && setVisitId(inspector.id)}
-                        onDelete={() => inspector && setDeleteItem(inspector)}
-                        onDirections={() => inspector && directions(inspector)}
-                        onMap={() => {
-                          if (inspector) {
-                            setSelected(inspector.id);
-                            navigate('map');
-                          }
-                        }}
-                      />
-                    </div>
+                  {!pwa.online && (
+                    <span
+                      className="icon-button muted"
+                      aria-label="Ngoại tuyến"
+                      title="Ngoại tuyến"
+                    >
+                      <WifiOff />
+                    </span>
                   )}
-                  {tab === 'map' && (
-                    <PlaceMap
-                      key={selected ?? 'map'}
-                      items={filtered}
-                      theme={theme}
-                      summary={summary}
-                      position={position}
-                      onLocate={() => void locate()}
-                      onEdit={edit}
-                      onDirections={directions}
-                      onCreate={add}
-                      selectedId={selected}
-                    />
-                  )}
-                  {tab === 'review' && draft && (
-                    <ReviewForm
-                      key={draft.id}
-                      initial={draft}
-                      isEdit={editing}
-                      theme={theme}
-                      busy={store.busy}
-                      isTyping={typing}
-                      existing={reviews}
-                      onSave={saveReview}
-                      onDirtyChange={setDirty}
-                      onCancel={() => {
-                        if (dirty) setLeaveTo('places');
-                        else {
-                          setDraft(null);
-                          navigate('places');
-                        }
-                      }}
-                    />
-                  )}
-                  {tab === 'insights' && (
-                    <Insights
-                      document={doc}
-                      items={filtered}
-                      summary={summary}
-                      now={now}
-                      dataTools={dataTools}
-                      onBudget={async (value) => {
-                        const ok = await saveSettings({ monthlyBudgetK: value });
-                        if (ok) setMessage('Đã lưu ngân sách chu kỳ.');
-                        return ok;
-                      }}
-                      onVisit={(r) => setVisitId(r.id)}
-                    />
-                  )}
-                </Suspense>
-              </>
-            )}
-            <footer className="app-footer">
-              NỐT {APP_VERSION} · Trải nghiệm của riêng bạn
-              <button className="text-button" onClick={() => setFormula(true)}>
-                Cách chấm điểm
-              </button>
-            </footer>
-          </div>
-        </main>
-        {doc && !(isForm && typing) && <AppNavigation value={tab} onChange={selectTab} />}
-        {reconciliation && doc && (
-          <PlaceReconciliation
-            items={reviews}
-            busy={store.busy}
-            onClose={() => setReconciliation(false)}
-            onEdit={(r) => {
-              setReconciliation(false);
-              edit(r);
-            }}
-            onConfirm={async (item) => {
-              const ok = await store.update(
-                (d) => ({
-                  ...d,
-                  reviews: d.reviews.map((r) =>
-                    r.id === item.id
-                      ? {
-                          ...r,
-                          ...THANH_HUONG_CANDIDATE,
-                          name: r.name,
-                          locationStatus: 'confirmed' as const,
-                          locationSource: 'research' as const,
-                          updatedAt: new Date().toISOString(),
-                          placeResolution: {
-                            ...r.placeResolution!,
-                            status: 'verified' as const,
-                            checkedAt: new Date().toISOString(),
-                          },
-                        }
-                      : r,
-                  ),
-                }),
-                'Xác nhận hồ sơ Maps Thanh Hương',
-              );
-              if (ok)
-                setMessage(
-                  'Đã đối chiếu địa điểm. Hãy chấm lại theo trải nghiệm của bạn trước khi dùng để gợi ý.',
-                );
-              return ok;
-            }}
-          />
-        )}
-        {message && (
-          <div className="toast" role="status">
-            <span>{message}</span>
-            <button
-              className="icon-button"
-              aria-label="Đóng thông báo"
-              onClick={() => setMessage('')}
-            >
-              ×
-            </button>
-          </div>
-        )}
-        {leaveTo && (
-          <Dialog title="Rời phần đang nhập?" onClose={() => setLeaveTo(null)}>
-            <div className="stack">
-              <p>
-                Đánh giá đang nhập chưa được lưu. Bạn có thể tiếp tục nhập hoặc bỏ bản nháp này.
-              </p>
-              <button className="button" onClick={() => setLeaveTo(null)}>
-                Tiếp tục nhập
-              </button>
-              <button
-                className="button secondary"
-                onClick={() => {
-                  const target = leaveTo;
-                  setDraft(null);
-                  setDirty(false);
-                  setLeaveTo(null);
-                  navigate(target);
-                }}
-              >
-                Bỏ bản nháp và rời màn hình
-              </button>
-            </div>
-          </Dialog>
-        )}
-        {deleteItem && (
-          <Dialog title="Xóa quán đã lưu?" onClose={() => setDeleteItem(null)}>
-            <div className="stack">
-              <p>
-                Xóa <strong>{deleteItem.name}</strong> cùng lịch sử ghé khỏi danh sách. Một bản dự
-                phòng được giữ trước khi xóa.
-              </p>
-              <button className="button danger" disabled={store.busy} onClick={() => void remove()}>
-                Xóa quán này
-              </button>
-              <button className="button secondary" onClick={() => setDeleteItem(null)}>
-                Giữ lại
-              </button>
-            </div>
-          </Dialog>
-        )}
-        {demo && (
-          <Dialog title="Quán minh họa" onClose={() => setDemo(false)}>
-            <div className="stack">
-              <p className="notice">
-                Các điểm này giúp xem giao diện. Chúng không nằm trong thống kê hoặc vòng quay cá
-                nhân. Hãy chấm lại theo trải nghiệm của bạn trước khi lưu.
-              </p>
-              {examples.map((r) => (
-                <div key={r.id} className="panel stack">
-                  <div className="split">
-                    <h3>{r.name}</h3>
-                    <strong>{r.totalScore.toFixed(1)}đ</strong>
-                  </div>
-                  <p className="small">
-                    {r.priceK}k · {r.category === 'food' ? 'Quán ăn' : 'Quán nước'} · Minh họa
-                  </p>
-                  <div className="button-row">
+                  {pwa.error && (
                     <button
-                      className="button secondary"
-                      onClick={() =>
-                        edit(demos.some((x) => x.id === r.id) ? r : { ...r, id: newId('review') })
+                      className="icon-button"
+                      aria-label={pwa.error}
+                      title={pwa.error}
+                      onClick={() => void pwa.retry()}
+                    >
+                      <CircleAlert />
+                    </button>
+                  )}
+                  {pwa.waiting && (
+                    <button
+                      className="icon-button update-button"
+                      aria-label="Cập nhật"
+                      title="Cập nhật"
+                      disabled={dirty || store.busy || !!visitItem}
+                      onClick={() => pwa.apply()}
+                    >
+                      <RefreshCw />
+                    </button>
+                  )}
+                  <button
+                    className="icon-button secondary"
+                    aria-label="Tùy chọn"
+                    onClick={() => setToolsOpen(true)}
+                  >
+                    <Settings2 />
+                  </button>
+                </div>
+              </div>
+            </header>
+            {doc && <AppNavigation desktop value={tab} onChange={selectTab} />}
+            <main id="main" ref={main} className="app-main" tabIndex={-1}>
+              <div className="content-width stack">
+                {store.loading ? (
+                  <div className="scene-loader" role="status" aria-label="Đang tải">
+                    <i />
+                  </div>
+                ) : !doc ? (
+                  <>
+                    <section className="panel stack">
+                      <h1>Cần khôi phục dữ liệu</h1>
+                      <p role="alert" className="alert">
+                        {store.error?.message ?? 'Chưa thể mở kho dữ liệu.'}
+                      </p>
+                      <p>
+                        Dữ liệu cũ được giữ nguyên. Chọn file sao lưu hoặc bản dự phòng bên dưới,
+                        hoặc thử mở lại kho.
+                      </p>
+                      <button className="button secondary" onClick={() => void store.reload()}>
+                        Thử mở lại
+                      </button>
+                    </section>
+                    {dataTools}
+                  </>
+                ) : (
+                  <>
+                    {store.error && (
+                      <div className="alert" role="alert">
+                        <strong>Chưa lưu thay đổi.</strong>
+                        <p>{store.error.message}</p>
+                        <button className="text-button" onClick={store.clearError}>
+                          Đóng thông báo
+                        </button>
+                      </div>
+                    )}
+                    <Suspense
+                      fallback={
+                        <div className="scene-loader" role="status" aria-label="Đang tải">
+                          <i />
+                        </div>
                       }
                     >
-                      Chấm lại theo trải nghiệm của tôi
-                    </button>
-                    {demos.some((x) => x.id === r.id) && (
-                      <button
-                        className="text-button danger-text"
-                        onClick={() => {
-                          setDemo(false);
-                          setDeleteItem(r);
-                        }}
-                      >
-                        Bỏ minh họa cũ
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Dialog>
-        )}
-        {formula && (
-          <Dialog title="Điểm để chọn quán theo gu của bạn" onClose={() => setFormula(false)}>
-            <div className="stack">
-              <p>
-                Điểm tổng là trung bình có trọng số, làm tròn 2 chữ số. Sao hiển thị bằng điểm / 2,
-                không phải đánh giá cộng đồng.
-              </p>
-              <div className="comparison-table">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Trải nghiệm</th>
-                      <th>Trọng số</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <th>Nước mang đi</th>
-                      <td>Vị 50% · Giá 25% · Lượng 20% · Ly 5%</td>
-                    </tr>
-                    <tr>
-                      <th>Nước ngồi lại</th>
-                      <td>Vị 35% · Không gian 20% · Giá 20% · Lượng 20% · Ly 5%</td>
-                    </tr>
-                    <tr>
-                      <th>Ăn bình dân / vỉa hè</th>
-                      <td>Ngon 40% · Chất lượng 25% · Sạch 15% · Giá 15% · Không gian 5%</td>
-                    </tr>
-                    <tr>
-                      <th>Ăn quán / nhà hàng</th>
-                      <td>Ngon 35% · Chất lượng 25% · Sạch 15% · Không gian 15% · Giá 10%</td>
-                    </tr>
-                  </tbody>
-                </table>
+                      <TransitionPanel activeIndex={tabs.findIndex((t) => t.id === tab)}>
+                        {[
+                          tab === 'places' ? (
+                            <div className="workspace-view">
+                              <div className="places-column stack">
+                                {heading}
+                                {controls}
+                                <div className="split list-heading">
+                                  <label className="sort-field">
+                                    <span className="sr-only">Sắp xếp quán</span>
+                                    <select
+                                      aria-label="Sắp xếp quán"
+                                      value={sort}
+                                      onChange={(e) => {
+                                        setSort(e.target.value);
+                                        if (e.target.value === 'distance' && !position)
+                                          void locate();
+                                      }}
+                                    >
+                                      <option value="score">Điểm cao trước</option>
+                                      <option value="taste">Ngon nhất trước</option>
+                                      <option value="price">Giá thấp trước</option>
+                                      <option value="recent">Mới cập nhật</option>
+                                      <option value="distance">Gần GPS nhất</option>
+                                    </select>
+                                  </label>
+                                </div>
+                                {undo && (
+                                  <div className="notice split">
+                                    <span>Đã xóa {undo.name}.</span>
+                                    <button
+                                      className="text-button"
+                                      disabled={store.busy}
+                                      onClick={() => void restoreDeleted()}
+                                    >
+                                      Hoàn tác xóa quán
+                                    </button>
+                                  </div>
+                                )}
+                                {!personal.length ? (
+                                  <section className="panel empty stack">
+                                    <Coffee size={40} />
+                                    <h2>Chưa có quán</h2>
+                                    <button
+                                      className="button"
+                                      aria-label="Chấm quán đầu tiên"
+                                      onClick={() => add()}
+                                    >
+                                      <Plus size={18} />
+                                      Thêm quán
+                                    </button>
+                                    <button className="text-button" onClick={() => setDemo(true)}>
+                                      Quán minh họa
+                                    </button>
+                                  </section>
+                                ) : !sorted.length ? (
+                                  <section className="panel empty stack">
+                                    <h2>Chưa có quán khớp điều kiện</h2>
+                                    <p>{summary}</p>
+                                    <button
+                                      className="button secondary"
+                                      onClick={() => setFilters({ ...DEFAULT_FILTERS })}
+                                    >
+                                      Xóa bộ lọc
+                                    </button>
+                                  </section>
+                                ) : (
+                                  sorted.map((item, index) => (
+                                    <ReviewCard
+                                      key={item.id}
+                                      item={item}
+                                      index={index}
+                                      now={now}
+                                      position={position}
+                                      selected={item.id === selected}
+                                      onInspect={() => setSelected(item.id)}
+                                      onEdit={() => edit(item)}
+                                      onDelete={() => setDeleteItem(item)}
+                                      onVisit={() => setVisitId(item.id)}
+                                      onDirections={() => directions(item)}
+                                      onMap={() => {
+                                        setSelected(item.id);
+                                        navigate('map');
+                                      }}
+                                    />
+                                  ))
+                                )}
+                                <HistoricalPlaces
+                                  items={demos}
+                                  onOpen={() => setReconciliation(true)}
+                                />
+                              </div>
+                              <ReviewInspector
+                                item={inspector}
+                                now={now}
+                                onEdit={() => inspector && edit(inspector)}
+                                onVisit={() => inspector && setVisitId(inspector.id)}
+                                onDelete={() => inspector && setDeleteItem(inspector)}
+                                onDirections={() => inspector && directions(inspector)}
+                                onMap={() => {
+                                  if (inspector) {
+                                    setSelected(inspector.id);
+                                    navigate('map');
+                                  }
+                                }}
+                              />
+                            </div>
+                          ) : null,
+                          tab === 'map' ? (
+                            <div className="map-page stack">
+                              {heading}
+                              {controls}
+                              <PlaceMap
+                                key={selected ?? 'map'}
+                                items={filtered}
+                                theme={theme}
+                                summary={summary}
+                                position={position}
+                                onLocate={() => void locate()}
+                                onEdit={edit}
+                                onDirections={directions}
+                                onCreate={add}
+                                selectedId={selected}
+                              />
+                            </div>
+                          ) : null,
+                          tab === 'review' && draft ? (
+                            <ReviewForm
+                              key={draft.id}
+                              initial={draft}
+                              isEdit={editing}
+                              theme={theme}
+                              busy={store.busy}
+                              isTyping={typing}
+                              existing={reviews}
+                              onSave={saveReview}
+                              onDirtyChange={setDirty}
+                              onCancel={() => {
+                                if (dirty) setLeaveTo('places');
+                                else {
+                                  setDraft(null);
+                                  navigate('places');
+                                }
+                              }}
+                            />
+                          ) : null,
+                          tab === 'insights' ? (
+                            <div className="insights-page stack">
+                              {heading}
+                              {controls}
+                              <Insights
+                                document={doc}
+                                items={filtered}
+                                summary={summary}
+                                now={now}
+                                dataTools={dataTools}
+                                onBudget={async (value) => {
+                                  const ok = await saveSettings({ monthlyBudgetK: value });
+                                  if (ok) setMessage('Đã lưu ngân sách');
+                                  return ok;
+                                }}
+                                onVisit={(r) => setVisitId(r.id)}
+                              />
+                            </div>
+                          ) : null,
+                        ]}
+                      </TransitionPanel>
+                    </Suspense>
+                  </>
+                )}
               </div>
-              <p className="notice">
-                Mốc ban đầu được giữ: Nốt 31k, vị 7, lượng ít, ly 9 → 6,5/10 khi mang đi.
-              </p>
-              <h3>Tần suất theo từng quán</h3>
-              <p>
-                ≤40k: 2 lần/tuần. Quán ăn &gt;40–80k: 1 lần/tuần; &gt;80k: 1 lần/tháng. Quán nước
-                &gt;40–80k: tối đa 2 lần/chu kỳ tháng, gợi ý cách khoảng 2 tuần; &gt;80k: 2 lần/năm.
-              </p>
-              <p className="small muted">
-                Tuần bắt đầu thứ Hai; tháng từ ngày 5; năm từ ngày 5/1. Mốc giờ Việt Nam. Lượt chỉ
-                tính khi bạn ghi đã ghé. Vòng quay loại quán hết lượt, áp dụng bộ lọc hiện tại, ưu
-                tiên điểm cao và số lượt gợi ý còn lại.
-              </p>
-              <h3>Giữ dữ liệu lâu dài</h3>
-              <p className="small muted">
-                Đánh giá, ảnh và tiền thực trả lưu trong trình duyệt trên thiết bị này. Chưa có đồng
-                bộ giữa máy tính và điện thoại. Hãy xuất JSON định kỳ ở Thống kê; giữ file bên ngoài
-                ứng dụng trước khi xóa dữ liệu Chrome hoặc đổi máy.
-              </p>
-            </div>
-          </Dialog>
-        )}
-        <Suspense fallback={null}>
-          {spin && (
-            <SpinPicker
-              items={filtered}
-              summary={summary}
-              theme={theme}
-              now={now}
-              onClose={() => setSpin(false)}
-              onSelect={(r) => {
-                setSelected(r.id);
-                setSpin(false);
-                navigate('places');
-              }}
-              onDirections={directions}
-              onVisit={(r) => {
-                setSpin(false);
-                setVisitId(r.id);
-              }}
-            />
-          )}
-          {visitItem && (
-            <VisitManager
-              item={visitItem}
-              now={now}
-              busy={store.busy}
-              onSave={saveVisit}
-              onDelete={deleteVisit}
-              onClose={() => setVisitId(null)}
-            />
-          )}
-        </Suspense>
-      </div>
+            </main>
+            {doc && !(isForm && typing) && <AppNavigation value={tab} onChange={selectTab} />}
+            {reconciliation && doc && (
+              <PlaceReconciliation
+                items={reviews}
+                busy={store.busy}
+                onClose={() => setReconciliation(false)}
+                onEdit={(r) => {
+                  setReconciliation(false);
+                  edit(r);
+                }}
+                onConfirm={async (item) => {
+                  const ok = await store.update(
+                    (d) => ({
+                      ...d,
+                      reviews: d.reviews.map((r) =>
+                        r.id === item.id
+                          ? {
+                              ...r,
+                              ...THANH_HUONG_CANDIDATE,
+                              name: r.name,
+                              locationStatus: 'confirmed' as const,
+                              locationSource: 'research' as const,
+                              updatedAt: new Date().toISOString(),
+                              placeResolution: {
+                                ...r.placeResolution!,
+                                status: 'verified' as const,
+                                checkedAt: new Date().toISOString(),
+                              },
+                            }
+                          : r,
+                      ),
+                    }),
+                    'Xác nhận hồ sơ Maps Thanh Hương',
+                  );
+                  if (ok)
+                    setMessage(
+                      'Đã đối chiếu địa điểm. Hãy chấm lại theo trải nghiệm của bạn trước khi dùng để gợi ý.',
+                    );
+                  return ok;
+                }}
+              />
+            )}
+            {toolsOpen && (
+              <Dialog title="Tùy chọn" onClose={() => setToolsOpen(false)}>
+                {dataTools}
+              </Dialog>
+            )}
+            {message && (
+              <div className="toast" role="status">
+                <span>{message}</span>
+                <button
+                  className="icon-button"
+                  aria-label="Đóng thông báo"
+                  onClick={() => setMessage('')}
+                >
+                  ×
+                </button>
+              </div>
+            )}
+            {leaveTo && (
+              <Dialog title="Rời phần đang nhập?" onClose={() => setLeaveTo(null)}>
+                <div className="stack">
+                  <p>Chưa lưu thay đổi.</p>
+                  <button className="button" onClick={() => setLeaveTo(null)}>
+                    Tiếp tục nhập
+                  </button>
+                  <button
+                    className="button secondary"
+                    onClick={() => {
+                      const target = leaveTo;
+                      setDraft(null);
+                      setDirty(false);
+                      setLeaveTo(null);
+                      navigate(target);
+                    }}
+                  >
+                    Bỏ bản nháp và rời màn hình
+                  </button>
+                </div>
+              </Dialog>
+            )}
+            {deleteItem && (
+              <Dialog title="Xóa quán đã lưu?" onClose={() => setDeleteItem(null)}>
+                <div className="stack">
+                  <p>
+                    Xóa <strong>{deleteItem.name}</strong> cùng lịch sử ghé khỏi danh sách. Một bản
+                    dự phòng được giữ trước khi xóa.
+                  </p>
+                  <button
+                    className="button danger"
+                    disabled={store.busy}
+                    onClick={() => void remove()}
+                  >
+                    Xóa quán này
+                  </button>
+                  <button className="button secondary" onClick={() => setDeleteItem(null)}>
+                    Giữ lại
+                  </button>
+                </div>
+              </Dialog>
+            )}
+            {demo && (
+              <Dialog title="Quán minh họa" onClose={() => setDemo(false)}>
+                <div className="stack">
+                  <p className="notice">
+                    Các điểm này giúp xem giao diện. Chúng không nằm trong thống kê hoặc vòng quay
+                    cá nhân. Hãy chấm lại theo trải nghiệm của bạn trước khi lưu.
+                  </p>
+                  {examples.map((r) => (
+                    <div key={r.id} className="panel stack">
+                      <div className="split">
+                        <h3>{r.name}</h3>
+                        <strong>{r.totalScore.toFixed(1)}đ</strong>
+                      </div>
+                      <p className="small">
+                        {r.priceK}k · {r.category === 'food' ? 'Quán ăn' : 'Quán nước'} · Minh họa
+                      </p>
+                      <div className="button-row">
+                        <button
+                          className="button secondary"
+                          onClick={() =>
+                            edit(
+                              demos.some((x) => x.id === r.id) ? r : { ...r, id: newId('review') },
+                            )
+                          }
+                        >
+                          Chấm lại theo trải nghiệm của tôi
+                        </button>
+                        {demos.some((x) => x.id === r.id) && (
+                          <button
+                            className="text-button danger-text"
+                            onClick={() => {
+                              setDemo(false);
+                              setDeleteItem(r);
+                            }}
+                          >
+                            Bỏ minh họa cũ
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Dialog>
+            )}
+            <Suspense fallback={null}>
+              {spin && (
+                <SpinPicker
+                  items={filtered}
+                  summary={summary}
+                  theme={theme}
+                  now={now}
+                  onClose={() => setSpin(false)}
+                  onSelect={(r) => {
+                    setSelected(r.id);
+                    setSpin(false);
+                    navigate('places');
+                  }}
+                  onDirections={directions}
+                  onVisit={(r) => {
+                    setSpin(false);
+                    setVisitId(r.id);
+                  }}
+                />
+              )}
+              {visitItem && (
+                <VisitManager
+                  item={visitItem}
+                  now={now}
+                  busy={store.busy}
+                  onSave={saveVisit}
+                  onDelete={deleteVisit}
+                  onClose={() => setVisitId(null)}
+                />
+              )}
+            </Suspense>
+          </div>
+        </MotionPreference.Provider>
+      </ClickSpark>
     </MotionConfig>
   );
 }

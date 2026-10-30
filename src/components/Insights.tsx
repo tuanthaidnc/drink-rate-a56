@@ -9,10 +9,8 @@ function Scatter({ items }: { items: ReviewItem[] }) {
   const maxPrice = Math.max(40, ...items.map((r) => r.priceK));
   return (
     <section className="panel stack">
-      <h3>Giá & điểm trải nghiệm</h3>
-      <p className="small muted">
-        Mỗi chấm là một quán thật trong bộ lọc. Chạm để xem; màu cam là quán ăn, xanh là quán nước.
-      </p>
+      <h3>Giá & điểm</h3>
+      <></>
       {items.length ? (
         <>
           <svg
@@ -76,11 +74,11 @@ function Scatter({ items }: { items: ReviewItem[] }) {
           <p className="small" aria-live="polite">
             {selected
               ? `${selected.name}: ${selected.priceK}k · ${selected.totalScore.toFixed(1)}/10`
-              : 'Chọn một chấm để xem tên quán.'}
+              : ''}
           </p>
         </>
       ) : (
-        <p className="muted">Thêm trải nghiệm thật để bắt đầu so sánh.</p>
+        <p className="muted">Chưa có dữ liệu</p>
       )}
     </section>
   );
@@ -252,10 +250,7 @@ export default function Insights({
   const maxSpend = Math.max(1, ...spendDays.map(([, v]) => v));
   return (
     <div className="stack">
-      <section className="panel compact">
-        <h2>Thống kê theo bộ lọc</h2>
-        <p className="small muted">{summary}</p>
-      </section>
+      <h2 className="sr-only">Thống kê theo bộ lọc</h2>
       <div className="stat-grid">
         <div className="panel">
           <span className="small muted">Quán trong bộ lọc</span>
@@ -273,17 +268,12 @@ export default function Insights({
           </strong>
         </div>
       </div>
-      <p className="small muted">
-        Đây là trung bình các đánh giá cá nhân trong bộ lọc, không phải mức chi thực tế hoặc điểm
-        cộng đồng. Quán minh họa được loại khỏi toàn bộ thống kê.
-      </p>
+      <></>
       <Scatter items={items} />
       <Comparison items={items} />
       <section className="panel stack">
-        <h3>Chi thực trả · chu kỳ ngày 5</h3>
-        <p className="small muted">
-          {getMonthCycleInfo(now).label} · Toàn bộ quán thật, không giới hạn theo bộ lọc phía trên.
-        </p>
+        <h3>Chi tiêu</h3>
+        <p className="small muted">{getMonthCycleInfo(now).label} · Tất cả quán</p>
         <div className="split">
           <strong className="score">
             {total.toLocaleString('vi-VN')}
@@ -291,11 +281,7 @@ export default function Insights({
           </strong>
           <span>{cycle.length} lượt ghé</span>
         </div>
-        {missing > 0 && (
-          <p className="notice small">
-            Còn {missing} lượt chưa ghi tiền. Tổng này chưa bao gồm các lượt đó.
-          </p>
-        )}
+        {missing > 0 && <p className="notice small">{missing} lượt chưa ghi tiền</p>}
         {doc.settings.monthlyBudgetK !== undefined && (
           <>
             <progress
@@ -307,7 +293,7 @@ export default function Insights({
               {total > doc.settings.monthlyBudgetK
                 ? `Vượt ${(total - doc.settings.monthlyBudgetK).toLocaleString('vi-VN')}k`
                 : `Còn ${(doc.settings.monthlyBudgetK - total).toLocaleString('vi-VN')}k`}{' '}
-              so với ngân sách bạn đặt{missing ? ' (chưa tính các lượt thiếu tiền)' : ''}.
+              {missing ? ' (chưa tính các lượt thiếu tiền)' : ''}.
             </p>
           </>
         )}
@@ -326,9 +312,7 @@ export default function Insights({
           }}
         >
           <label className="field">
-            <span>
-              Ngân sách chu kỳ của tôi <small>· k, có thể để trống</small>
-            </span>
+            <span>Ngân sách (k)</span>
             <input
               type="number"
               min="1"
@@ -336,7 +320,7 @@ export default function Insights({
               inputMode="decimal"
               value={budget}
               onChange={(e) => setBudget(e.target.value)}
-              placeholder="Ví dụ: 1500 = 1.500.000đ"
+              placeholder="Ngân sách"
             />
           </label>
           <button className="button secondary" type="submit">
@@ -377,9 +361,7 @@ export default function Insights({
                 </small>
               </button>
             ))}
-          {!cycle.length && (
-            <p className="muted small">Ghi nhận lần đã ghé để xem lịch sử và chi tiêu.</p>
-          )}
+          {!cycle.length && <p className="muted small">0 lượt</p>}
         </details>
       </section>
       <section className="panel stack">
@@ -400,7 +382,7 @@ export default function Insights({
             />
           </div>
         ))}
-        {!groups.length && <p className="muted">Chưa có dữ liệu trong bộ lọc.</p>}
+        {!groups.length && <p className="muted">Chưa có dữ liệu</p>}
       </section>
       {dataTools}
     </div>

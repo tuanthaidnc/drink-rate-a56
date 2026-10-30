@@ -117,17 +117,10 @@ export default function PlaceMap({
             {[active.address, active.street, active.ward, active.city].filter(Boolean).join(' • ')}
           </p>
           {!hasConfirmedLocation(active) && (
-            <p className="notice">
-              Vị trí quán chưa được xác nhận. Hãy kiểm tra ghim trước khi dùng khoảng cách hoặc chỉ
-              đường chính xác.
-            </p>
+            <span className="small muted">Chưa ghim</span>
           )}
           {position && hasConfirmedLocation(active) && (
-            <p className="muted">
-              Cách GPS khoảng{' '}
-              {distanceKm(position, { lat: active.lat!, lng: active.lng! }).toFixed(1)} km đường
-              chim bay. Lộ trình thực tế xem trong Maps.
-            </p>
+            <span className="small muted">{distanceKm(position, { lat: active.lat!, lng: active.lng! }).toFixed(1)} km</span>
           )}
           <div className="button-row">
             <button className="button" onClick={() => onDirections(active)}>
@@ -140,7 +133,7 @@ export default function PlaceMap({
           </div>
         </section>
       ) : (
-        <p className="empty">Không có quán trong bộ lọc này. Hãy điều chỉnh bộ lọc ở Quán xá.</p>
+        <p className="empty">Không có quán</p>
       )}
     </div>
   );

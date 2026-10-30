@@ -53,10 +53,7 @@ export function LocationPicker({
   }, [data, current, query]);
   return (
     <Dialog title="Chọn tỉnh và phường/xã" onClose={onClose}>
-      <p className="muted small">
-        34 tỉnh/thành • 3.321 phường/xã/đặc khu. Danh mục 01/07/2025, lưu sẵn trên thiết bị khi ứng
-        dụng sẵn sàng offline.
-      </p>
+      
       {current && (
         <button
           className="button secondary w-full"
@@ -112,7 +109,7 @@ export function LocationPicker({
           </button>
         ))}
         {data && !choices.length && (
-          <p className="muted">Không tìm thấy. Hãy thử tên không dấu hoặc chọn lại tỉnh.</p>
+          <p className="muted">Không tìm thấy</p>
         )}
       </div>
       <details className="disclosure small">

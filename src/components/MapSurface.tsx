@@ -32,11 +32,11 @@ export default function MapSurface({
   const pickRef = useRef(onPin);
   pickRef.current = onPin;
   const markers = useRef<Marker[]>([]);
-  const [message, setMessage] = useState('Đang mở bản đồ…');
+  const [message, setMessage] = useState('');
   const selected = items.find((r) => r.id === selectedId);
   useEffect(() => {
     if (!element.current) return;
-    setMessage('Đang mở bản đồ…');
+    setMessage('');
     const center = pin ??
       (selected?.lat != null && selected.lng != null
         ? { lat: selected.lat, lng: selected.lng }
@@ -179,7 +179,7 @@ export default function MapSurface({
       <p className="map-caption">
         {onPin
           ? 'Chạm để ghim · Hai ngón để di chuyển'
-          : 'Chỉ tên đường và ghim quán · Hai ngón để di chuyển'}
+          : ''}
       </p>
     </div>
   );

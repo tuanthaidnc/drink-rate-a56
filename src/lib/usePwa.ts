@@ -8,6 +8,7 @@ export function usePwa() {
     applying = useRef(false),
     alive = useRef(true);
   const check = useCallback(async () => {
+    if (import.meta.env.DEV) return;
     if (!('serviceWorker' in navigator)) {
       setError('Trình duyệt chưa hỗ trợ chuẩn bị ngoại tuyến.');
       return;

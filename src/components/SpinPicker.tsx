@@ -119,8 +119,8 @@ export default function SpinPicker({
   return (
     <Dialog title="Hôm nay ăn / uống gì?" onClose={onClose}>
       <div className="stack">
-        <p className="muted small">Phạm vi: {summary}</p>
-        <p className="muted small">Chu kỳ tháng {getMonthCycleInfo(now).label} · Bắt đầu ngày 5</p>
+        <p className="muted small">{summary}</p>
+        <p className="muted small">Chu kỳ tháng {getMonthCycleInfo(now).label}</p>
         <div className="button-row">
           {[
             ['ALL', 'Tất cả'],
@@ -172,13 +172,10 @@ export default function SpinPicker({
         <strong role="status">{pool.length} quán hợp lệ, còn lượt gợi ý</strong>
         {!pool.length ? (
           <div className="empty">
-            <p>Chưa có quán thỏa tất cả điều kiện và còn lượt.</p>
-            <p className="muted small">
-              Bạn có thể bỏ giới hạn 7,5 điểm, đổi khung giá hoặc quay lại chỉnh bộ lọc. Ứng dụng sẽ
-              giữ đúng điều kiện bạn chọn.
-            </p>
+            <p>Không có quán phù hợp</p>
+            
             <button className="button secondary" onClick={onClose}>
-              Quay lại chỉnh lựa chọn
+              Bộ lọc
             </button>
           </div>
         ) : (
@@ -208,7 +205,7 @@ export default function SpinPicker({
             </div>
             {winner && quota && (
               <section className="panel winner" role="status" aria-live="polite">
-                <span className="badge">Lựa chọn cho bạn</span>
+                <span className="badge"></span>
                 <div className="split">
                   <h3>{winner.name}</h3>
                   <strong className="score">
@@ -217,7 +214,7 @@ export default function SpinPicker({
                   </strong>
                 </div>
                 <p>
-                  {winner.priceK}k · {winner.dish || winner.cuisine || 'Xem ghi chú của bạn'}
+                  {winner.priceK}k · {winner.dish || winner.cuisine || ''}
                 </p>
                 <p className="small muted">
                   {quota.tier.label} · {quota.statusBadgeText}
@@ -235,15 +232,12 @@ export default function SpinPicker({
                 <button className="text-button" onClick={() => onVisit(winner)}>
                   Tôi đã ghé · ghi lại lượt và tiền thực trả
                 </button>
-                <p className="small muted">Chọn quán hoặc mở Maps không tự trừ lượt.</p>
+                <></>
               </section>
             )}
             <details className="disclosure">
               <summary>Xem quán và mức ưu tiên</summary>
-              <p className="muted small">
-                Ưu tiên điểm cao và còn nhiều lượt. Xác suất có trọng số; các ô minh họa không biểu
-                thị tỷ lệ.
-              </p>
+              
               {weighted.map(({ item, weight }) => (
                 <div className="split small" key={item.id}>
                   <span>
