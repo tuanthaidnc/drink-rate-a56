@@ -36,6 +36,7 @@ export default function MapSurface({
   const selected = items.find((r) => r.id === selectedId);
   useEffect(() => {
     if (!element.current) return;
+    setMessage('Đang mở bản đồ…');
     const center = pin ??
       (selected?.lat != null && selected.lng != null
         ? { lat: selected.lat, lng: selected.lng }
