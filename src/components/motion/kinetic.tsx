@@ -111,11 +111,24 @@ export function TransitionPanel({
   activeIndex: number;
   children: ReactNode[];
 }) {
+  const quiet = useQuietMotion();
+  // Freeze the wrapper for the lifetime of a route. Changing the preference
+  // must never reparent/remount the form that owns an unsaved draft.
+  const mode = useRef({ index: activeIndex, animated: !quiet });
+  if (mode.current.index !== activeIndex) mode.current = { index: activeIndex, animated: !quiet };
   const previous = useRef(activeIndex),
     direction = activeIndex >= previous.current ? 1 : -1;
   useEffect(() => {
     previous.current = activeIndex;
   }, [activeIndex]);
+  if (!mode.current.animated)
+    return (
+      <div className="screen-stack">
+        <Scene key={activeIndex} direction={direction}>
+          {children[activeIndex]}
+        </Scene>
+      </div>
+    );
   return (
     <div className="screen-stack">
       <AnimatePresence initial={false} mode="popLayout">
