@@ -173,7 +173,7 @@ export default function SpinPicker({
         {!pool.length ? (
           <div className="empty">
             <p>Không có quán phù hợp</p>
-            
+
             <button className="button secondary" onClick={onClose}>
               Bộ lọc
             </button>
@@ -237,7 +237,7 @@ export default function SpinPicker({
             )}
             <details className="disclosure">
               <summary>Xem quán và mức ưu tiên</summary>
-              
+
               {weighted.map(({ item, weight }) => (
                 <div className="split small" key={item.id}>
                   <span>

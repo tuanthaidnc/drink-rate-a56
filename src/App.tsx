@@ -424,7 +424,7 @@ export default function App() {
   );
   const controls = (
     <FilterBar
-      key={theme}
+      theme={theme}
       items={reviews}
       filters={filters}
       onChange={setFilters}

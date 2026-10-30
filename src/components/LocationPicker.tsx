@@ -53,7 +53,6 @@ export function LocationPicker({
   }, [data, current, query]);
   return (
     <Dialog title="Chọn tỉnh và phường/xã" onClose={onClose}>
-      
       {current && (
         <button
           className="button secondary w-full"
@@ -108,9 +107,7 @@ export function LocationPicker({
             <span className="muted small">{x.code}</span>
           </button>
         ))}
-        {data && !choices.length && (
-          <p className="muted">Không tìm thấy</p>
-        )}
+        {data && !choices.length && <p className="muted">Không tìm thấy</p>}
       </div>
       <details className="disclosure small">
         <summary>Nguồn danh mục</summary>

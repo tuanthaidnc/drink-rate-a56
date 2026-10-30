@@ -77,11 +77,20 @@ export function TransitionPanel({
   activeIndex: number;
   children: ReactNode[];
 }) {
+  const quiet = useQuietMotion();
   const previous = useRef(activeIndex),
     direction = activeIndex >= previous.current ? 1 : -1;
   useEffect(() => {
     previous.current = activeIndex;
   }, [activeIndex]);
+  if (quiet)
+    return (
+      <div className="screen-stack">
+        <div className="app-scene" data-motion="scene">
+          {children[activeIndex]}
+        </div>
+      </div>
+    );
   return (
     <div className="screen-stack">
       <AnimatePresence initial={false} mode="popLayout">

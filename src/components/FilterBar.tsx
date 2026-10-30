@@ -12,6 +12,7 @@ export default function FilterBar({
   position,
   onLocate,
   locating,
+  theme,
 }: {
   items: ReviewItem[];
   filters: Filters;
@@ -19,6 +20,7 @@ export default function FilterBar({
   position: Position | null;
   onLocate: () => void;
   locating: boolean;
+  theme: 'dark' | 'light';
 }) {
   const [open, setOpen] = useState(false);
   const real = items.filter((r) => !r.isDemo);
@@ -51,6 +53,7 @@ export default function FilterBar({
     <>
       <div className="filters-header stack">
         <ToggleGroup.Root
+          key={theme}
           type="single"
           className="category-tabs"
           aria-label="Lọc loại quán"

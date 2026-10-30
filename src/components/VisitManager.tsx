@@ -104,7 +104,6 @@ export default function VisitManager({
               onChange={(e) => setSpent(e.target.value)}
               placeholder="Để trống nếu chưa nhớ"
             />
-            
           </label>
           <label className="field">
             <span>Món đã gọi</span>
