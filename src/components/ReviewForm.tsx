@@ -547,6 +547,7 @@ export default function ReviewForm({
                 }}
                 onPin={(p) => {
                   manualPin.current = true;
+                  setGpsError('');
                   setDraft((r) => ({
                     ...r,
                     lat: p.lat,

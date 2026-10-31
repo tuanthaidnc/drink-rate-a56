@@ -54,7 +54,7 @@ async function attachCameraPhoto(
     ...snapshot,
     draft: { ...snapshot.draft, photoIds: [...snapshot.draft.photoIds, photo.id] },
     photos: [...snapshot.photos, photo],
-    stage: snapshot.isEdit ? 'score' : 'location',
+    stage: snapshot.isEdit || snapshot.stage === 'score' ? 'score' : 'location',
     recoveryId: newId('capture'),
   };
 }

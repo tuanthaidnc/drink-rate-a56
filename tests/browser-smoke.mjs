@@ -95,6 +95,18 @@ async function setup({
       x.fill();
       window.__cameraImage = c.toDataURL('image/jpeg');
       window.__cameraMode = camera;
+      window.__draftWrites = [];
+      const originalPut = IDBObjectStore.prototype.put;
+      IDBObjectStore.prototype.put = function (value, ...args) {
+        if (this.name === 'capture-drafts')
+          window.__draftWrites.push({
+            stage: value.stage,
+            name: value.draft?.name,
+            price: value.price,
+            stack: new Error().stack,
+          });
+        return originalPut.call(this, value, ...args);
+      };
       window.__gpsMode = gps;
       window.__calls = [];
       window.androidBridge = {};
@@ -540,6 +552,7 @@ try {
             {
               pending: await store(p, 'capture-drafts', 'pending'),
               calls: await p.evaluate(() => window.__calls),
+              writes: await p.evaluate(() => window.__draftWrites),
               body: await p.locator('body').innerText(),
             },
             null,
