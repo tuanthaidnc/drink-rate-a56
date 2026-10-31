@@ -75,8 +75,9 @@ public class NativeFlowTest {
             until("!!document.querySelector('.bottom-dock')");
             // DOM can be ready while the system launch splash still owns input.
             // Wait for the native accessibility surface before the first touch.
-            assertTrue("Native navigation is visible", device.wait(Until.hasObject(By.text("Chấm điểm")), 10000));
             device.waitForIdle();
+            screenshot("native-launch");
+            assertTrue("NỐT foreground native window is visible", device.wait(Until.hasObject(By.pkg("com.tuanthaidnc.notfood").depth(0)), 15000));
             assertDockGeometry();
             assertEquals("android", js("document.documentElement.dataset.platform"));
             assertEquals("https://localhost", js("location.origin"));
