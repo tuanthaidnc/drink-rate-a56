@@ -1211,7 +1211,7 @@ h2 {
 }
 @media (min-width: 768px) {
   .app-main {
-    padding: 20px 30px 115px;
+    padding: 20px 30px calc(var(--not-dock-height, 82px) + 33px + env(safe-area-inset-bottom));
   }
   .content-width {
     max-width: 1380px;
@@ -1575,7 +1575,7 @@ h2 {
 }
 @media (max-width: 380px) {
   .app-main {
-    padding: 10px 14px 110px;
+    padding: 10px 14px calc(var(--not-dock-height, 82px) + 33px + env(safe-area-inset-bottom));
   }
   .app-header {
     padding: 15px 17px;
