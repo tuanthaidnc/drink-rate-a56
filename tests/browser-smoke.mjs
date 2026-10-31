@@ -1013,6 +1013,8 @@ try {
       );
       await p.getByRole('heading', { name: 'Chấm điểm', exact: true }).waitFor();
       await nav(p, 'Quán xá');
+      await p.getByRole('button', { name: 'Đổi sang giao diện tối', exact: true }).click();
+      await p.getByRole('button', { name: 'Đổi sang giao diện sáng', exact: true }).waitFor();
       for (const width of [320, 360, 393, 412, 768, 1365]) {
         await p.setViewportSize({ width, height: width > 1100 ? 900 : 852 });
         const navigation = p.getByRole('navigation', {
