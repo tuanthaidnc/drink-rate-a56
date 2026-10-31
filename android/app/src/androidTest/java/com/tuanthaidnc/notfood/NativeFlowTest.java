@@ -128,7 +128,8 @@ public class NativeFlowTest {
         } finally {
             // The Gradle device provider uninstalls the app after the test,
             // which removes its external-files directory before adb can pull it.
-            device.executeShellCommand("mkdir -p /sdcard/Download/not-ci-qa && cp -R " + proof.getAbsolutePath() + "/. /sdcard/Download/not-ci-qa/");
+            device.executeShellCommand("mkdir -p /sdcard/Download/not-ci-qa");
+            device.executeShellCommand("cp -R " + proof.getAbsolutePath() + "/. /sdcard/Download/not-ci-qa/");
             device.setOrientationNatural();
             device.unfreezeRotation();
             device.executeShellCommand("settings put system font_scale " + (oldScale.equals("null") ? "1.0" : oldScale));
