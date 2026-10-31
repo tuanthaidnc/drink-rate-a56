@@ -20,7 +20,7 @@ Một sổ quán cá nhân với điểm, giá và địa chỉ làm nội dung 
 | Thao tác       | Chuyển động                                            |
 | -------------- | ------------------------------------------------------ |
 | Đổi tab        | Fade-through: thoát 120ms, vào 240ms, trượt 18px; chỉ một màn; gỡ DOM khi thoát |
-| Hiện thẻ quán  | Trượt/scale/fade 450ms, trễ tối đa 375ms cho danh sách |
+| Hiện thẻ quán  | Trượt/scale/fade 450ms khi vào vùng nhìn, trễ tối đa 375ms; không chạy điểm ngoài màn hình |
 | Mở thẻ         | Chiều cao tự nhiên và opacity 380ms                    |
 | Điểm           | Vòng vẽ 950ms; số chạy bằng spring 120/22              |
 | Thanh tiêu chí | Thanh mở từ trái 750–800ms                             |
@@ -41,3 +41,5 @@ Giữ ba nhóm Tất cả/Nước/Ăn, không thêm nhóm Ăn vặt mà ảnh de
 Nốt Tea vẫn 6,5 từ các tiêu chí 7/7/4/9, tại 38 Phan Thanh theo Maps đã kiểm tra. Bếp Trang mẫu được bỏ; Thanh Hương chỉ là ứng viên địa điểm. Thiết kế và animation không sửa công thức, lượt ghé, lịch sử hoặc chi tiêu.
 
 Dock: four equal icon rows (34 px), captions aligned at 12 px, non-shrinking circular review action. The glyph rotates inside the circle. Height expands with larger text; Android dock and modal backdrop avoid costly blur.
+
+Ảnh: hàng thao tác Chụp / Thư viện, lưới tối đa ba ảnh vuông, nút bỏ ảnh tròn 48px. Chạm ảnh mở bản đầy đủ trong Dialog có Back/Escape và trả focus. Chỉ hiện trạng thái trong lúc xử lý. Nén ảnh trong worker riêng, lần lượt từng ảnh để giới hạn RAM; không giữ worker khi xong. IDB v2 thêm capture-drafts, giữ nguyên document schema 13 và bốn store dữ liệu cũ. Hiệu ứng giữ vùng vẽ riêng cho vòng điểm/thẻ; chỉ gợi ý lớp compositor trong thời gian chuyển màn, không đo lại layout mọi thẻ trong mỗi render.

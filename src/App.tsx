@@ -28,6 +28,11 @@ import {
 import { Dialog } from './components/Dialog.tsx';
 import FilterBar from './components/FilterBar.tsx';
 import ReviewCard from './components/ReviewCard.tsx';
+import {
+  watchCaptureRecovery,
+  forgetCaptureRecovery,
+  type CaptureDraft,
+} from './lib/reviewCapture.ts';
 import DataTools from './components/DataTools.tsx';
 import AppNavigation from './components/AppNavigation.tsx';
 import ReviewInspector from './components/ReviewInspector.tsx';
@@ -88,6 +93,8 @@ export default function App() {
   const [draft, setDraft] = useState<ReviewItem | null>(null),
     [editing, setEditing] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [captureDraft, setCaptureDraft] = useState<CaptureDraft>();
+  const [photoBusy, setPhotoBusy] = useState(false);
   const [sort, setSort] = useState('score'),
     [position, setPosition] = useState<Position | null>(null),
     [locating, setLocating] = useState(false);
@@ -105,7 +112,7 @@ export default function App() {
   const main = useRef<HTMLElement>(null),
     isForm = tab === 'review' && draft !== null;
   const formRef = useRef(isForm);
-  formRef.current = isForm && dirty;
+  formRef.current = isForm && (dirty || photoBusy);
   const reduced = doc?.settings.reducedMotion === true;
   const systemReduced = useSystemReducedMotion();
   const navigate = useCallback((target: Tab, push = true) => {
@@ -114,6 +121,7 @@ export default function App() {
     main.current?.scrollTo({ top: 0 });
   }, []);
   const add = (p?: Position) => {
+    setCaptureDraft(undefined);
     setDirty(!!p);
     setDraft({
       ...createReview(),
@@ -130,6 +138,7 @@ export default function App() {
     navigate('review');
   };
   const edit = (r: ReviewItem) => {
+    setCaptureDraft(undefined);
     setDirty(false);
     setDraft(structuredClone(r));
     setEditing(!!doc?.reviews.some((x) => x.id === r.id));
@@ -137,6 +146,7 @@ export default function App() {
     navigate('review');
   };
   const selectTab = (target: Tab) => {
+    if (photoBusy) return;
     if (target === tab) return;
     if (isForm && dirty && target !== tab) {
       setLeaveTo(target);
@@ -149,6 +159,8 @@ export default function App() {
       if (isForm) {
         setDraft(null);
         setDirty(false);
+        setCaptureDraft(undefined);
+        void forgetCaptureRecovery().catch(() => {});
       }
       navigate(target);
     }
@@ -185,14 +197,26 @@ export default function App() {
     window.addEventListener('popstate', pop);
     return () => window.removeEventListener('popstate', pop);
   }, []);
+  useEffect(
+    () =>
+      watchCaptureRecovery(({ snapshot, error }) => {
+        setDraft(snapshot.original);
+        setEditing(snapshot.isEdit);
+        setCaptureDraft(snapshot);
+        setDirty(true);
+        navigate('review');
+        if (error) setMessage(error);
+      }),
+    [navigate],
+  );
   useEffect(() => {
     const prevent = (e: BeforeUnloadEvent) => {
       e.preventDefault();
       e.returnValue = '';
     };
-    if (isForm && dirty) window.addEventListener('beforeunload', prevent);
+    if (isForm && (dirty || photoBusy)) window.addEventListener('beforeunload', prevent);
     return () => window.removeEventListener('beforeunload', prevent);
-  }, [isForm, dirty]);
+  }, [isForm, dirty, photoBusy]);
   useEffect(() => {
     syncStatusBarThemeColor(theme);
   }, [theme]);
@@ -322,6 +346,8 @@ export default function App() {
       photos,
     );
     if (ok) {
+      await forgetCaptureRecovery().catch(() => {});
+      setCaptureDraft(undefined);
       setDraft(null);
       setDirty(false);
       setSelected(item.id);
@@ -535,7 +561,7 @@ export default function App() {
                 </div>
               </div>
             </header>
-            {doc && <AppNavigation desktop value={tab} onChange={selectTab} />}
+            {doc && <AppNavigation desktop value={tab} onChange={selectTab} locked={photoBusy} />}
             <main id="main" ref={main} className="app-main" tabIndex={-1}>
               <div className="content-width stack">
                 {store.loading ? (
@@ -704,8 +730,9 @@ export default function App() {
                           ) : null,
                           tab === 'review' && draft ? (
                             <ReviewForm
-                              key={draft.id}
+                              key={`${draft.id}-${captureDraft?.recoveryId ?? ''}`}
                               initial={draft}
+                              recovered={captureDraft}
                               isEdit={editing}
                               theme={theme}
                               busy={store.busy}
@@ -713,6 +740,7 @@ export default function App() {
                               existing={reviews}
                               onSave={saveReview}
                               onDirtyChange={setDirty}
+                              onPhotoBusyChange={setPhotoBusy}
                               onCancel={() => {
                                 if (dirty) setLeaveTo('places');
                                 else {
@@ -748,7 +776,9 @@ export default function App() {
                 )}
               </div>
             </main>
-            {doc && !(isForm && typing) && <AppNavigation value={tab} onChange={selectTab} />}
+            {doc && !(isForm && typing) && (
+              <AppNavigation value={tab} onChange={selectTab} locked={photoBusy} />
+            )}
             {reconciliation && doc && (
               <PlaceReconciliation
                 items={reviews}
@@ -820,6 +850,8 @@ export default function App() {
                       const target = leaveTo;
                       setDraft(null);
                       setDirty(false);
+                      setCaptureDraft(undefined);
+                      void forgetCaptureRecovery().catch(() => {});
                       setLeaveTo(null);
                       navigate(target);
                     }}

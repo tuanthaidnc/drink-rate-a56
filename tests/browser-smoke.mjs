@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { chromium } from 'playwright';
 import { INITIAL_REVIEWS } from '../src/data/demo.ts';
 import { createReview, validateReview } from '../src/lib/validation.ts';
+import { emptyDocument } from '../src/lib/models.ts';
 // Automated CI regression suite. Interactive local QA uses the connected browser.
 const base = process.env.TEST_URL ?? 'http://127.0.0.1:4173/drink-rate-a56/';
 const output = resolve(process.env.TEST_OUTPUT ?? resolve(tmpdir(), 'not-browser-qa'));
@@ -155,6 +156,257 @@ async function importText(p, text) {
 
 try {
   let primary;
+  await scenario(
+    'v1 IndexedDB upgrade retains reviews, photos, snapshots and raw archives',
+    async () => {
+      const context = await browser.newContext({ viewport: { width: 384, height: 824 } });
+      contexts.push(context);
+      const p = await context.newPage();
+      await p.route(base, (route) =>
+        route.fulfill({
+          contentType: 'text/html',
+          body: '<html><body>Migration fixture</body></html>',
+        }),
+      );
+      await p.goto(base);
+      const old = emptyDocument();
+      old.settings.placeCorrectionsVersion = 1;
+      old.reviews = [
+        validateReview({ ...createReview(), name: 'Quán đã lưu', photoIds: ['old-photo'] }),
+      ];
+      await p.evaluate(async (document) => {
+        const db = await new Promise((resolve, reject) => {
+          const q = indexedDB.open('not-food-drink-personal', 1);
+          q.onupgradeneeded = () => {
+            q.result.createObjectStore('documents');
+            for (const name of ['photos', 'snapshots', 'archives'])
+              q.result.createObjectStore(name, { keyPath: 'id' });
+          };
+          q.onsuccess = () => resolve(q.result);
+          q.onerror = () => reject(q.error);
+        });
+        await new Promise((resolve, reject) => {
+          const tx = db.transaction(['documents', 'photos', 'snapshots', 'archives'], 'readwrite');
+          tx.objectStore('documents').put(document, 'current');
+          tx.objectStore('photos').put({
+            id: 'old-photo',
+            blob: new Blob(['original image'], { type: 'image/webp' }),
+          });
+          tx.objectStore('snapshots').put({
+            id: 'old-snapshot',
+            createdAt: document.updatedAt,
+            reason: 'before',
+            document,
+          });
+          tx.objectStore('archives').put({ id: 'old-raw', raw: 'unchanged original' });
+          tx.oncomplete = resolve;
+          tx.onabort = () => reject(tx.error);
+        });
+        db.close();
+      }, old);
+      await p.unroute(base);
+      await p.goto(base);
+      await p.getByRole('heading', { name: 'Quán xá (1)', exact: true }).waitFor();
+      assert.deepEqual(await readDoc(p), old);
+      const retained = await p.evaluate(async () => {
+        const db = await new Promise((resolve) => {
+          const q = indexedDB.open('not-food-drink-personal');
+          q.onsuccess = () => resolve(q.result);
+        });
+        const get = (store, key) =>
+          new Promise((resolve) => {
+            const q = db.transaction(store).objectStore(store).get(key);
+            q.onsuccess = () => resolve(q.result);
+          });
+        const result = {
+          version: db.version,
+          capture: db.objectStoreNames.contains('capture-drafts'),
+          photo: await (await get('photos', 'old-photo')).blob.text(),
+          raw: (await get('archives', 'old-raw')).raw,
+          snapshot: (await get('snapshots', 'old-snapshot')).document,
+        };
+        db.close();
+        return result;
+      });
+      assert.equal(retained.version, 2);
+      assert.equal(retained.capture, true);
+      assert.equal(retained.photo, 'original image');
+      assert.equal(retained.raw, 'unchanged original');
+      assert.deepEqual(retained.snapshot, old);
+    },
+  );
+  await scenario(
+    'camera cancel, capture, preview and process-death draft recovery through the native bridge',
+    async () => {
+      const context = await browser.newContext({
+        viewport: { width: 384, height: 824 },
+        isMobile: true,
+        hasTouch: true,
+        reducedMotion: 'reduce',
+      });
+      contexts.push(context);
+      await context.addInitScript(() => {
+        const c = document.createElement('canvas');
+        c.width = 1600;
+        c.height = 1200;
+        const x = c.getContext('2d');
+        x.fillStyle = '#d7ff3f';
+        x.fillRect(0, 0, c.width, c.height);
+        window.__cameraImage = c.toDataURL('image/jpeg');
+        window.__cancelCamera = true;
+        window.androidBridge = {};
+        window.Capacitor = {
+          PluginHeaders: [
+            { name: 'Camera', methods: [{ name: 'getPhoto', rtype: 'promise' }] },
+            {
+              name: 'App',
+              methods: [
+                { name: 'addListener', rtype: 'callback' },
+                { name: 'removeListener', rtype: 'promise' },
+              ],
+            },
+            { name: 'NotDisplay', methods: [{ name: 'preferences', rtype: 'promise' }] },
+          ],
+          nativeCallback: async (plugin, method, options, callback) => {
+            if (
+              options.eventName === 'appRestoredResult' &&
+              sessionStorage.getItem('restore-camera')
+            ) {
+              sessionStorage.removeItem('restore-camera');
+              queueMicrotask(() =>
+                callback({
+                  pluginId: 'Camera',
+                  methodName: 'getPhoto',
+                  success: true,
+                  data: { webPath: window.__cameraImage },
+                }),
+              );
+            }
+            return 'qa-callback';
+          },
+          nativePromise: async (plugin, method, options) => {
+            if (plugin === 'NotDisplay') return { reducedMotion: false, refreshRate: 120 };
+            if (plugin !== 'Camera') return {};
+            window.__cameraOptions = options;
+            const db = await new Promise((resolve) => {
+              const q = indexedDB.open('not-food-drink-personal');
+              q.onsuccess = () => resolve(q.result);
+            });
+            window.__persistedBeforeCamera = await new Promise((resolve) => {
+              const q = db
+                .transaction('capture-drafts')
+                .objectStore('capture-drafts')
+                .get('pending');
+              q.onsuccess = () => resolve(!!q.result);
+            });
+            db.close();
+            if (window.__cancelCamera) throw new Error('User cancelled photos app');
+            return { webPath: window.__cameraImage };
+          },
+        };
+      });
+      const p = await context.newPage();
+      await p.goto(base);
+      await p.getByRole('heading', { name: 'Quán xá (0)', exact: true }).waitFor();
+      await nav(p, 'Chấm điểm');
+      await p.getByRole('button', { name: 'Chụp', exact: true }).click();
+      await p
+        .getByRole('status')
+        .filter({ hasText: 'Đang xử lý ảnh' })
+        .waitFor({ state: 'detached' });
+      assert.equal(await p.evaluate(() => window.__persistedBeforeCamera), true);
+      assert.equal(await p.getByRole('alert').count(), 0);
+      await nav(p, 'Quán xá');
+      assert.equal(await p.getByRole('dialog').count(), 0);
+      await nav(p, 'Chấm điểm');
+      await p.getByLabel('Tên quán').fill('Quán chụp ảnh');
+      await p.evaluate(() => {
+        window.__cancelCamera = false;
+      });
+      await p.getByRole('button', { name: 'Chụp', exact: true }).click();
+      await p.locator('.photo-grid img').waitFor();
+      assert.equal((await readDoc(p)).reviews.length, 0);
+      const options = await p.evaluate(() => window.__cameraOptions);
+      assert.equal(options.saveToGallery, false);
+      assert.equal(options.correctOrientation, true);
+      await p.getByRole('button', { name: 'Xem Ảnh trải nghiệm 1', exact: true }).click();
+      await p.getByRole('dialog', { name: 'Ảnh trải nghiệm 1', exact: true }).waitFor();
+      await assertNoOverflow(p);
+      await closeDialog(p);
+      await p.getByRole('dialog').waitFor({ state: 'detached' });
+      await p.getByRole('button', { name: 'Lưu đánh giá & vị trí', exact: true }).click();
+      await p.getByRole('heading', { name: 'Quán xá (1)', exact: true }).waitFor();
+      const saved = await readDoc(p);
+      const measured = await p.evaluate(async (id) => {
+        const db = await new Promise((resolve) => {
+          const q = indexedDB.open('not-food-drink-personal');
+          q.onsuccess = () => resolve(q.result);
+        });
+        const photo = await new Promise((resolve) => {
+          const q = db.transaction('photos').objectStore('photos').get(id);
+          q.onsuccess = () => resolve(q.result);
+        });
+        db.close();
+        const bitmap = await createImageBitmap(photo.blob);
+        const dimensions = [bitmap.width, bitmap.height];
+        bitmap.close();
+        return { bytes: photo.blob.size, type: photo.blob.type, dimensions };
+      }, saved.reviews[0].photoIds[0]);
+      assert.ok(measured.bytes <= 300000);
+      assert.equal(measured.type, 'image/webp');
+      assert.ok(Math.max(...measured.dimensions) <= 1400);
+      await p.evaluate(async (original) => {
+        const db = await new Promise((resolve) => {
+          const q = indexedDB.open('not-food-drink-personal');
+          q.onsuccess = () => resolve(q.result);
+        });
+        await new Promise((resolve, reject) => {
+          const tx = db.transaction('capture-drafts', 'readwrite');
+          tx.objectStore('capture-drafts').put(
+            {
+              original,
+              isEdit: true,
+              draft: { ...original, note: 'Ghi chú chưa lưu' },
+              price: String(original.priceK),
+              reviewDate: original.reviewedAt.slice(0, 10),
+              firstVisit: false,
+              photos: [],
+              recoveryId: 'interrupted-capture',
+            },
+            'pending',
+          );
+          tx.oncomplete = resolve;
+          tx.onabort = () => reject(tx.error);
+        });
+        db.close();
+        sessionStorage.setItem('restore-camera', '1');
+      }, saved.reviews[0]);
+      await p.reload();
+      await p.getByRole('heading', { name: 'Sửa đánh giá', exact: true }).waitFor();
+      await p.locator('.photo-grid img').nth(1).waitFor();
+      assert.deepEqual(await readDoc(p), saved);
+      await p.getByRole('button', { name: 'Lưu đánh giá & vị trí', exact: true }).click();
+      await p.getByRole('heading', { name: 'Quán xá (1)', exact: true }).waitFor();
+      const restored = await readDoc(p);
+      assert.equal(restored.reviews[0].photoIds.length, 2);
+      assert.equal(restored.reviews[0].note, 'Ghi chú chưa lưu');
+      assert.equal(restored.reviews[0].totalScore, saved.reviews[0].totalScore);
+      await writeFile(
+        resolve(output, 'camera-bridge-results.json'),
+        JSON.stringify(
+          {
+            pass: true,
+            source: 'Synthetic native bridge, not hardware camera',
+            measured,
+            cancelIsClean: true,
+            interruptedDraftPreserved: true,
+          },
+          null,
+          2,
+        ),
+      );
+    },
+  );
   await scenario(
     'v12 migration preserves raw source, remaps verified Nốt and retires only Bếp Trang sample',
     async () => {

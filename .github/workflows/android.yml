@@ -50,7 +50,7 @@ jobs:
           arch: x86_64
           profile: pixel_6
           disable-animations: false
-          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back emulated
           script: bash scripts/android-emulator-check.sh
       - name: Collect native proof and signing utility
         if: always()

@@ -1,5 +1,5 @@
 import { AnimatedNumber, ScoreDial } from './motion/kinetic.tsx';
-import { lazy, Suspense, useEffect, useId, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Button } from './ui/button.tsx';
 import { Input } from './ui/input.tsx';
 import { Textarea } from './ui/textarea.tsx';
@@ -11,6 +11,8 @@ import {
   Check,
   MapPin,
   Camera,
+  Images,
+  LoaderCircle,
   X,
   Coffee,
   Utensils,
@@ -35,6 +37,10 @@ import {
 } from '../lib/scoring.ts';
 import { getFreqTier, localDayParts } from '../lib/frequency.ts';
 import { compressPhoto } from '../lib/storage.ts';
+import { clearCaptureDraft } from '../lib/storage.ts';
+import { takeReviewPhoto, type CaptureDraft } from '../lib/reviewCapture.ts';
+import { isNativeApp } from '../lib/platform.ts';
+import { newId } from '../lib/models.ts';
 import { CategoryScoreBadge, StarRatingBadge } from './animate-ui/primitives.tsx';
 import { LocationPicker } from './LocationPicker.tsx';
 import { Photo } from './Photo.tsx';
@@ -112,6 +118,7 @@ function ScoreSlider({
 }
 export default function ReviewForm({
   initial,
+  recovered,
   isEdit,
   theme,
   busy,
@@ -120,8 +127,10 @@ export default function ReviewForm({
   onSave,
   onCancel,
   onDirtyChange,
+  onPhotoBusyChange,
 }: {
   initial: ReviewItem;
+  recovered?: CaptureDraft;
   isEdit: boolean;
   theme: 'dark' | 'light';
   busy: boolean;
@@ -135,16 +144,83 @@ export default function ReviewForm({
   ) => Promise<boolean>;
   onCancel: () => void;
   onDirtyChange: (dirty: boolean) => void;
+  onPhotoBusyChange: (busy: boolean) => void;
 }) {
-  const [draft, setDraft] = useState<ReviewItem>(() => structuredClone(initial));
-  const [price, setPrice] = useState(String(initial.priceK));
-  const [reviewDate, setReviewDate] = useState(dateInput(initial.reviewedAt ?? initial.createdAt));
+  const [draft, setDraft] = useState<ReviewItem>(() =>
+    structuredClone(recovered?.draft ?? initial),
+  );
+  const [price, setPrice] = useState(recovered?.price ?? String(initial.priceK));
+  const [reviewDate, setReviewDate] = useState(
+    recovered?.reviewDate ?? dateInput(initial.reviewedAt ?? initial.createdAt),
+  );
   const [error, setError] = useState('');
   const [location, setLocation] = useState(false);
   const [pinPicker, setPinPicker] = useState(false);
-  const [photos, setPhotos] = useState<PhotoData[]>([]);
+  const [photos, setPhotos] = useState<PhotoData[]>(recovered?.photos ?? []);
   const [photoBusy, setPhotoBusy] = useState(false);
-  const [firstVisit, setFirstVisit] = useState(false);
+  const [firstVisit, setFirstVisit] = useState(recovered?.firstVisit ?? false);
+  const captureInput = useRef<HTMLInputElement>(null);
+  const photoOperation = useRef(false);
+  useEffect(() => {
+    onPhotoBusyChange(photoBusy);
+    return () => onPhotoBusyChange(false);
+  }, [photoBusy, onPhotoBusyChange]);
+  const attach = (added: PhotoData[]) => {
+    setPhotos((current) => [...current, ...added]);
+    setDraft((current) => ({
+      ...current,
+      photoIds: [...current.photoIds, ...added.map((photo) => photo.id)],
+    }));
+    setError('');
+  };
+  const importPhotos = async (files: File[]) => {
+    if (!files.length || photoOperation.current) return;
+    if (draft.photoIds.length + files.length > 3) {
+      setError('Mỗi quán tối đa 3 ảnh.');
+      return;
+    }
+    photoOperation.current = true;
+    setPhotoBusy(true);
+    try {
+      const added: PhotoData[] = [];
+      // Sequential decoding bounds peak memory when selecting three large photos.
+      for (const file of files) added.push(await compressPhoto(file));
+      attach(added);
+    } catch (error) {
+      setError((error as Error).message);
+    } finally {
+      photoOperation.current = false;
+      setPhotoBusy(false);
+    }
+  };
+  const capture = async () => {
+    if (!isNativeApp) {
+      captureInput.current?.click();
+      return;
+    }
+    if (photoOperation.current || draft.photoIds.length >= 3) return;
+    photoOperation.current = true;
+    setPhotoBusy(true);
+    try {
+      const next = await takeReviewPhoto({
+        original: initial,
+        isEdit,
+        draft,
+        price,
+        reviewDate,
+        firstVisit,
+        photos,
+        recoveryId: newId('capture'),
+      });
+      if (next) attach(next.photos.filter((photo) => !photos.some((p) => p.id === photo.id)));
+      await clearCaptureDraft();
+    } catch (error) {
+      setError((error as Error).message);
+    } finally {
+      photoOperation.current = false;
+      setPhotoBusy(false);
+    }
+  };
   const baseline = useMemo(
     () =>
       reviewDraftSignature(
@@ -246,7 +322,13 @@ export default function ReviewForm({
       }}
     >
       <div className="split form-title">
-        <button type="button" className="text-button" aria-label="Hủy" onClick={onCancel}>
+        <button
+          type="button"
+          className="text-button"
+          aria-label="Hủy"
+          disabled={photoBusy}
+          onClick={onCancel}
+        >
           <ArrowLeft />
         </button>
         <h1>{isEdit ? 'Sửa đánh giá' : 'Chấm điểm'}</h1>
@@ -567,38 +649,54 @@ export default function ReviewForm({
           <h3>
             Ảnh <small>{draft.photoIds.length}/3</small>
           </h3>
-          <label className="button secondary file-button">
-            <Camera size={17} />
-            {photoBusy ? 'Đang xử lý…' : 'Thêm ảnh'}
-            <input
-              aria-label="Thêm ảnh món ăn hoặc quán"
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              multiple
+          <div className="photo-actions">
+            <Button
+              type="button"
+              className="photo-capture"
               disabled={photoBusy || draft.photoIds.length >= 3}
-              onChange={async (e) => {
-                const files = Array.from(e.target.files ?? []);
-                e.target.value = '';
-                if (draft.photoIds.length + files.length > 3) {
-                  setError('Mỗi quán tối đa 3 ảnh.');
-                  return;
-                }
-                setPhotoBusy(true);
-                try {
-                  const added = await Promise.all(files.map(compressPhoto));
-                  setPhotos((p) => [...p, ...added]);
-                  setDraft((r) => ({ ...r, photoIds: [...r.photoIds, ...added.map((p) => p.id)] }));
-                  setError('');
-                } catch (e) {
-                  setError((e as Error).message);
-                } finally {
-                  setPhotoBusy(false);
-                }
+              onClick={() => void capture()}
+            >
+              <Camera size={18} /> Chụp
+            </Button>
+            <input
+              ref={captureInput}
+              type="file"
+              hidden
+              capture="environment"
+              accept="image/jpeg,image/png,image/webp"
+              aria-label="Chụp ảnh món ăn hoặc đồ uống"
+              onChange={(event) => {
+                const files = Array.from(event.target.files ?? []);
+                event.target.value = '';
+                void importPhotos(files);
               }}
             />
-          </label>
+            <label
+              className="button secondary file-button"
+              data-disabled={photoBusy || draft.photoIds.length >= 3}
+            >
+              <Images size={17} />
+              Thư viện
+              <input
+                aria-label="Thêm ảnh món ăn hoặc quán"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
+                disabled={photoBusy || draft.photoIds.length >= 3}
+                onChange={(e) => {
+                  const files = Array.from(e.target.files ?? []);
+                  e.target.value = '';
+                  void importPhotos(files);
+                }}
+              />
+            </label>
+          </div>
         </div>
-
+        {photoBusy && (
+          <div className="photo-processing" role="status">
+            <LoaderCircle className="photo-spinner" size={18} /> Đang xử lý ảnh…
+          </div>
+        )}
         <div className="photo-grid">
           {draft.photoIds.map((id, index) => (
             <div className="photo-item" key={id}>
@@ -611,6 +709,7 @@ export default function ReviewForm({
                 type="button"
                 className="icon-button"
                 aria-label={`Bỏ ảnh ${index + 1}`}
+                disabled={photoBusy}
                 onClick={() => {
                   change(
                     'photoIds',

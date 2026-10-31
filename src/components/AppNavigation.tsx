@@ -18,10 +18,12 @@ export default function AppNavigation({
   value,
   onChange,
   desktop = false,
+  locked = false,
 }: {
   value: AppTab;
   onChange: (tab: AppTab) => void;
   desktop?: boolean;
+  locked?: boolean;
 }) {
   const quiet = useQuietMotion();
   const dock = useRef<HTMLElement>(null);
@@ -54,6 +56,7 @@ export default function AppNavigation({
         <BottomNavigationItem key={id} value={id} asChild>
           <button
             type="button"
+            disabled={locked}
             aria-current={value === id ? 'page' : undefined}
             data-active={value === id}
             data-nav-tab={id}

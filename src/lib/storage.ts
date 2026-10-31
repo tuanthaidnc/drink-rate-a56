@@ -17,6 +17,8 @@ import {
 } from './validation.ts';
 
 import { applyPlaceCorrections, needsPlaceCorrections } from './placeCorrections.ts';
+import type { CaptureDraft } from './reviewCapture.ts';
+import { isNativeApp } from './platform.ts';
 export const DB_NAME = 'not-food-drink-personal';
 export const LEGACY_KEYS = [
   'not_drink_food_reviews_v11',
@@ -44,13 +46,13 @@ let database: Promise<IDBDatabase> | undefined;
 function db(): Promise<IDBDatabase> {
   if (!database)
     database = new Promise((resolve, reject) => {
-      const r = indexedDB.open(DB_NAME, 1);
+      const r = indexedDB.open(DB_NAME, 2);
       r.onupgradeneeded = () => {
         const d = r.result;
-        d.createObjectStore('documents');
-        d.createObjectStore('snapshots', { keyPath: 'id' });
-        d.createObjectStore('photos', { keyPath: 'id' });
-        d.createObjectStore('archives', { keyPath: 'id' });
+        if (!d.objectStoreNames.contains('documents')) d.createObjectStore('documents');
+        for (const name of ['snapshots', 'photos', 'archives'])
+          if (!d.objectStoreNames.contains(name)) d.createObjectStore(name, { keyPath: 'id' });
+        if (!d.objectStoreNames.contains('capture-drafts')) d.createObjectStore('capture-drafts');
       };
       r.onsuccess = () => {
         r.result.onversionchange = () => {
@@ -314,6 +316,25 @@ export async function getPhoto(id: string): Promise<PhotoData | undefined> {
   const d = await db();
   return request(d.transaction('photos', 'readonly').objectStore('photos').get(id));
 }
+// Separate from saved reviews and backups: opening a camera never commits a rating.
+export async function saveCaptureDraft(draft: CaptureDraft): Promise<void> {
+  const d = await db(),
+    t = d.transaction('capture-drafts', 'readwrite');
+  const done = complete(t);
+  t.objectStore('capture-drafts').put(draft, 'pending');
+  await done;
+}
+export async function getCaptureDraft(): Promise<CaptureDraft | undefined> {
+  const d = await db();
+  return request(d.transaction('capture-drafts').objectStore('capture-drafts').get('pending'));
+}
+export async function clearCaptureDraft(): Promise<void> {
+  const d = await db(),
+    t = d.transaction('capture-drafts', 'readwrite');
+  const done = complete(t);
+  t.objectStore('capture-drafts').delete('pending');
+  await done;
+}
 function dataUrl(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -384,7 +405,7 @@ export async function recoverLegacyFile(): Promise<{ raw: string; source: string
   }
 }
 export async function downloadBlob(blob: Blob, fileName: string): Promise<boolean> {
-  if ((await import('@capacitor/core')).Capacitor.isNativePlatform()) {
+  if (isNativeApp) {
     const [{ Filesystem, Directory, Encoding }, { Share }] = await Promise.all([
       import('@capacitor/filesystem'),
       import('@capacitor/share'),
@@ -427,29 +448,6 @@ export async function requestPersistence(): Promise<boolean> {
   return navigator.storage?.persist ? navigator.storage.persist() : false;
 }
 export async function compressPhoto(file: File): Promise<PhotoData> {
-  if (
-    file.size > 20 * 1024 * 1024 ||
-    !['image/jpeg', 'image/png', 'image/webp'].includes(file.type)
-  )
-    throw new DataError('Chọn ảnh JPEG, PNG hoặc WebP tối đa 20 MB.');
-  const image = await createImageBitmap(file);
-  const scale = Math.min(1, 1400 / Math.max(image.width, image.height));
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.max(1, Math.round(image.width * scale));
-  canvas.height = Math.max(1, Math.round(image.height * scale));
-  const ctx = canvas.getContext('2d');
-  if (!ctx) {
-    image.close();
-    throw new DataError('Không xử lý được ảnh trên thiết bị này.');
-  }
-  ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
-  image.close();
-  let blob: Blob | null = null;
-  for (const q of [0.8, 0.65, 0.5, 0.35]) {
-    blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, 'image/webp', q));
-    if (blob && blob.size <= MAX_PHOTO_BYTES) break;
-  }
-  if (!blob || blob.size > MAX_PHOTO_BYTES)
-    throw new DataError('Ảnh còn quá lớn; hãy chọn ảnh nhỏ hơn.');
-  return { id: newId('photo'), blob };
+  const { processPhoto } = await import('./photoProcessing.ts');
+  return { id: newId('photo'), blob: await processPhoto(file) };
 }

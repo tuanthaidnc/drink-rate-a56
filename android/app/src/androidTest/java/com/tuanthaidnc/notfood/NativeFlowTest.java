@@ -85,6 +85,16 @@ public class NativeFlowTest {
             screenshot("native-keyboard");
             device.pressBack();
             until("!!document.querySelector('.live-score')");
+            js("document.querySelector('.photo-capture').scrollIntoView({block:'center'})");
+            tap(".photo-capture");
+            assertTrue("System camera opened", device.wait(Until.hasObject(By.pkg("com.android.camera2").depth(0)), 15000));
+            screenshot("native-system-camera");
+            device.pressBack();
+            assertTrue("NỐT resumed after cancellation", device.wait(Until.hasObject(By.pkg("com.tuanthaidnc.notfood").depth(0)), 10000));
+            until("!document.querySelector('.photo-processing')");
+            assertEquals("Native-QA", js("document.querySelector('#shop-name-input').value"));
+            assertEquals(0, ((Number)js("document.querySelectorAll('.photo-grid img').length")).intValue());
+            js("document.querySelector('.review-form').scrollIntoView({block:'start'})");
             tap(".live-score button");
             until("!!document.querySelector('.review-card')");
             screenshot("native-list-dark");
@@ -130,6 +140,7 @@ public class NativeFlowTest {
             result.put("circle", circle);
             result.put("viewport", js("innerWidth+'x'+innerHeight"));
             result.put("physical120HzVerified", false);
+            result.put("cameraOpenCancelPreservesDraft", true);
             Files.write(new File(proof, "native-results.json").toPath(), result.toString(2).getBytes(StandardCharsets.UTF_8));
         } finally {
             // The Gradle device provider uninstalls the app after the test,

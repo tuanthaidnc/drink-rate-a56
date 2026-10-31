@@ -161,9 +161,14 @@ h2 {
   width: 100%;
   min-width: 0;
   transform-origin: 50% 0;
+  /* Isolate route paints; the layer hint exists only during its short transition. */
+  contain: layout style;
 }
 .app-scene[inert] {
   pointer-events: none;
+}
+.app-scene[data-transitioning='true'] {
+  will-change: transform, opacity;
 }
 .places-column {
   gap: 18px;
@@ -297,6 +302,7 @@ h2 {
   max-width: 220px;
 }
 .review-card {
+  contain: layout paint style;
   overflow: hidden;
   border: 1px solid var(--border-card);
   border-radius: 25px;
@@ -406,6 +412,8 @@ h2 {
   height: 14px;
 }
 .score-dial {
+  contain: layout paint style;
+  transform: translateZ(0);
   display: inline-grid;
   place-items: center;
   position: relative;
@@ -1153,6 +1161,71 @@ h2 {
 }
 [data-platform='android'] .dialog-backdrop {
   backdrop-filter: none;
+}
+.photo-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.photo-actions .button {
+  min-height: 44px;
+  gap: 7px;
+}
+.photo-actions [data-disabled='true'] {
+  opacity: 0.45;
+  cursor: default;
+}
+.photo-preview {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--bg-elevated);
+  cursor: zoom-in;
+}
+.photo-preview:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.photo-full {
+  display: block;
+  width: 100%;
+  max-height: 70dvh;
+  object-fit: contain;
+  border-radius: 12px;
+}
+.photo-processing {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.photo-item .icon-button {
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  min-height: 48px;
+  aspect-ratio: 1;
+}
+.photo-spinner {
+  animation: photo-spin 0.8s linear infinite;
+}
+@keyframes photo-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .photo-spinner {
+    animation: none;
+  }
+}
+[data-reduced-motion='true'] .photo-spinner {
+  animation: none;
 }
 @media (max-width: 1099px) {
   [data-platform='android'] .not-app {

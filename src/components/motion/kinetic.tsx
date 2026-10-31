@@ -3,6 +3,7 @@ import {
   useContext,
   useEffect,
   useRef,
+  useState,
   useSyncExternalStore,
   forwardRef,
   type ReactNode,
@@ -17,6 +18,7 @@ import {
 } from 'motion/react';
 
 export const MotionPreference = createContext(false);
+export const MotionActivity = createContext(true);
 let systemQuery: MediaQueryList | undefined;
 const motionListeners = new Set<() => void>();
 const notifyMotion = () => motionListeners.forEach((notify) => notify());
@@ -65,6 +67,7 @@ export function AnimatedNumber({
   springOptions?: SpringOptions;
 }) {
   const quiet = useQuietMotion();
+  const active = useContext(MotionActivity);
   const spring = useSpring(
     from ?? value,
     springOptions ?? { stiffness: 120, damping: 22, mass: 0.8 },
@@ -72,8 +75,8 @@ export function AnimatedNumber({
   const display = useTransform(spring, (n) => n.toFixed(decimals));
   useEffect(() => {
     if (quiet) spring.jump(value);
-    else spring.set(value);
-  }, [spring, value, quiet]);
+    else if (active) spring.set(value);
+  }, [spring, value, quiet, active]);
   return (
     <span className={className} data-motion="number">
       <motion.span aria-hidden="true">{display}</motion.span>
@@ -89,12 +92,16 @@ const Scene = forwardRef<HTMLDivElement, { children: ReactNode; direction: numbe
     // motion.div owns completion, otherwise its parent leaves old screens mounted.
     const present = useIsPresent();
     const quiet = useQuietMotion();
+    const [transitioning, setTransitioning] = useState(!quiet);
     return (
       <motion.div
         ref={ref}
         className="app-scene"
         data-motion="scene"
         data-screen-index={index}
+        data-transitioning={transitioning && !quiet}
+        onAnimationStart={() => setTransitioning(true)}
+        onAnimationComplete={() => setTransitioning(false)}
         aria-hidden={!present}
         inert={!present || undefined}
         initial={quiet ? false : { opacity: 0.6, x: direction * 18 }}
@@ -144,6 +151,7 @@ export function ScoreDial({
   size?: number;
 }) {
   const quiet = useQuietMotion();
+  const active = useContext(MotionActivity);
   return (
     <span
       className={`score-dial ${className}`}
@@ -167,7 +175,9 @@ export function ScoreDial({
           strokeDasharray="1"
           transform="rotate(-90 60 60)"
           initial={quiet ? false : { strokeDashoffset: 1 }}
-          animate={{ strokeDashoffset: 1 - Math.min(10, Math.max(0, value)) / 10 }}
+          animate={{
+            strokeDashoffset: quiet || active ? 1 - Math.min(10, Math.max(0, value)) / 10 : 1,
+          }}
           transition={{ duration: quiet ? 0 : 0.95, ease: [0.22, 1, 0.36, 1] }}
         />
       </svg>
@@ -181,6 +191,7 @@ export function ScoreDial({
 
 export function CriterionBar({ label, value }: { label: string; value: number }) {
   const quiet = useQuietMotion();
+  const active = useContext(MotionActivity);
   return (
     <div className="criterion">
       <span className="criterion-label">{label}</span>
@@ -194,7 +205,7 @@ export function CriterionBar({ label, value }: { label: string; value: number })
       >
         <motion.span
           initial={quiet ? false : { scaleX: 0 }}
-          animate={{ scaleX: value / 10 }}
+          animate={{ scaleX: quiet || active ? value / 10 : 0 }}
           transition={{ duration: quiet ? 0 : 0.75, ease: [0.22, 1, 0.36, 1] }}
         />
       </span>
