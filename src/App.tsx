@@ -19,6 +19,10 @@ import {
   WifiOff,
   Settings2,
   CircleAlert,
+  Grid2X2,
+  Grid3X3,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import {
   applyThemeWithTransition,
@@ -32,6 +36,7 @@ import ReviewCard from './components/ReviewCard.tsx';
 import {
   watchCaptureRecovery,
   forgetCaptureRecovery,
+  openWebCamera,
   type CaptureDraft,
 } from './lib/reviewCapture.ts';
 import DataTools from './components/DataTools.tsx';
@@ -96,6 +101,16 @@ export default function App() {
   const [dirty, setDirty] = useState(false);
   const [captureDraft, setCaptureDraft] = useState<CaptureDraft>();
   const [photoBusy, setPhotoBusy] = useState(false);
+  const [entryPhotos, setEntryPhotos] = useState<Promise<File[]>>();
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const [density, setDensity] = useState<'medium' | 'small'>(() => {
+    try {
+      return localStorage.getItem('not-album-density') === 'small' ? 'small' : 'medium';
+    } catch {
+      return 'medium';
+    }
+  });
+  const [page, setPage] = useState(0);
   const [sort, setSort] = useState('score'),
     [position, setPosition] = useState<Position | null>(null),
     [locating, setLocating] = useState(false);
@@ -123,6 +138,8 @@ export default function App() {
     main.current?.scrollTo({ top: 0 });
   }, []);
   const add = (p?: Position) => {
+    setDetailId(null);
+    setEntryPhotos(!isNativeApp ? openWebCamera() : undefined);
     setCaptureDraft(undefined);
     setDirty(!!p);
     setDraft({
@@ -140,6 +157,8 @@ export default function App() {
     navigate('review');
   };
   const edit = (r: ReviewItem) => {
+    setDetailId(null);
+    setEntryPhotos(undefined);
     setCaptureDraft(undefined);
     setDirty(false);
     setDraft(structuredClone(r));
@@ -281,7 +300,12 @@ export default function App() {
       ),
     [filtered, sort, position],
   );
-  const inspector = sorted.find((r) => r.id === selected) ?? sorted[0];
+  const inspector = reviews.find((r) => r.id === detailId);
+  const pageCount = Math.max(1, Math.ceil(sorted.length / 24));
+  const activePage = Math.min(page, pageCount - 1);
+  useEffect(() => {
+    setPage(0);
+  }, [filters, sort]);
   const summary = describeFilters(filters),
     visitItem = reviews.find((r) => r.id === visitId);
   const locate = async () => {
@@ -631,6 +655,24 @@ export default function App() {
                                       <option value="distance">Gần GPS nhất</option>
                                     </select>
                                   </label>
+                                  <button
+                                    type="button"
+                                    className="icon-button density-toggle"
+                                    aria-label={
+                                      density === 'medium' ? 'Hiển thị ảnh nhỏ' : 'Hiển thị ảnh vừa'
+                                    }
+                                    onClick={() => {
+                                      const next = density === 'medium' ? 'small' : 'medium';
+                                      setDensity(next);
+                                      try {
+                                        localStorage.setItem('not-album-density', next);
+                                      } catch {
+                                        /* session-only preference */
+                                      }
+                                    }}
+                                  >
+                                    {density === 'medium' ? <Grid3X3 /> : <Grid2X2 />}
+                                  </button>
                                 </div>
                                 {undo && (
                                   <div className="notice split">
@@ -672,45 +714,57 @@ export default function App() {
                                     </button>
                                   </section>
                                 ) : (
-                                  sorted.map((item, index) => (
-                                    <ReviewCard
-                                      key={item.id}
-                                      item={item}
-                                      index={index}
-                                      now={now}
-                                      position={position}
-                                      selected={item.id === selected}
-                                      onInspect={() => setSelected(item.id)}
-                                      onEdit={() => edit(item)}
-                                      onDelete={() => setDeleteItem(item)}
-                                      onVisit={() => setVisitId(item.id)}
-                                      onDirections={() => directions(item)}
-                                      onMap={() => {
-                                        setSelected(item.id);
-                                        navigate('map');
+                                  <div className="album-grid" data-density={density}>
+                                    {sorted
+                                      .slice(activePage * 24, (activePage + 1) * 24)
+                                      .map((item, index) => (
+                                        <ReviewCard
+                                          key={item.id}
+                                          item={item}
+                                          index={index}
+                                          selected={item.id === selected}
+                                          onInspect={() => {
+                                            setSelected(item.id);
+                                            setDetailId(item.id);
+                                          }}
+                                        />
+                                      ))}
+                                  </div>
+                                )}
+                                {pageCount > 1 && (
+                                  <nav className="album-pagination" aria-label="Trang đánh giá">
+                                    <button
+                                      className="icon-button"
+                                      aria-label="Trang trước"
+                                      disabled={activePage === 0}
+                                      onClick={() => {
+                                        setPage(activePage - 1);
+                                        main.current?.scrollTo({ top: 0 });
                                       }}
-                                    />
-                                  ))
+                                    >
+                                      <ChevronLeft />
+                                    </button>
+                                    <span>
+                                      {activePage + 1} / {pageCount}
+                                    </span>
+                                    <button
+                                      className="icon-button"
+                                      aria-label="Trang sau"
+                                      disabled={activePage >= pageCount - 1}
+                                      onClick={() => {
+                                        setPage(activePage + 1);
+                                        main.current?.scrollTo({ top: 0 });
+                                      }}
+                                    >
+                                      <ChevronRight />
+                                    </button>
+                                  </nav>
                                 )}
                                 <HistoricalPlaces
                                   items={demos}
                                   onOpen={() => setReconciliation(true)}
                                 />
                               </div>
-                              <ReviewInspector
-                                item={inspector}
-                                now={now}
-                                onEdit={() => inspector && edit(inspector)}
-                                onVisit={() => inspector && setVisitId(inspector.id)}
-                                onDelete={() => inspector && setDeleteItem(inspector)}
-                                onDirections={() => inspector && directions(inspector)}
-                                onMap={() => {
-                                  if (inspector) {
-                                    setSelected(inspector.id);
-                                    navigate('map');
-                                  }
-                                }}
-                              />
                             </div>
                           ) : null,
                           tab === 'map' ? (
@@ -735,6 +789,7 @@ export default function App() {
                               key={`${draft.id}-${captureDraft?.recoveryId ?? ''}`}
                               initial={draft}
                               recovered={captureDraft}
+                              entryPhotos={entryPhotos}
                               isEdit={editing}
                               theme={theme}
                               busy={store.busy}
@@ -780,6 +835,29 @@ export default function App() {
             </main>
             {doc && !(isForm && typing) && (
               <AppNavigation value={tab} onChange={selectTab} locked={photoBusy} />
+            )}
+            {inspector && (
+              <Dialog title={inspector.name} wide onClose={() => setDetailId(null)}>
+                <ReviewInspector
+                  item={inspector}
+                  now={now}
+                  onEdit={() => edit(inspector)}
+                  onVisit={() => {
+                    setDetailId(null);
+                    setVisitId(inspector.id);
+                  }}
+                  onDelete={() => {
+                    setDetailId(null);
+                    setDeleteItem(inspector);
+                  }}
+                  onDirections={() => directions(inspector)}
+                  onMap={() => {
+                    setDetailId(null);
+                    setSelected(inspector.id);
+                    navigate('map');
+                  }}
+                />
+              </Dialog>
             )}
             {reconciliation && doc && (
               <PlaceReconciliation

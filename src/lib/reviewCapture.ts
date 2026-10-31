@@ -12,6 +12,8 @@ export interface CaptureDraft {
   firstVisit: boolean;
   photos: PhotoData[];
   recoveryId: string;
+  stage?: 'capture' | 'location' | 'score';
+  gpsAttempted?: boolean;
 }
 type Recovered = { snapshot: CaptureDraft; error?: string };
 let recovered: Recovered | undefined;
@@ -34,7 +36,7 @@ export function isCameraCancellation(error: unknown): boolean {
 export function cameraError(error: unknown): string {
   const text = String((error as { message?: string })?.message ?? error);
   return /permission|denied|access/i.test(text)
-    ? 'Camera chưa được cho phép. Mở quyền Camera của NỐT rồi thử lại.'
+    ? 'Camera chưa được cho phép. Kiểm tra quyền của máy ảnh rồi thử lại hoặc chọn Thư viện.'
     : 'Không mở được ảnh từ camera. Hãy thử lại hoặc chọn Thư viện.';
 }
 async function attachCameraPhoto(
@@ -52,6 +54,7 @@ async function attachCameraPhoto(
     ...snapshot,
     draft: { ...snapshot.draft, photoIds: [...snapshot.draft.photoIds, photo.id] },
     photos: [...snapshot.photos, photo],
+    stage: snapshot.isEdit ? 'score' : 'location',
     recoveryId: newId('capture'),
   };
 }
@@ -113,4 +116,23 @@ export async function initializeCaptureRecovery(): Promise<void> {
 export async function forgetCaptureRecovery() {
   recovered = undefined;
   await clearCaptureDraft();
+}
+
+// Browser capture requires a user gesture; call before the lazy form mounts.
+export function openWebCamera(): Promise<File[]> {
+  return new Promise((resolve) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/jpeg,image/png,image/webp';
+    input.capture = 'environment';
+    input.hidden = true;
+    const finish = (files: File[]) => {
+      input.remove();
+      resolve(files);
+    };
+    input.addEventListener('change', () => finish(Array.from(input.files ?? [])), { once: true });
+    input.addEventListener('cancel', () => finish([]), { once: true });
+    document.body.append(input);
+    input.click();
+  });
 }

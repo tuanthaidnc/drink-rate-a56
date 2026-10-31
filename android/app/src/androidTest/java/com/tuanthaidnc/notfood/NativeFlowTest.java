@@ -78,27 +78,47 @@ public class NativeFlowTest {
             assertEquals("https://localhost", js("location.origin"));
             assertFalse("No service worker is needed for bundled assets", (Boolean) js("!!navigator.serviceWorker.controller"));
             nav(2);
+            assertTrue("Automatic system camera opened", device.wait(Until.hasObject(By.pkg("com.android.camera2").depth(0)), 15000));
+            screenshot("native-system-camera");
+            device.pressBack();
+            until("document.querySelector('.review-form')?.dataset.stage==='capture' && !document.querySelector('.capture-processing')");
+            assertFalse("No scoring before a photo", (Boolean)js("!!document.querySelector('#shop-name-input')"));
+            nav(3);
+            assertFalse("Cancelled capture stays pristine", (Boolean)js("!!document.querySelector('[role=dialog]')"));
+            nav(0);
+            nav(2);
+            assertTrue(device.wait(Until.hasObject(By.pkg("com.android.camera2").depth(0)), 15000));
+            device.pressBack();
+            until("!document.querySelector('.capture-processing')");
+            // Isolated emulator: exercise the actual image-file pipeline with a
+            // synthetic canvas image. Physical capture is verified on the A56.
+            js("(()=>{const c=document.createElement('canvas');c.width=800;c.height=800;const x=c.getContext('2d');x.fillStyle='#c4b6a4';x.fillRect(0,0,800,800);c.toBlob(blob=>{const d=new DataTransfer();d.items.add(new File([blob],'emulator-qa.png',{type:'image/png'}));const i=document.querySelector('input[aria-label=\"Chọn ảnh để tiếp tục\"]');i.files=d.files;i.dispatchEvent(new Event('change',{bubbles:true}));});return true;})()");
+            until("document.querySelector('.review-form')?.dataset.stage==='location'");
+            tap(".manual-coordinates");
+            tap(".capture-location .two-columns label:nth-child(1) input");
+            device.executeShellCommand("input text 16.066");
+            tap(".capture-location .two-columns label:nth-child(2) input");
+            device.executeShellCommand("input text 108.209");
+            device.pressBack();
+            js("document.querySelector('.capture-location .two-columns').scrollIntoView({block:'center'})");
+            // The only secondary action in this manual-entry group is Đặt ghim.
+            tap(".capture-location > .stack > button");
+            js("document.querySelector('.confirm-location').scrollIntoView({block:'center'})");
+            tap(".confirm-location");
             until("!!document.querySelector('#shop-name-input')");
             tap("#shop-name-input");
             device.executeShellCommand("input text Native-QA");
             until("document.querySelector('#shop-name-input').value==='Native-QA'");
+            tap("#review-price");
+            device.executeShellCommand("input text 31");
             screenshot("native-keyboard");
             device.pressBack();
             until("!!document.querySelector('.live-score')");
-            js("document.querySelector('.photo-capture').scrollIntoView({block:'center'})");
-            tap(".photo-capture");
-            assertTrue("System camera opened", device.wait(Until.hasObject(By.pkg("com.android.camera2").depth(0)), 15000));
-            screenshot("native-system-camera");
-            device.pressBack();
-            assertTrue("NỐT resumed after cancellation", device.wait(Until.hasObject(By.pkg("com.tuanthaidnc.notfood").depth(0)), 10000));
-            until("!document.querySelector('.photo-processing')");
-            assertEquals("Native-QA", js("document.querySelector('#shop-name-input').value"));
-            assertEquals(0, ((Number)js("document.querySelectorAll('.photo-grid img').length")).intValue());
             js("document.querySelector('.review-form').scrollIntoView({block:'start'})");
             tap(".live-score button");
-            until("!!document.querySelector('.review-card')");
+            until("!!document.querySelector('.album-entry')");
             screenshot("native-list-dark");
-            for (int i : new int[] {3, 0, 1, 3, 2, 0, 3}) nav(i);
+            for (int i : new int[] {3, 0, 1, 3, 0, 3}) nav(i);
             until("!!document.querySelector('[data-stat=average]')");
             assertEquals("7.3", js("document.querySelector('[data-stat=average]').textContent"));
             assertEquals(1, ((Number)js("document.querySelectorAll('.app-scene').length")).intValue());
@@ -113,12 +133,16 @@ public class NativeFlowTest {
             until("!!document.querySelector('[role=dialog]')");
             device.pressBack();
             until("!document.querySelector('[role=dialog]')");
-            nav(2);
+            nav(0);
+            tap(".album-tile");
+            until("!!document.querySelector('.review-inspector')");
+            tap(".inspector-actions button[title='Sửa đánh giá']");
+            until("!!document.querySelector('#shop-name-input')");
             screenshot("native-form");
             JSONObject circle = new JSONObject((String)js("JSON.stringify((()=>{const r=document.querySelector('.dial-mini').getBoundingClientRect();return {width:r.width,height:r.height}})())"));
             assertEquals(circle.getDouble("width"), circle.getDouble("height"), 1);
             device.pressBack();
-            until("!!document.querySelector('.review-card')");
+            until("!!document.querySelector('.album-entry')");
             assertFalse((Boolean)js("!!document.querySelector('[role=dialog]')"));
             device.executeShellCommand("settings put system font_scale 1.3");
             Thread.sleep(1000);
@@ -140,7 +164,8 @@ public class NativeFlowTest {
             result.put("circle", circle);
             result.put("viewport", js("innerWidth+'x'+innerHeight"));
             result.put("physical120HzVerified", false);
-            result.put("cameraOpenCancelPreservesDraft", true);
+            result.put("automaticCameraAndCleanCancel", true);
+            result.put("syntheticPhotoFileAndManualLocation", true);
             Files.write(new File(proof, "native-results.json").toPath(), result.toString(2).getBytes(StandardCharsets.UTF_8));
         } finally {
             // The Gradle device provider uninstalls the app after the test,

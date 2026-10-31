@@ -1,4 +1,4 @@
-import { Store, Map, Plus, ChartColumn } from 'lucide-react';
+import { Store, Map, Camera, ChartColumn } from 'lucide-react';
 import { useLayoutEffect, useRef } from 'react';
 import { motion } from 'motion/react';
 import { useQuietMotion } from './motion/kinetic.tsx';
@@ -11,7 +11,7 @@ export type AppTab = 'places' | 'map' | 'review' | 'insights';
 export const NAV_ITEMS = [
   { id: 'places', label: 'Quán xá', icon: Store },
   { id: 'map', label: 'Bản đồ', icon: Map },
-  { id: 'review', label: 'Chấm điểm', icon: Plus },
+  { id: 'review', label: 'Chấm điểm', icon: Camera },
   { id: 'insights', label: 'Thống kê', icon: ChartColumn },
 ] as const;
 export default function AppNavigation({
@@ -77,7 +77,7 @@ export default function AppNavigation({
               <motion.span
                 className="nav-glyph"
                 animate={{
-                  rotate: value === id && id === 'review' ? 90 : 0,
+                  rotate: value === id && id === 'review' ? -8 : 0,
                   y: value === id && id !== 'review' ? -2 : 0,
                 }}
                 transition={

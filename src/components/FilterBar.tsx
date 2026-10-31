@@ -23,6 +23,7 @@ export default function FilterBar({
   theme: 'dark' | 'light';
 }) {
   const [open, setOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const real = items.filter((r) => !r.isDemo);
   const cities = [...new Set(real.map((r) => r.city).filter(Boolean))].sort((a, b) =>
     a.localeCompare(b, 'vi'),
@@ -51,7 +52,7 @@ export default function FilterBar({
     onChange({ ...filters, [key]: value });
   return (
     <>
-      <div className="filters-header stack">
+      <div className="filters-header stack" data-search-open={searchOpen || !!filters.search}>
         <ToggleGroup.Root
           key={theme}
           type="single"
@@ -83,6 +84,14 @@ export default function FilterBar({
           ))}
         </ToggleGroup.Root>
         <div className="search-row">
+          <button
+            className="icon-button search-toggle"
+            aria-label="Mở tìm kiếm"
+            onClick={() => setSearchOpen((v) => !v)}
+            aria-expanded={searchOpen || !!filters.search}
+          >
+            <Search size={18} />
+          </button>
           <label className="search-field">
             <Search size={17} />
             <span className="sr-only">Tìm quán, món, đường hoặc ghi chú</span>

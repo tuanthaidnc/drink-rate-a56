@@ -1,7 +1,17 @@
 import { useEffect, useState } from 'react';
 import { getPhoto } from '../lib/storage.ts';
 import { Dialog } from './Dialog.tsx';
-export function Photo({ id, alt, draft }: { id: string; alt: string; draft?: Blob }) {
+export function Photo({
+  id,
+  alt,
+  draft,
+  preview = true,
+}: {
+  id: string;
+  alt: string;
+  draft?: Blob;
+  preview?: boolean;
+}) {
   const [url, setUrl] = useState<string>();
   const [open, setOpen] = useState(false);
   useEffect(() => {
@@ -22,24 +32,28 @@ export function Photo({ id, alt, draft }: { id: string; alt: string; draft?: Blo
     };
   }, [id, draft]);
   return url ? (
-    <>
-      <button
-        type="button"
-        className="photo-preview"
-        aria-label={`Xem ${alt}`}
-        onClick={() => setOpen(true)}
-      >
-        <img src={url} alt={alt} loading="lazy" decoding="async" className="review-photo" />
-      </button>
-      {open && (
-        <Dialog title={alt} wide onClose={() => setOpen(false)}>
-          <img className="photo-full" src={url} alt={alt} />
-        </Dialog>
-      )}
-    </>
+    !preview ? (
+      <img src={url} alt={alt} loading="lazy" decoding="async" className="review-photo" />
+    ) : (
+      <>
+        <button
+          type="button"
+          className="photo-preview"
+          aria-label={`Xem ${alt}`}
+          onClick={() => setOpen(true)}
+        >
+          <img src={url} alt={alt} loading="lazy" decoding="async" className="review-photo" />
+        </button>
+        {open && (
+          <Dialog title={alt} wide onClose={() => setOpen(false)}>
+            <img className="photo-full" src={url} alt={alt} />
+          </Dialog>
+        )}
+      </>
+    )
   ) : (
     <div className="photo-placeholder" role="img" aria-label={`${alt}: đang mở ảnh`}>
-      Ảnh
+      <span>Ảnh</span>
     </div>
   );
 }

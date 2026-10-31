@@ -6,7 +6,8 @@ import { chromium } from 'playwright';
 import { INITIAL_REVIEWS } from '../src/data/demo.ts';
 import { createReview, validateReview } from '../src/lib/validation.ts';
 import { emptyDocument } from '../src/lib/models.ts';
-// Automated CI regression suite. Interactive local QA uses the connected browser.
+
+// CI only. Local interactive QA uses the connected browser; fixtures are synthetic.
 const base = process.env.TEST_URL ?? 'http://127.0.0.1:4173/drink-rate-a56/';
 const output = resolve(process.env.TEST_OUTPUT ?? resolve(tmpdir(), 'not-browser-qa'));
 await mkdir(output, { recursive: true });
@@ -31,7 +32,6 @@ async function scenario(name, run) {
     console.log('PASS', name);
   } catch (e) {
     results.push({ name, pass: false, error: e.stack });
-    console.error('FAIL', name, e.message);
     const p = contexts.at(-1)?.pages().at(-1);
     if (p) {
       await p.screenshot({ path: resolve(output, 'failure.png') });
@@ -42,120 +42,248 @@ async function scenario(name, run) {
     await writeFile(resolve(output, 'browser-results.json'), JSON.stringify(results, null, 2));
   }
 }
+function fixture(count = 6) {
+  return Array.from({ length: count }, (_, i) =>
+    validateReview({
+      ...createReview(),
+      id: `qa-${i}`,
+      name: i === 0 ? 'Quán kiểm thử có tên rất dài trên màn hình nhỏ' : `Quán kiểm thử ${i + 1}`,
+      category: i % 2 ? 'food' : 'drink',
+      priceK: 20 + i,
+      street: 'Phan Thanh',
+      address: String(10 + i),
+      taste: 6 + (i % 4),
+      lat: 16.06528,
+      lng: 108.2083,
+      locationStatus: 'confirmed',
+      locationSource: 'manual',
+    }),
+  );
+}
 async function setup({
-  legacy,
-  viewport = { width: 393, height: 852 },
-  offline = false,
-  reducedMotion = 'reduce',
+  legacy = '[]',
+  native = true,
+  camera = 'success',
+  gps = 'success',
+  viewport = { width: 384, height: 824 },
+  motion = 'reduce',
 } = {}) {
   const context = await browser.newContext({
     viewport,
     isMobile: viewport.width < 600,
     hasTouch: viewport.width < 600,
     timezoneId: 'America/Los_Angeles',
-    reducedMotion,
-    offline,
+    reducedMotion: motion,
   });
   contexts.push(context);
-  if (legacy !== undefined)
-    await context.addInitScript((raw) => {
+  await context.addInitScript(
+    ({ legacy, native, camera, gps }) => {
       if (!sessionStorage.getItem('seeded')) {
-        localStorage.setItem('not_drink_food_reviews_v11', raw);
+        localStorage.setItem('not_drink_food_reviews_v11', legacy);
         sessionStorage.setItem('seeded', '1');
       }
-    }, legacy);
+      if (!native) return;
+      const c = document.createElement('canvas');
+      c.width = 1600;
+      c.height = 1200;
+      const x = c.getContext('2d');
+      x.fillStyle = '#8f7666';
+      x.fillRect(0, 0, 1600, 1200);
+      x.fillStyle = '#f6ead2';
+      x.beginPath();
+      x.arc(800, 600, 400, 0, Math.PI * 2);
+      x.fill();
+      window.__cameraImage = c.toDataURL('image/jpeg');
+      window.__cameraMode = camera;
+      window.__gpsMode = gps;
+      window.__calls = [];
+      window.androidBridge = {};
+      window.Capacitor = {
+        PluginHeaders: [
+          { name: 'Camera', methods: [{ name: 'getPhoto', rtype: 'promise' }] },
+          {
+            name: 'Geolocation',
+            methods: ['checkPermissions', 'requestPermissions', 'getCurrentPosition'].map(
+              (name) => ({ name, rtype: 'promise' }),
+            ),
+          },
+          {
+            name: 'App',
+            methods: [
+              { name: 'addListener', rtype: 'callback' },
+              { name: 'removeListener', rtype: 'promise' },
+              { name: 'minimizeApp', rtype: 'promise' },
+            ],
+          },
+          { name: 'NotDisplay', methods: [{ name: 'preferences', rtype: 'promise' }] },
+        ],
+        nativeCallback: (plugin, method, options, callback) => {
+          if (
+            options.eventName === 'appRestoredResult' &&
+            sessionStorage.getItem('restore-camera')
+          ) {
+            sessionStorage.removeItem('restore-camera');
+            queueMicrotask(() =>
+              callback({
+                pluginId: 'Camera',
+                methodName: 'getPhoto',
+                success: true,
+                data: { webPath: window.__cameraImage },
+              }),
+            );
+          }
+          return 'qa-callback';
+        },
+        nativePromise: async (plugin, method, options) => {
+          if (plugin === 'NotDisplay') return { reducedMotion: false, refreshRate: 120 };
+          if (plugin === 'Camera') {
+            window.__calls.push('camera');
+            window.__cameraOptions = options;
+            const db = await new Promise((r) => {
+              const q = indexedDB.open('not-food-drink-personal');
+              q.onsuccess = () => r(q.result);
+            });
+            window.__persistedBeforeCamera = await new Promise((r) => {
+              const q = db
+                .transaction('capture-drafts')
+                .objectStore('capture-drafts')
+                .get('pending');
+              q.onsuccess = () => r(!!q.result);
+            });
+            db.close();
+            if (window.__cameraMode === 'cancel') throw new Error('User cancelled photos app');
+            if (window.__cameraMode === 'error') throw new Error('Camera permission denied');
+            return { webPath: window.__cameraImage };
+          }
+          if (plugin === 'Geolocation') {
+            if (method === 'checkPermissions' || method === 'requestPermissions')
+              return { location: 'granted', coarseLocation: 'granted' };
+            window.__calls.push('gps');
+            if (window.__gpsMode === 'deny') throw new Error('Permission denied');
+            if (window.__gpsMode === 'deferred')
+              return new Promise((r) => {
+                window.__gpsResolve = () =>
+                  r({ coords: { latitude: 16.06528, longitude: 108.2083, accuracy: 12 } });
+              });
+            return { coords: { latitude: 16.06528, longitude: 108.2083, accuracy: 12 } };
+          }
+          return {};
+        },
+      };
+    },
+    { legacy, native, camera, gps },
+  );
   const page = await context.newPage();
-  page.setDefaultTimeout(12000);
+  page.setDefaultTimeout(15000);
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto(base);
   await page.getByRole('heading', { name: /Quán xá/ }).waitFor();
-  return { context, page, errors };
+  return { page, context, errors };
 }
-const nav = async (p, label) => {
+async function nav(p, label) {
   await p
-    .getByRole('navigation', { name: 'Điều hướng chính' })
+    .getByRole('navigation', {
+      name: (await p.viewportSize()).width >= 1100 ? 'Điều hướng máy tính' : 'Điều hướng chính',
+      exact: true,
+    })
     .getByRole('button', { name: label, exact: true })
     .click();
-  const index = ['Quán xá', 'Bản đồ', 'Chấm điểm', 'Thống kê'].indexOf(label);
-  await p
-    .locator(`.app-scene[data-screen-index="${index}"]:not([aria-hidden="true"])`)
-    .or(p.getByRole('dialog', { name: 'Rời phần đang nhập?', exact: true }))
-    .waitFor({ state: 'attached' });
-};
-const closeDialog = (p) => p.keyboard.press('Escape');
+}
 const readDoc = (p) =>
   p.evaluate(
     () =>
       new Promise((resolve, reject) => {
         const q = indexedDB.open('not-food-drink-personal');
         q.onsuccess = () => {
-          const db = q.result;
-          const r = db.transaction('documents').objectStore('documents').get('current');
+          const db = q.result,
+            r = db.transaction('documents').objectStore('documents').get('current');
           r.onsuccess = () => {
             resolve(r.result);
             db.close();
           };
           r.onerror = () => reject(r.error);
         };
-        q.onerror = () => reject(q.error);
       }),
   );
-async function eventuallyDoc(p, check) {
-  await p.waitForFunction(async (fn) => {
-    const doc = await new Promise((resolve) => {
-      const q = indexedDB.open('not-food-drink-personal');
-      q.onsuccess = () => {
-        const db = q.result;
-        const r = db.transaction('documents').objectStore('documents').get('current');
-        r.onsuccess = () => {
-          resolve(r.result);
-          db.close();
+async function store(p, name, key) {
+  return p.evaluate(
+    ({ name, key }) =>
+      new Promise((resolve) => {
+        const q = indexedDB.open('not-food-drink-personal');
+        q.onsuccess = () => {
+          const db = q.result,
+            r = db.transaction(name).objectStore(name).get(key);
+          r.onsuccess = () => {
+            resolve(r.result);
+            db.close();
+          };
         };
-      };
-    });
-    return new Function('d', `return (${fn})(d)`)(doc);
-  }, check.toString());
+      }),
+    { name, key },
+  );
 }
-async function assertNoOverflow(p) {
-  const x = await p.evaluate(() => ({
-    width: innerWidth,
-    scroll: document.documentElement.scrollWidth,
-    main: document.querySelector('main').scrollWidth,
-    client: document.querySelector('main').clientWidth,
-  }));
-  assert.ok(x.scroll <= x.width && x.main <= x.client + 1, JSON.stringify(x));
+async function openDetail(p, index = 0) {
+  await p.locator('.album-tile').nth(index).click();
+  await p.locator('.review-inspector').waitFor();
 }
-async function assertButtonContrast(p, name) {
-  const ratio = await p.getByRole('button', { name, exact: true }).evaluate((el) => {
-    const luminance = (color) => {
-      const rgb = color
-        .match(/[\d.]+/g)
-        .slice(0, 3)
-        .map(Number)
-        .map((n) => {
-          const s = n / 255;
-          return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
-        });
-      return rgb[0] * 0.2126 + rgb[1] * 0.7152 + rgb[2] * 0.0722;
-    };
-    const style = getComputedStyle(el),
-      a = luminance(style.color),
-      b = luminance(style.backgroundColor);
-    return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
-  });
-  assert.ok(ratio >= 4.5, `${name}: text contrast ${ratio.toFixed(2)} must meet 4.5:1`);
+async function editFirst(p) {
+  await openDetail(p);
+  await p.getByRole('button', { name: /^Sửa / }).click();
+  await p.getByLabel('Tên quán', { exact: true }).waitFor();
+}
+async function begin(p) {
+  await nav(p, 'Chấm điểm');
+  await p.getByRole('heading', { name: 'Vị trí quán', exact: true }).waitFor();
+  await p.getByRole('button', { name: 'Dùng vị trí này', exact: true }).waitFor();
+  await p.waitForFunction(() => !document.querySelector('.gps-status'));
+}
+async function scoreStep(p) {
+  await begin(p);
+  await p.getByRole('button', { name: 'Dùng vị trí này', exact: true }).click();
+  await p.getByLabel('Tên quán', { exact: true }).waitFor();
+}
+async function save(p, name = 'Quán ảnh kiểm thử') {
+  await p.getByLabel('Tên quán', { exact: true }).fill(name);
+  await p.locator('#review-price').fill('31');
+  await p.getByRole('button', { name: 'Lưu quán', exact: true }).click();
+  await p.locator('.album-tile').waitFor();
+}
+async function manual(p, lat = '16.066', lng = '108.209') {
+  await p.getByRole('button', { name: 'Nhập tọa độ', exact: true }).click();
+  await p.getByLabel('Vĩ độ', { exact: true }).fill(lat);
+  await p.getByLabel('Kinh độ', { exact: true }).fill(lng);
+  await p.getByRole('button', { name: 'Đặt ghim', exact: true }).click();
+}
+async function tools(p) {
+  await p.getByRole('button', { name: 'Tùy chọn', exact: true }).click();
+  await p.getByRole('dialog', { name: 'Tùy chọn', exact: true }).waitFor();
 }
 async function importText(p, text) {
-  await p.getByLabel('Chọn file JSON để khôi phục').setInputFiles({
-    name: 'backup.json',
-    mimeType: 'application/json',
-    buffer: Buffer.from(text),
-  });
+  await p
+    .getByLabel('Chọn file JSON để khôi phục')
+    .setInputFiles({
+      name: 'backup.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(text),
+    });
 }
-
+async function noOverflow(p) {
+  assert.ok(
+    await p.evaluate(
+      () =>
+        document.documentElement.scrollWidth <= innerWidth &&
+        document.querySelector('main').scrollWidth <=
+          document.querySelector('main').clientWidth + 1,
+    ),
+  );
+}
+async function discard(p) {
+  await nav(p, 'Quán xá');
+  await p.getByRole('button', { name: 'Bỏ bản nháp và rời màn hình', exact: true }).click();
+  await p.locator('.review-form').waitFor({ state: 'detached' });
+}
 try {
-  let primary;
   await scenario(
     'v1 IndexedDB upgrade retains reviews, photos, snapshots and raw archives',
     async () => {
@@ -235,1015 +363,514 @@ try {
       assert.deepEqual(retained.snapshot, old);
     },
   );
+
+  await scenario('legacy migration preserves source and remaps only verified places', async () => {
+    const { page: p } = await setup({ legacy: JSON.stringify(INITIAL_REVIEWS) });
+    const d = await readDoc(p);
+    assert.equal(d.reviews.length, 2);
+    assert.equal(d.reviews[0].name, 'Nốt Tea');
+    assert.equal(d.reviews[0].totalScore, 6.5);
+    assert.equal(d.reviews[0].address, '38');
+    assert.equal(d.reviews[0].lat, 16.06528);
+    assert.equal(d.reviews[1].isDemo, true);
+    assert.equal(
+      await p.evaluate(() => localStorage.getItem('not_drink_food_reviews_v11')),
+      JSON.stringify(INITIAL_REVIEWS),
+    );
+  });
   await scenario(
-    'camera cancel, capture, preview and process-death draft recovery through the native bridge',
+    'automatic camera opens once; cancel stays clean and never starts GPS',
     async () => {
-      const context = await browser.newContext({
-        viewport: { width: 384, height: 824 },
-        isMobile: true,
-        hasTouch: true,
-        reducedMotion: 'reduce',
-      });
-      contexts.push(context);
-      await context.addInitScript(() => {
-        const c = document.createElement('canvas');
-        c.width = 1600;
-        c.height = 1200;
-        const x = c.getContext('2d');
-        x.fillStyle = '#d7ff3f';
-        x.fillRect(0, 0, c.width, c.height);
-        window.__cameraImage = c.toDataURL('image/jpeg');
-        window.__cancelCamera = true;
-        window.androidBridge = {};
-        window.Capacitor = {
-          PluginHeaders: [
-            { name: 'Camera', methods: [{ name: 'getPhoto', rtype: 'promise' }] },
-            {
-              name: 'App',
-              methods: [
-                { name: 'addListener', rtype: 'callback' },
-                { name: 'removeListener', rtype: 'promise' },
-              ],
-            },
-            { name: 'NotDisplay', methods: [{ name: 'preferences', rtype: 'promise' }] },
-          ],
-          nativeCallback: async (plugin, method, options, callback) => {
-            if (
-              options.eventName === 'appRestoredResult' &&
-              sessionStorage.getItem('restore-camera')
-            ) {
-              sessionStorage.removeItem('restore-camera');
-              queueMicrotask(() =>
-                callback({
-                  pluginId: 'Camera',
-                  methodName: 'getPhoto',
-                  success: true,
-                  data: { webPath: window.__cameraImage },
-                }),
-              );
-            }
-            return 'qa-callback';
-          },
-          nativePromise: async (plugin, method, options) => {
-            if (plugin === 'NotDisplay') return { reducedMotion: false, refreshRate: 120 };
-            if (plugin !== 'Camera') return {};
-            window.__cameraOptions = options;
-            const db = await new Promise((resolve) => {
-              const q = indexedDB.open('not-food-drink-personal');
-              q.onsuccess = () => resolve(q.result);
-            });
-            window.__persistedBeforeCamera = await new Promise((resolve) => {
-              const q = db
-                .transaction('capture-drafts')
-                .objectStore('capture-drafts')
-                .get('pending');
-              q.onsuccess = () => resolve(!!q.result);
-            });
-            db.close();
-            if (window.__cancelCamera) throw new Error('User cancelled photos app');
-            return { webPath: window.__cameraImage };
-          },
-        };
-      });
-      const p = await context.newPage();
-      await p.goto(base);
-      await p.getByRole('heading', { name: 'Quán xá (0)', exact: true }).waitFor();
+      const { page: p } = await setup({ camera: 'cancel' });
       await nav(p, 'Chấm điểm');
-      await p.getByRole('button', { name: 'Chụp', exact: true }).click();
-      await p
-        .getByRole('status')
-        .filter({ hasText: 'Đang xử lý ảnh' })
-        .waitFor({ state: 'detached' });
+      await p.getByRole('heading', { name: 'Chụp ảnh', exact: true }).waitFor();
+      await p.waitForFunction(() => !document.querySelector('.capture-processing'));
+      assert.deepEqual(await p.evaluate(() => window.__calls), ['camera']);
       assert.equal(await p.evaluate(() => window.__persistedBeforeCamera), true);
-      assert.equal(await p.getByRole('alert').count(), 0);
-      await nav(p, 'Quán xá');
+      assert.equal(await p.getByLabel('Tên quán').count(), 0);
+      await nav(p, 'Thống kê');
+      await p.locator('.stat-grid').waitFor();
       assert.equal(await p.getByRole('dialog').count(), 0);
-      await nav(p, 'Chấm điểm');
-      await p.getByLabel('Tên quán').fill('Quán chụp ảnh');
-      await p.evaluate(() => {
-        window.__cancelCamera = false;
-      });
-      await p.getByRole('button', { name: 'Chụp', exact: true }).click();
-      await p.locator('.photo-grid img').waitFor();
       assert.equal((await readDoc(p)).reviews.length, 0);
-      const options = await p.evaluate(() => window.__cameraOptions);
-      assert.equal(options.saveToGallery, false);
-      assert.equal(options.correctOrientation, true);
-      await p.getByRole('button', { name: 'Xem Ảnh trải nghiệm 1', exact: true }).click();
-      await p.getByRole('dialog', { name: 'Ảnh trải nghiệm 1', exact: true }).waitFor();
-      await assertNoOverflow(p);
-      await closeDialog(p);
-      await p.getByRole('dialog').waitFor({ state: 'detached' });
-      await p.getByRole('button', { name: 'Lưu đánh giá & vị trí', exact: true }).click();
-      await p.getByRole('heading', { name: 'Quán xá (1)', exact: true }).waitFor();
-      const saved = await readDoc(p);
-      const measured = await p.evaluate(async (id) => {
-        const db = await new Promise((resolve) => {
-          const q = indexedDB.open('not-food-drink-personal');
-          q.onsuccess = () => resolve(q.result);
-        });
-        const photo = await new Promise((resolve) => {
-          const q = db.transaction('photos').objectStore('photos').get(id);
-          q.onsuccess = () => resolve(q.result);
-        });
-        db.close();
-        const bitmap = await createImageBitmap(photo.blob);
-        const dimensions = [bitmap.width, bitmap.height];
-        bitmap.close();
-        return { bytes: photo.blob.size, type: photo.blob.type, dimensions };
-      }, saved.reviews[0].photoIds[0]);
-      assert.ok(measured.bytes <= 300000);
-      assert.equal(measured.type, 'image/webp');
-      assert.ok(Math.max(...measured.dimensions) <= 1400);
+    },
+  );
+  await scenario('camera failure requires a photo and offers retry/library', async () => {
+    const { page: p } = await setup({ camera: 'error' });
+    await nav(p, 'Chấm điểm');
+    await p.getByRole('alert').filter({ hasText: 'Camera chưa được cho phép' }).waitFor();
+    assert.equal(await p.getByRole('button', { name: 'Dùng vị trí này' }).count(), 0);
+    assert.equal(await p.getByRole('button', { name: 'Lưu quán' }).count(), 0);
+    assert.deepEqual(await p.evaluate(() => window.__calls), ['camera']);
+    const img = await p.evaluate(() => window.__cameraImage.split(',')[1]);
+    await p
+      .getByLabel('Chọn ảnh để tiếp tục')
+      .setInputFiles({
+        name: 'photo.jpg',
+        mimeType: 'image/jpeg',
+        buffer: Buffer.from(img, 'base64'),
+      });
+    await p.getByRole('heading', { name: 'Vị trí quán', exact: true }).waitFor();
+    await p.getByRole('button', { name: 'Dùng vị trí này' }).click();
+    await save(p);
+  });
+  await scenario('photo then GPS then confirmation then scoring; save is atomic', async () => {
+    const { page: p, errors } = await setup();
+    await begin(p);
+    assert.deepEqual(await p.evaluate(() => window.__calls), ['camera', 'gps']);
+    assert.equal(await p.getByLabel('Tên quán').count(), 0);
+    assert.equal((await readDoc(p)).reviews.length, 0);
+    await p.getByRole('button', { name: 'Dùng vị trí này' }).click();
+    assert.equal(await p.getByLabel('Tên quán').inputValue(), '');
+    assert.equal(await p.locator('#review-price').inputValue(), '');
+    await save(p);
+    const d = await readDoc(p),
+      r = d.reviews[0];
+    assert.equal(r.photoIds.length, 1);
+    assert.equal(r.locationStatus, 'confirmed');
+    assert.equal(r.locationSource, 'gps');
+    assert.equal(r.lat, 16.06528);
+    assert.equal(r.totalScore, 7.3);
+    const photo = await store(p, 'photos', r.photoIds[0]);
+    assert.ok(photo.blob.size <= 300000);
+    assert.equal(photo.blob.type, 'image/webp');
+    const options = await p.evaluate(() => window.__cameraOptions);
+    assert.equal(options.saveToGallery, false);
+    assert.equal(options.correctOrientation, true);
+    assert.equal(await store(p, 'capture-drafts', 'pending'), undefined);
+    await p.reload();
+    await p.locator('.album-cover img').waitFor();
+    await openDetail(p);
+    await p.getByRole('button', { name: `Xem Ảnh tại ${r.name}`, exact: true }).click();
+    await p.locator('.photo-full').waitFor();
+    await p.keyboard.press('Escape');
+    await p.locator('.photo-full').waitFor({ state: 'detached' });
+    assert.deepEqual(errors, []);
+  });
+  await scenario('GPS denial allows manual pin; no reverse-geocoding request is made', async () => {
+    const { page: p } = await setup({ gps: 'deny' });
+    const lookups = [];
+    p.on('request', (r) => {
+      if (/nominatim/.test(r.url())) lookups.push(r.url());
+    });
+    await begin(p);
+    assert.equal(await p.getByRole('button', { name: 'Dùng vị trí này' }).isDisabled(), true);
+    await manual(p);
+    await p.getByRole('button', { name: 'Dùng vị trí này' }).click();
+    await save(p);
+    const r = (await readDoc(p)).reviews[0];
+    assert.equal(r.lat, 16.066);
+    assert.equal(r.lng, 108.209);
+    assert.equal(r.locationSource, 'manual');
+    assert.equal(r.accuracyM, undefined);
+    assert.deepEqual(lookups, []);
+  });
+  await scenario('manual correction and confirmation win over a late GPS response', async () => {
+    const { page: p } = await setup({ gps: 'deferred' });
+    await nav(p, 'Chấm điểm');
+    await p.waitForFunction(() => !!window.__gpsResolve);
+    await manual(p);
+    await p.getByRole('button', { name: 'Dùng vị trí này' }).click();
+    await p.evaluate(() => window.__gpsResolve());
+    await save(p);
+    assert.equal((await readDoc(p)).reviews[0].lat, 16.066);
+  });
+  await scenario('last-photo removal blocks new review; no blank photo bypass', async () => {
+    const { page: p } = await setup();
+    await scoreStep(p);
+    await p.getByRole('button', { name: 'Bỏ ảnh 1', exact: true }).click();
+    await p.getByRole('heading', { name: 'Chụp ảnh', exact: true }).waitFor();
+    assert.equal(await p.getByLabel('Tên quán').count(), 0);
+    assert.equal(await p.getByRole('button', { name: 'Lưu quán' }).count(), 0);
+    assert.equal((await readDoc(p)).reviews.length, 0);
+  });
+  await scenario('editing existing no-photo reviews never opens camera or relocates', async () => {
+    const old = fixture(1);
+    const { page: p } = await setup({ legacy: JSON.stringify(old) });
+    await editFirst(p);
+    assert.deepEqual(await p.evaluate(() => window.__calls), []);
+    await nav(p, 'Thống kê');
+    await p.locator('.stat-grid').waitFor();
+    assert.equal(await p.getByRole('dialog').count(), 0);
+    await nav(p, 'Quán xá');
+    await editFirst(p);
+    await p.getByLabel('Tên quán').fill('Sửa tên');
+    await nav(p, 'Quán xá');
+    await p.getByRole('dialog', { name: 'Rời phần đang nhập?' }).waitFor();
+    await p.getByRole('button', { name: 'Tiếp tục nhập' }).click();
+    await p.getByRole('button', { name: 'Cập nhật đánh giá' }).click();
+    await p.locator('.album-tile').waitFor();
+    const r = (await readDoc(p)).reviews[0];
+    assert.equal(r.lat, old[0].lat);
+    assert.equal(r.photoIds.length, 0);
+  });
+  await scenario(
+    'capture draft survives restart at the scoring step without recapture',
+    async () => {
+      const { page: p } = await setup();
+      await scoreStep(p);
+      await p.getByLabel('Tên quán').fill('Bản nháp khôi phục');
+      await p.locator('#review-price').fill('25');
+      await p.waitForFunction(
+        () =>
+          new Promise((resolve) => {
+            const q = indexedDB.open('not-food-drink-personal');
+            q.onsuccess = () => {
+              const db = q.result,
+                r = db.transaction('capture-drafts').objectStore('capture-drafts').get('pending');
+              r.onsuccess = () => {
+                resolve(
+                  r.result?.draft.name === 'Bản nháp khôi phục' && r.result?.stage === 'score',
+                );
+                db.close();
+              };
+            };
+          }),
+      );
+      await p.reload();
+      await p.getByLabel('Tên quán').waitFor();
+      assert.equal(await p.getByLabel('Tên quán').inputValue(), 'Bản nháp khôi phục');
+      assert.deepEqual(await p.evaluate(() => window.__calls), []);
+      assert.equal((await readDoc(p)).reviews.length, 0);
+      await p.getByRole('button', { name: 'Lưu quán' }).click();
+      await p.locator('.album-tile').waitFor();
+      assert.equal((await readDoc(p)).reviews[0].photoIds.length, 1);
+    },
+  );
+  await scenario(
+    'restored Android camera result resumes location, preserving pending review',
+    async () => {
+      const { page: p } = await setup({ camera: 'cancel' });
+      const original = createReview();
       await p.evaluate(async (original) => {
-        const db = await new Promise((resolve) => {
+        const q = await new Promise((r) => {
           const q = indexedDB.open('not-food-drink-personal');
-          q.onsuccess = () => resolve(q.result);
+          q.onsuccess = () => r(q.result);
         });
-        await new Promise((resolve, reject) => {
-          const tx = db.transaction('capture-drafts', 'readwrite');
-          tx.objectStore('capture-drafts').put(
+        await new Promise((r) => {
+          const t = q.transaction('capture-drafts', 'readwrite');
+          t.objectStore('capture-drafts').put(
             {
               original,
-              isEdit: true,
-              draft: { ...original, note: 'Ghi chú chưa lưu' },
-              price: String(original.priceK),
-              reviewDate: original.reviewedAt.slice(0, 10),
+              isEdit: false,
+              draft: { ...original, name: 'Giữ tên trước camera' },
+              price: '22',
+              reviewDate: original.createdAt.slice(0, 10),
               firstVisit: false,
               photos: [],
-              recoveryId: 'interrupted-capture',
+              recoveryId: 'qa-death',
+              stage: 'capture',
             },
             'pending',
           );
-          tx.oncomplete = resolve;
-          tx.onabort = () => reject(tx.error);
+          t.oncomplete = r;
         });
-        db.close();
+        q.close();
         sessionStorage.setItem('restore-camera', '1');
-      }, saved.reviews[0]);
+      }, original);
       await p.reload();
-      await p.getByRole('heading', { name: 'Sửa đánh giá', exact: true }).waitFor();
+      await p.getByRole('heading', { name: 'Vị trí quán', exact: true }).waitFor();
+      await p.getByRole('button', { name: 'Dùng vị trí này' }).click();
+      assert.equal(await p.getByLabel('Tên quán').inputValue(), 'Giữ tên trước camera');
+      assert.deepEqual(await p.evaluate(() => window.__calls), ['gps']);
+    },
+  );
+  await scenario(
+    'photos are limited to three; broken image preserves existing photos',
+    async () => {
+      const { page: p } = await setup();
+      await scoreStep(p);
+      await p
+        .getByLabel('Thêm ảnh món ăn hoặc quán')
+        .setInputFiles({
+          name: 'broken.jpg',
+          mimeType: 'image/jpeg',
+          buffer: Buffer.from('broken'),
+        });
+      await p.getByRole('alert').filter({ hasText: 'Ảnh bị lỗi' }).waitFor();
+      assert.equal(await p.locator('.photo-grid img').count(), 1);
+      await p.getByRole('button', { name: 'Chụp', exact: true }).click();
       await p.locator('.photo-grid img').nth(1).waitFor();
-      assert.deepEqual(await readDoc(p), saved);
-      await p.getByLabel('Thêm ảnh món ăn hoặc quán').setInputFiles({
-        name: 'broken.jpg',
-        mimeType: 'image/jpeg',
-        buffer: Buffer.from('not an image'),
-      });
-      await p.getByRole('alert').filter({ hasText: 'Ảnh bị lỗi hoặc không đọc được' }).waitFor();
-      assert.equal(await p.locator('.photo-grid img').count(), 2);
-      await p.evaluate(() => {
-        window.__cancelCamera = false;
-      });
       await p.getByRole('button', { name: 'Chụp', exact: true }).click();
       await p.locator('.photo-grid img').nth(2).waitFor();
-      assert.equal(await p.getByRole('button', { name: 'Chụp', exact: true }).isDisabled(), true);
-      assert.equal(await p.getByLabel('Thêm ảnh món ăn hoặc quán').isDisabled(), true);
-      await p.getByRole('button', { name: 'Lưu cập nhật quán', exact: true }).click();
-      await p.getByRole('heading', { name: 'Quán xá (1)', exact: true }).waitFor();
-      const restored = await readDoc(p);
-      assert.equal(restored.reviews[0].photoIds.length, 3);
-      assert.equal(restored.reviews[0].note, 'Ghi chú chưa lưu');
-      assert.equal(restored.reviews[0].totalScore, saved.reviews[0].totalScore);
-      await writeFile(
-        resolve(output, 'camera-bridge-results.json'),
-        JSON.stringify(
-          {
-            pass: true,
-            source: 'Synthetic native bridge, not hardware camera',
-            measured,
-            cancelIsClean: true,
-            interruptedDraftPreserved: true,
-          },
-          null,
-          2,
-        ),
-      );
+      assert.ok(await p.getByRole('button', { name: 'Chụp', exact: true }).isDisabled());
+      await save(p);
+      assert.equal((await readDoc(p)).reviews[0].photoIds.length, 3);
     },
   );
   await scenario(
-    'v12 migration preserves raw source, remaps verified Nốt and retires only Bếp Trang sample',
+    'invalid price and failed transaction keep old document and draft; retry saves once',
     async () => {
-      primary = await setup({ legacy: JSON.stringify(INITIAL_REVIEWS) });
-      const { page: p, errors } = primary;
-      await p.getByRole('heading', { name: 'Quán xá (1)', exact: true }).waitFor();
-      const d = await readDoc(p);
-      assert.equal(d.reviews.length, 2);
-      assert.equal(d.reviews.filter((r) => r.isDemo).length, 1);
-      assert.equal(d.reviews[0].totalScore, 6.5);
-      assert.equal(d.reviews[0].locationStatus, 'confirmed');
-      assert.equal(d.reviews[0].name, 'Nốt Tea');
-      assert.equal(d.reviews[0].address, '38');
-      assert.equal(d.reviews[0].lat, 16.06528);
-      assert.equal(d.reviews[0].lng, 108.2083);
-      assert.equal(d.reviews[1].locationStatus, 'missing');
-      assert.equal(
-        await p.evaluate(() => localStorage.getItem('not_drink_food_reviews_v11')),
-        JSON.stringify(INITIAL_REVIEWS),
-      );
-      await p.screenshot({ path: resolve(output, '01-mobile-list.png') });
-      await assertNoOverflow(p);
-      assert.deepEqual(errors, []);
-    },
-  );
-  await scenario(
-    'pristine and reverted forms leave freely; only real changes require confirmation',
-    async () => {
-      const p = primary.page;
-      await nav(p, 'Chấm điểm');
-      await p.getByRole('heading', { name: 'Chấm điểm', exact: true }).waitFor();
-      await assertButtonContrast(p, 'Lưu quán');
-      await nav(p, 'Quán xá');
-      await p.getByRole('button', { name: 'Đổi sang giao diện sáng', exact: true }).click();
-      await nav(p, 'Chấm điểm');
-      await assertButtonContrast(p, 'Lưu quán');
-      await nav(p, 'Quán xá');
-      await p.getByRole('button', { name: 'Đổi sang giao diện tối', exact: true }).click();
-      await nav(p, 'Chấm điểm');
-      await nav(p, 'Bản đồ');
-      assert.equal(await p.getByRole('dialog').count(), 0);
-      await nav(p, 'Chấm điểm');
-      await p.getByLabel('Tên quán').fill('Tên tạm');
-      await p.getByLabel('Tên quán').fill('');
-      await p.getByRole('slider', { name: 'Hương vị đồ uống', exact: true }).press('ArrowRight');
-      await p.getByRole('slider', { name: 'Hương vị đồ uống', exact: true }).press('ArrowLeft');
-      await nav(p, 'Thống kê');
-      assert.equal(await p.getByRole('dialog').count(), 0);
-      await nav(p, 'Chấm điểm');
-      await p.getByLabel('Tên quán').fill('Bản nháp cần giữ');
-      await nav(p, 'Quán xá');
-      await p.getByRole('dialog', { name: 'Rời phần đang nhập?' }).waitFor();
-      await p.getByRole('button', { name: 'Tiếp tục nhập', exact: true }).click();
-      assert.equal(await p.getByLabel('Tên quán').inputValue(), 'Bản nháp cần giữ');
-      await p.getByLabel('Tên quán').fill('');
-      await nav(p, 'Quán xá');
-      assert.equal(await p.getByRole('dialog').count(), 0);
-      await p.locator('.review-card>.review-summary').click();
-      await p.getByRole('button', { name: 'Sửa đánh giá', exact: true }).click();
-      await nav(p, 'Thống kê');
-      assert.equal(await p.getByRole('dialog').count(), 0);
-      await nav(p, 'Quán xá');
-      if (await p.locator('.review-card').evaluate((el) => el.dataset.expanded === 'true'))
-        await p.locator('.review-card>.review-summary').click();
-    },
-  );
-  await scenario(
-    'spin keeps zero and single eligible pool, chosen place does not consume visit',
-    async () => {
-      const p = primary.page;
-      await p.getByRole('button', { name: 'Ăn gì?', exact: true }).click();
-      await p.getByText('0 quán hợp lệ, còn lượt gợi ý', { exact: true }).waitFor();
-      assert.equal(await p.getByRole('button', { name: 'QUAY', exact: true }).count(), 0);
-      await p.getByLabel('Ưu tiên quán đáng quay lại (từ 7,5 điểm)').uncheck();
-      await p.getByText('1 quán hợp lệ, còn lượt gợi ý', { exact: true }).waitFor();
-      await p.getByRole('button', { name: 'CHỌN', exact: true }).click();
-      await p.getByRole('button', { name: 'Chọn quán này', exact: true }).click();
-      assert.equal((await readDoc(p)).reviews[0].visitLog.length, 0);
-      await p.locator('.review-card>.review-summary').click();
-    },
-  );
-  await scenario('shared category filter drives list, map, insights and spin', async () => {
-    const p = primary.page;
-    await p.getByRole('radio', { name: 'Quán ăn (0)', exact: true }).click();
-    await p.getByRole('heading', { name: 'Quán xá (0)', exact: true }).waitFor();
-    await nav(p, 'Bản đồ');
-    await p.getByText('0 quán · 0 ghim xác nhận', { exact: true }).waitFor();
-    await nav(p, 'Thống kê');
-    await p.locator('.stat-grid').waitFor();
-    assert.equal(await p.locator('.stat-grid .panel').first().locator('strong').innerText(), '0');
-    await p.getByRole('button', { name: 'Ăn gì?', exact: true }).click();
-    await p.getByText('0 quán hợp lệ, còn lượt gợi ý', { exact: true }).waitFor();
-    await closeDialog(p);
-    await p.getByRole('radio', { name: 'Tất cả (1)', exact: true }).click();
-  });
-  await scenario('bad JSON and invalid negative price cannot overwrite data', async () => {
-    const p = primary.page,
-      before = await readDoc(p);
-    await importText(p, '[{"name":"bad"}]');
-    await p.getByRole('alert').waitFor();
-    assert.deepEqual(await readDoc(p), before);
-    assert.equal(await p.getByRole('dialog').count(), 0);
-    await nav(p, 'Chấm điểm');
-    await p.getByLabel('Tên quán').fill('Quán kiểm thử riêng');
-    await p.locator('#review-price').fill('-10');
-    await p.getByRole('heading', { name: 'Chấm điểm', exact: true }).click();
-    await p.getByRole('button', { name: 'Lưu quán', exact: true }).click();
-    await p.getByRole('alert').first().waitFor();
-    assert.deepEqual(await readDoc(p), before);
-    await p.locator('#review-price').fill('29.5');
-    await p.getByLabel('Món nên gọi / món đã thử').fill('Ô long ít đường');
-    await p.getByLabel('Ghi chú trải nghiệm').fill('Dữ liệu kiểm thử trong hồ sơ Chrome riêng');
-    await p.getByRole('button', { name: 'Lưu đánh giá & vị trí', exact: true }).click();
-    await p.getByRole('heading', { name: 'Quán xá (2)', exact: true }).waitFor();
-    assert.equal(
-      (await readDoc(p)).reviews.find((r) => r.name === 'Quán kiểm thử riêng').priceK,
-      29.5,
-    );
-  });
-  await scenario(
-    'visit CRUD records actual spend, date uses Vietnam, delete can be undone',
-    async () => {
-      const p = primary.page;
-      await p
-        .getByRole('button', { name: 'Lượt ghé & tiền', exact: true })
-        .filter({ visible: true })
-        .first()
-        .click();
-      const dialog = p.getByRole('dialog');
-      await dialog.getByLabel(/Tiền thực trả/).fill('35.5');
-      await dialog.getByRole('button', { name: 'Ghi nhận đã ghé', exact: true }).click();
-      await eventuallyDoc(p, (d) =>
-        d.reviews.some((r) => r.visitLog.some((v) => v.spentK === 35.5)),
-      );
-      await dialog.getByRole('button', { name: 'Sửa lượt ghé', exact: true }).first().click();
-      await dialog.getByLabel(/Tiền thực trả/).fill('36');
-      await dialog.getByRole('button', { name: 'Lưu sửa lượt ghé', exact: true }).click();
-      await eventuallyDoc(p, (d) => d.reviews.some((r) => r.visitLog.some((v) => v.spentK === 36)));
-      await dialog.getByRole('button', { name: 'Bỏ lượt ghi nhầm', exact: true }).first().click();
-      await p.getByRole('button', { name: 'Bỏ lượt này', exact: true }).click();
-      await p.getByRole('button', { name: 'Hoàn tác bỏ lượt ghé', exact: true }).click();
-      await eventuallyDoc(p, (d) => d.reviews.some((r) => r.visitLog.some((v) => v.spentK === 36)));
-      await closeDialog(p);
-    },
-  );
-  await scenario('export, explicit empty replacement, reload empty, restore snapshot', async () => {
-    const p = primary.page;
-    await nav(p, 'Thống kê');
-    const downloading = p.waitForEvent('download');
-    await p.getByRole('button', { name: 'Xuất JSON', exact: true }).click();
-    const download = await downloading;
-    await download.saveAs(resolve(output, 'roundtrip-backup.json'));
-    const backup = JSON.parse(await readFile(await download.path(), 'utf8'));
-    assert.equal(backup.reviews.length, 3);
-    assert.ok(backup.reviews.some((r) => r.visitLog.length));
-    await importText(p, '[]');
-    const dialog = p.getByRole('dialog');
-    await dialog.getByLabel(/Thay toàn bộ/).check();
-    assert.equal(
-      await dialog.getByRole('button', { name: 'Xác nhận khôi phục' }).isDisabled(),
-      true,
-    );
-    await dialog.getByLabel(/Tôi đã kiểm tra file/).check();
-    await dialog.getByRole('button', { name: 'Xác nhận khôi phục' }).click();
-    await eventuallyDoc(p, (d) => d.reviews.length === 0);
-    await p.reload();
-    await nav(p, 'Thống kê');
-    assert.equal((await readDoc(p)).reviews.length, 0);
-    await p.getByText(/Dự phòng/).click();
-    await p.getByRole('button').filter({ hasText: 'Khôi phục JSON (thay thế)' }).first().click();
-    await p.getByRole('button', { name: 'Khôi phục bản này', exact: true }).click();
-    await eventuallyDoc(p, (d) => d.reviews.length === 3);
-  });
-  await scenario(
-    'animated Radix modal traps focus, Escape restores focus, phone 360px light theme and 200% text',
-    async () => {
-      const p = primary.page;
-      await p.setViewportSize({ width: 360, height: 800 });
-      await p.getByRole('button', { name: 'Đổi sang giao diện sáng' }).click();
-      await p.getByRole('button', { name: 'Bộ lọc', exact: true }).click();
-      await p.keyboard.press('Tab');
-      assert.equal(
-        await p.evaluate(() =>
-          document.querySelector('[role="dialog"]').contains(document.activeElement),
-        ),
-        true,
-      );
-      await p.screenshot({ path: resolve(output, '02-mobile-light-filters.png') });
-      await closeDialog(p);
-      await p.waitForFunction(
-        () => document.querySelector('.search-row > button') === document.activeElement,
-      );
-      assert.equal(
-        await p
-          .getByRole('button', { name: 'Bộ lọc', exact: true })
-          .evaluate((el) => el === document.activeElement),
-        true,
-      );
-      await assertNoOverflow(p);
-      await p.addStyleTag({ content: 'html,body,#root {font-size:28px !important}' });
-      await assertNoOverflow(p);
-    },
-  );
-  await scenario(
-    'fresh empty profile stays empty through reload; corrupt legacy offers raw recovery',
-    async () => {
-      const { page: p } = await setup({ legacy: '[]' });
-      await p.getByRole('button', { name: 'Chấm quán đầu tiên', exact: true }).waitFor();
-      await p.reload();
+      const { page: p } = await setup();
+      await scoreStep(p);
+      await p.getByLabel('Tên quán').fill('Giữ khi lỗi');
+      await p.locator('#review-price').fill('-1');
+      await p.getByRole('button', { name: 'Lưu quán' }).click();
+      await p.getByRole('alert').waitFor();
       assert.equal((await readDoc(p)).reviews.length, 0);
-      await p.getByRole('button', { name: 'Quán minh họa', exact: true }).click();
-      const examples = p.getByRole('dialog', { name: 'Quán minh họa' });
-      await examples.getByRole('heading', { name: 'Nốt Tea', exact: true }).waitFor();
-      assert.equal(await examples.getByText(/Bếp Trang/).count(), 0);
-      await examples
-        .locator('.panel')
-        .filter({ hasText: 'Bánh Canh Cá Lóc Thanh Hương' })
-        .getByRole('button', { name: 'Chấm lại theo trải nghiệm của tôi', exact: true })
-        .click();
-      await p.locator('.form-address>summary').click();
-      assert.equal(await p.getByLabel('Đường / phố / kiệt').inputValue(), '');
-      await p.getByText('Chưa ghim', { exact: true }).waitFor();
-      await p.getByRole('button', { name: 'Hủy', exact: true }).click();
-      assert.equal(await p.getByRole('dialog').count(), 0);
-      const c = await browser.newContext();
-      contexts.push(c);
-      await c.addInitScript(() => localStorage.setItem('not_drink_food_reviews_v11', '{bad'));
-      const q = await c.newPage();
-      await q.goto(base);
-      await q.getByRole('heading', { name: 'Cần khôi phục dữ liệu', exact: true }).waitFor();
-      await q
-        .getByRole('button', { name: 'Tải nguyên dữ liệu gốc để giữ lại', exact: true })
-        .waitFor();
-      assert.equal(
-        await q.evaluate(() => localStorage.getItem('not_drink_food_reviews_v11')),
-        '{bad',
-      );
+      await p.locator('#review-price').fill('31');
+      await p.evaluate(() => {
+        window.__tx = IDBDatabase.prototype.transaction;
+        IDBDatabase.prototype.transaction = function (names, mode, ...rest) {
+          if (
+            mode === 'readwrite' &&
+            Array.from(typeof names === 'string' ? [names] : names).includes('documents')
+          )
+            throw new DOMException('QA quota', 'QuotaExceededError');
+          return window.__tx.call(this, names, mode, ...rest);
+        };
+      });
+      await p.getByRole('button', { name: 'Lưu quán' }).click();
+      await p.getByRole('alert').filter({ hasText: 'Chưa lưu thay đổi' }).waitFor();
+      assert.equal(await p.getByLabel('Tên quán').inputValue(), 'Giữ khi lỗi');
+      assert.equal((await readDoc(p)).reviews.length, 0);
+      await p.evaluate(() => {
+        IDBDatabase.prototype.transaction = window.__tx;
+      });
+      await p.getByRole('button', { name: 'Lưu quán' }).click();
+      await p.locator('.album-tile').waitFor();
+      assert.equal((await readDoc(p)).reviews.length, 1);
     },
   );
-  await scenario(
-    'precache is complete; offline reload and every lazy screen keep data',
-    async () => {
-      const { page: p, context, errors } = await setup({ legacy: JSON.stringify(INITIAL_REVIEWS) });
-      await p.locator('[data-offline-ready="true"]').waitFor({ timeout: 45000 });
-      const before = await readDoc(p);
-      await context.setOffline(true);
-      await p.reload();
-      await p.getByRole('heading', { name: 'Quán xá (1)', exact: true }).waitFor();
-      assert.deepEqual(await readDoc(p), before);
-      await nav(p, 'Thống kê');
-      await p.locator('.stat-grid').waitFor();
-      await nav(p, 'Chấm điểm');
-      await p.locator('.form-address>summary').click();
-      await p.getByRole('button', { name: 'Chọn từ danh mục', exact: true }).click();
-      await p
-        .getByRole('button', { name: /Phường Thanh Khê/ })
-        .first()
-        .waitFor();
-      await closeDialog(p);
-      await p.getByRole('button', { name: 'Hủy', exact: true }).click();
-      assert.equal(await p.getByRole('dialog').count(), 0);
-      await nav(p, 'Bản đồ');
-      await p.getByRole('region', { name: 'Điều khiển bản đồ', exact: true }).waitFor();
-      await p.screenshot({ path: resolve(output, '03-mobile-offline-map.png') });
-      assert.deepEqual(errors, []);
-      await p.goto(new URL('assets/index.html', base).href);
-      await p.getByRole('heading', { name: 'Quán xá (1)', exact: true }).waitFor();
-      assert.equal(new URL(p.url()).pathname, '/drink-rate-a56/');
-    },
-  );
-  await scenario('desktop layout and primary flows have no JavaScript exceptions', async () => {
-    const { page: p, errors } = await setup({
-      legacy: JSON.stringify(INITIAL_REVIEWS),
-      viewport: { width: 1365, height: 900 },
+  await scenario('stale edit cannot revive a review deleted by another session', async () => {
+    const { page: p } = await setup({ legacy: JSON.stringify(fixture(1)) });
+    await editFirst(p);
+    await p.getByLabel('Tên quán').fill('Không hồi sinh');
+    await p.evaluate(async () => {
+      const db = await new Promise((r) => {
+        const q = indexedDB.open('not-food-drink-personal');
+        q.onsuccess = () => r(q.result);
+      });
+      await new Promise((resolve) => {
+        const t = db.transaction('documents', 'readwrite'),
+          s = t.objectStore('documents'),
+          q = s.get('current');
+        q.onsuccess = () =>
+          s.put({ ...q.result, reviews: [], revision: 'qa-external-deletion' }, 'current');
+        t.oncomplete = resolve;
+      });
+      db.close();
     });
-    await p.getByRole('heading', { name: 'Quán xá (1)', exact: true }).waitFor();
-    await p.screenshot({ path: resolve(output, '04-desktop.png') });
-    await assertNoOverflow(p);
-    assert.deepEqual(errors, []);
+    await p.getByRole('button', { name: 'Cập nhật đánh giá' }).click();
+    await p.getByRole('alert').waitFor();
+    assert.equal((await readDoc(p)).reviews.length, 0);
+    assert.equal(await p.getByLabel('Tên quán').inputValue(), 'Không hồi sinh');
   });
   await scenario(
-    'photo backup round-trip and duplicate import preserve images in retained snapshots',
+    'square covers, density, finite pagination, long names and aligned dock across breakpoints',
     async () => {
-      const { page: p } = await setup({ legacy: '[]' });
-      await nav(p, 'Chấm điểm');
-      await p.getByLabel('Tên quán').fill('Quán có ảnh');
-      const image = await p.evaluate(() => {
-        const c = document.createElement('canvas');
-        c.width = 80;
-        c.height = 60;
-        const x = c.getContext('2d');
-        x.fillStyle = '#10b981';
-        x.fillRect(0, 0, 80, 60);
-        return c.toDataURL('image/png').split(',')[1];
+      const { page: p, errors } = await setup({
+        legacy: JSON.stringify(fixture(53)),
+        camera: 'cancel',
+        motion: 'no-preference',
       });
-      await p.getByLabel('Thêm ảnh món ăn hoặc quán').setInputFiles({
-        name: 'dish.png',
-        mimeType: 'image/png',
-        buffer: Buffer.from(image, 'base64'),
+      const geometry = [];
+      for (const width of [320, 360, 384, 412, 768, 1365]) {
+        await p.setViewportSize({ width, height: width > 1100 ? 900 : 824 });
+        await p.locator('.album-tile').first().waitFor();
+        await p.waitForTimeout(600);
+        assert.equal(await p.locator('.album-entry').count(), 24);
+        const boxes = await p.locator('.album-cover').evaluateAll((es) =>
+          es.map((e) => {
+            const r = e.getBoundingClientRect(),
+              s = getComputedStyle(e);
+            return {
+              w: r.width,
+              h: r.height,
+              b: [s.borderTopWidth, s.borderRightWidth, s.borderBottomWidth, s.borderLeftWidth],
+            };
+          }),
+        );
+        assert.ok(boxes.every((r) => Math.abs(r.w - r.h) < 1 && r.b.every((b) => b === '1px')));
+        await noOverflow(p);
+        if (width < 1100) {
+          const dock = await p.locator('.bottom-dock').evaluate((e) =>
+            [...e.querySelectorAll('button')].map((b) => {
+              const i = b.querySelector('.nav-icon').getBoundingClientRect(),
+                l = b.querySelector('.nav-label').getBoundingClientRect(),
+                r = b.getBoundingClientRect();
+              return { w: i.width, h: i.height, y: l.y, bottom: l.bottom, buttonBottom: r.bottom };
+            }),
+          );
+          assert.ok(
+            dock.every(
+              (r) =>
+                Math.abs(r.w - r.h) < 0.5 &&
+                Math.abs(r.y - dock[0].y) < 0.5 &&
+                r.bottom <= r.buttonBottom + 1,
+            ),
+          );
+        }
+        geometry.push({ width, cover: boxes[0], entries: 24 });
+        if ([384, 1365].includes(width))
+          await p.screenshot({ path: resolve(output, `album-${width}.png`) });
+      }
+      await p.setViewportSize({ width: 384, height: 824 });
+      await p.getByRole('button', { name: 'Hiển thị ảnh nhỏ' }).click();
+      assert.equal(await p.locator('.album-grid').getAttribute('data-density'), 'small');
+      await p.getByRole('button', { name: 'Trang sau' }).click();
+      assert.equal(await p.locator('.album-entry').count(), 24);
+      await p.getByRole('button', { name: 'Trang sau' }).click();
+      assert.equal(await p.locator('.album-entry').count(), 5);
+      await p.getByRole('button', { name: 'Mở tìm kiếm' }).click();
+      await p.getByRole('searchbox').fill('Quán kiểm thử 2');
+      await p.waitForFunction(() => !document.querySelector('.album-pagination'));
+      await noOverflow(p);
+      assert.deepEqual(errors, []);
+      await writeFile(resolve(output, 'album-geometry.json'), JSON.stringify(geometry, null, 2));
+    },
+  );
+  await scenario(
+    'rapid navigation, average contrast, detail and theme remain stable with motion enabled',
+    async () => {
+      const { page: p, errors } = await setup({
+        legacy: JSON.stringify(fixture()),
+        camera: 'cancel',
+        motion: 'no-preference',
       });
-      await p.locator('.photo-grid img').waitFor();
-      await p.getByRole('button', { name: 'Lưu đánh giá & vị trí', exact: true }).click();
-      await p.getByRole('heading', { name: 'Quán xá (1)', exact: true }).waitFor();
-      const before = await readDoc(p);
-      assert.equal(before.reviews[0].photoIds.length, 1);
+      for (const label of ['Thống kê', 'Quán xá', 'Bản đồ', 'Thống kê', 'Quán xá']) {
+        await nav(p, label);
+        assert.ok((await p.locator('.app-scene').count()) <= 1);
+      }
+      await p.locator('.album-tile').first().waitFor();
+      await p.waitForTimeout(550);
+      await openDetail(p);
+      await p.keyboard.press('Escape');
+      await p.locator('.review-inspector').waitFor({ state: 'detached' });
       await nav(p, 'Thống kê');
-      const dl = p.waitForEvent('download');
+      await p.locator('[data-stat="average"]').waitFor();
+      const expected = (await readDoc(p)).reviews.reduce((s, r) => s + r.totalScore, 0) / 6;
+      assert.equal(await p.locator('[data-stat="average"]').innerText(), expected.toFixed(1));
+      for (let i = 0; i < 2; i++) {
+        await p.locator('.theme-toggle').click();
+        await p.waitForTimeout(350);
+        const ratio = await p.locator('[data-stat="average"]').evaluate((e) => {
+          const lum = (c) => {
+            const a = c
+              .match(/[\d.]+/g)
+              .slice(0, 3)
+              .map(Number)
+              .map((x) => {
+                x /= 255;
+                return x <= 0.04045 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4;
+              });
+            return a[0] * 0.2126 + a[1] * 0.7152 + a[2] * 0.0722;
+          };
+          const a = lum(getComputedStyle(e).color),
+            b = lum(getComputedStyle(e.parentElement).backgroundColor);
+          return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+        });
+        assert.ok(ratio >= 4.5);
+        await noOverflow(p);
+      }
+      assert.equal(await p.locator('.app-scene').count(), 1);
+      assert.deepEqual(errors, []);
+    },
+  );
+  await scenario(
+    'web user gesture opens capture before lazy form mounts; cancel stays clean',
+    async () => {
+      const { page: p } = await setup({ native: false });
+      const chooser = p.waitForEvent('filechooser');
+      await nav(p, 'Chấm điểm');
+      const c = await chooser;
+      await c.setFiles([]);
+      await p.getByRole('heading', { name: 'Chụp ảnh', exact: true }).waitFor();
+      await nav(p, 'Quán xá');
+      await p.locator('.review-form').waitFor({ state: 'detached' });
+      assert.equal(await p.getByRole('dialog').count(), 0);
+    },
+  );
+  await scenario(
+    'backup round trip preserves image, history and visits; old photo survives snapshot restore',
+    async () => {
+      const { page: p } = await setup({ native: false, legacy: JSON.stringify(fixture(1)) });
+      await tools(p);
+      const download = p.waitForEvent('download');
       await p.getByRole('button', { name: 'Xuất JSON', exact: true }).click();
-      const backup = JSON.parse(await readFile(await (await dl).path(), 'utf8'));
-      assert.equal(backup.media.length, 1);
-      assert.ok(backup.media[0].dataUrl.startsWith('data:image/webp;base64,'));
-      await importText(p, JSON.stringify(backup));
-      await p.getByRole('button', { name: 'Xác nhận khôi phục', exact: true }).click();
-      await p.getByRole('dialog').waitFor({ state: 'detached' });
-      assert.deepEqual((await readDoc(p)).reviews, before.reviews);
+      const backup = JSON.parse(await readFile(await (await download).path(), 'utf8'));
+      assert.equal(backup.reviews.length, 1);
       await importText(p, '[]');
       await p.getByLabel(/Thay toàn bộ/).check();
       await p.getByLabel(/Tôi đã kiểm tra file/).check();
       await p.getByRole('button', { name: 'Xác nhận khôi phục' }).click();
-      await eventuallyDoc(p, (d) => d.reviews.length === 0);
+      await p.getByRole('dialog', { name: /Khôi phục/ }).waitFor({ state: 'detached' });
+      assert.equal((await readDoc(p)).reviews.length, 0);
       await importText(p, JSON.stringify(backup));
       await p.getByRole('button', { name: 'Xác nhận khôi phục' }).click();
-      await eventuallyDoc(p, (d) => d.reviews.length === 1);
-      const after = await readDoc(p);
-      assert.notEqual(after.reviews[0].photoIds[0], before.reviews[0].photoIds[0]);
-      assert.equal(
-        await p.evaluate(async (id) => {
-          const q = await new Promise((resolve) => {
-            const r = indexedDB.open('not-food-drink-personal');
-            r.onsuccess = () => resolve(r.result);
-          });
-          return await new Promise((resolve) => {
-            const r = q.transaction('photos').objectStore('photos').get(id);
-            r.onsuccess = () => {
-              q.close();
-              resolve(!!r.result?.blob?.size);
-            };
-          });
-        }, before.reviews[0].photoIds[0]),
-        true,
-      );
-      await nav(p, 'Quán xá');
-      if (!(await p.locator('.review-card').evaluate((el) => el.dataset.expanded === 'true')))
-        await p.locator('.review-card>.review-summary').click();
-      await p.locator('.review-card img').waitFor();
-      await p.screenshot({ path: resolve(output, '05-photo-review.png') });
+      await p.waitForFunction(() => document.querySelectorAll('[role=dialog]').length === 1);
+      assert.deepEqual((await readDoc(p)).reviews, backup.reviews);
     },
   );
-  await scenario(
-    'failed IndexedDB transaction keeps draft and old document; retry persists once',
-    async () => {
-      const { page: p } = await setup({ legacy: '[]' }),
-        before = await readDoc(p);
-      await p.evaluate(() => {
-        window.__idbTransaction = IDBDatabase.prototype.transaction;
-        IDBDatabase.prototype.transaction = function (stores, mode, ...rest) {
-          const tx = window.__idbTransaction.call(this, stores, mode, ...rest);
-          if (
-            mode === 'readwrite' &&
-            Array.from(typeof stores === 'string' ? [stores] : stores).includes('documents')
-          )
-            queueMicrotask(() => tx.abort());
-          return tx;
-        };
-      });
-      await nav(p, 'Chấm điểm');
-      await p.getByLabel('Tên quán').fill('Bản nháp khi hết dung lượng');
-      await p.getByRole('button', { name: 'Lưu đánh giá & vị trí', exact: true }).click();
-      await p.getByText('Chưa lưu thay đổi.', { exact: true }).waitFor();
-      assert.deepEqual(await readDoc(p), before);
-      assert.equal(await p.getByLabel('Tên quán').inputValue(), 'Bản nháp khi hết dung lượng');
-      assert.equal(await p.getByText('Đã lưu', { exact: true }).count(), 0);
-      await p.evaluate(() => {
-        IDBDatabase.prototype.transaction = window.__idbTransaction;
-      });
-      await p.getByRole('button', { name: 'Lưu đánh giá & vị trí', exact: true }).click();
-      await eventuallyDoc(p, (d) => d.reviews.length === 1);
-    },
-  );
-  await scenario(
-    'two windows preserve concurrent visits and reject a stale review edit',
-    async () => {
-      const fixture = [{ ...INITIAL_REVIEWS[0], name: 'Quán hai cửa sổ' }];
-      const { context, page: a } = await setup({ legacy: JSON.stringify(fixture) });
-      const b = await context.newPage();
-      b.setDefaultTimeout(12000);
-      await b.goto(base);
-      await b.getByRole('navigation').waitFor();
-      for (const p of [a, b]) {
-        await p.locator('.review-card>.review-summary').click();
-        await p.getByRole('button', { name: 'Lượt ghé & tiền', exact: true }).click();
-      }
-      await a.getByLabel(/Tiền thực trả/).fill('20');
-      await b.getByLabel(/Tiền thực trả/).fill('21');
-      await Promise.all([
-        a.getByRole('button', { name: 'Ghi nhận đã ghé', exact: true }).click(),
-        b.getByRole('button', { name: 'Ghi nhận đã ghé', exact: true }).click(),
-      ]);
-      await eventuallyDoc(a, (d) => d.reviews[0].visitLog.length === 2);
-      await closeDialog(a);
-      await closeDialog(b);
-      for (const p of [a, b])
-        await p.getByRole('button', { name: 'Sửa đánh giá', exact: true }).click();
-      await a.getByLabel('Ghi chú trải nghiệm').fill('Ghi chú được lưu đầu tiên');
-      await b.getByLabel('Ghi chú trải nghiệm').fill('Bản nháp xung đột phải được giữ');
-      await a.getByRole('button', { name: 'Lưu cập nhật quán', exact: true }).click();
-      await a.getByRole('heading', { name: 'Quán xá (1)', exact: true }).waitFor();
-      await b.getByRole('button', { name: 'Lưu cập nhật quán', exact: true }).click();
-      await b.getByText('Chưa lưu thay đổi.', { exact: true }).waitFor();
-      const d = await readDoc(a);
-      assert.equal(d.reviews[0].note, 'Ghi chú được lưu đầu tiên');
-      assert.equal(d.reviews[0].visitLog.length, 2);
-      assert.equal(
-        await b.getByLabel('Ghi chú trải nghiệm').inputValue(),
-        'Bản nháp xung đột phải được giữ',
-      );
-    },
-  );
-  await scenario('map marker handles HTML-looking names as plain text', async () => {
-    const fixture = [
-      {
-        ...INITIAL_REVIEWS[0],
-        name: '<img src=x onerror="window.__xss=1">',
-        locationStatus: 'confirmed',
-        locationSource: 'manual',
-      },
-    ];
-    const { page: p, errors } = await setup({ legacy: JSON.stringify(fixture) });
-    await nav(p, 'Bản đồ');
-    await p.locator('.place-pin').waitFor();
-    assert.equal(await p.locator('.place-pin img').count(), 0);
-    assert.ok((await p.locator('.place-pin').innerText()).includes('<img'));
-    assert.equal(await p.evaluate(() => window.__xss), undefined);
-    const mapLayout = await p.evaluate(() => {
-      const marker = document.querySelector('.place-pin').getBoundingClientRect();
-      const dock = document.querySelector('.bottom-dock').getBoundingClientRect();
-      return {
-        markerBottom: marker.bottom,
-        dockTop: dock.top,
-        toolbarHeight: document.querySelector('.map-toolbar').getBoundingClientRect().height,
-      };
-    });
-    assert.ok(
-      mapLayout.markerBottom < mapLayout.dockTop,
-      `The initial pin is hidden by navigation: ${JSON.stringify(mapLayout)}`,
-    );
-    assert.ok(
-      mapLayout.toolbarHeight <= 86,
-      `Map controls consume too much space: ${JSON.stringify(mapLayout)}`,
-    );
+  await scenario('delete has a working undo and preserves original review', async () => {
+    const { page: p } = await setup({ legacy: JSON.stringify(fixture(1)) });
+    const before = await readDoc(p);
+    await openDetail(p);
+    await p.getByRole('button', { name: 'Xóa quán', exact: true }).click();
+    await p.getByRole('button', { name: 'Xóa quán này', exact: true }).click();
+    await p.getByRole('heading', { name: 'Quán xá (0)', exact: true }).waitFor();
+    await p.getByRole('button', { name: 'Hoàn tác xóa quán', exact: true }).click();
+    await p.locator('.album-tile').waitFor();
+    assert.deepEqual((await readDoc(p)).reviews, before.reviews);
+  });
+  await scenario('shared category/search filters drive album, map and insights', async () => {
+    const { page: p } = await setup({ legacy: JSON.stringify(fixture()) });
+    await p.getByRole('radio', { name: /Quán ăn/ }).click();
+    assert.equal(await p.locator('.album-entry').count(), 3);
+    await nav(p, 'Thống kê');
+    await p.locator('[data-stat="average"]').waitFor();
+    const doc = await readDoc(p),
+      foods = doc.reviews.filter((r) => r.category === 'food');
     assert.equal(
-      await p.getByRole('heading', { name: 'Bản đồ trong bộ lọc', exact: true }).count(),
-      0,
+      await p.locator('[data-stat="average"]').innerText(),
+      (foods.reduce((s, r) => s + r.totalScore, 0) / 3).toFixed(1),
     );
-    await p.getByRole('button', { name: 'Chấm ghim mới', exact: true }).click();
-    await p.getByRole('button', { name: 'Dừng chấm ghim', exact: true }).waitFor();
-    await p.getByRole('button', { name: 'Dừng chấm ghim', exact: true }).click();
-    await p.screenshot({ path: resolve(output, '06-confirmed-map.png') });
+    await nav(p, 'Bản đồ');
+    await p.getByRole('radio', { name: /Quán ăn/ }).waitFor();
+    await nav(p, 'Quán xá');
+    await p.locator('.album-entry').first().waitFor();
+    assert.equal(await p.locator('.album-entry').count(), 3);
+  });
+  await scenario('offline PWA retains reviews, lazy routes and manual-photo fallback', async () => {
+    const {
+      page: p,
+      context,
+      errors,
+    } = await setup({ native: false, legacy: JSON.stringify(fixture(1)) });
+    await p.locator('[data-offline-ready="true"]').waitFor({ timeout: 45000 });
+    const before = await readDoc(p);
+    await context.setOffline(true);
+    await p.reload();
+    await p.locator('.album-tile').waitFor();
+    await nav(p, 'Thống kê');
+    await p.locator('.stat-grid').waitFor();
+    await nav(p, 'Quán xá');
+    await p.locator('.album-tile').waitFor();
+    await editFirst(p);
+    await p.locator('.form-address>summary').click();
+    await p.getByRole('button', { name: 'Chọn từ danh mục' }).click();
+    await p
+      .getByRole('button', { name: /Phường Thanh Khê/ })
+      .first()
+      .waitFor();
+    await noOverflow(p);
+    assert.deepEqual(await readDoc(p), before);
     assert.deepEqual(errors, []);
   });
   await scenario(
-    'motion is visibly active, scoring rolls, touch sparks run only on interaction, copy stays compact',
+    'map safely renders HTML-looking names and reduced motion remains functional',
     async () => {
-      const { page: p, errors } = await setup({
-        legacy: JSON.stringify(INITIAL_REVIEWS),
-        reducedMotion: 'no-preference',
-      });
-      const copy = await p.locator('main').innerText();
-      for (const text of [
-        'Trải nghiệm của riêng bạn',
-        'Sẵn sàng dùng ngoại tuyến',
-        'Cách chấm điểm',
-        'NỐT 15.0.0',
-      ])
-        assert.ok(!copy.includes(text), text);
-      const selectedFilter = p.locator('.category-tabs button[data-state="on"]');
-      assert.notEqual(
-        await selectedFilter.evaluate((e) => getComputedStyle(e).backgroundColor),
-        'rgba(0, 0, 0, 0)',
-        'Selected filter must carry its own readable background',
-      );
-      assert.ok(
-        (await p
-          .locator('.bottom-dock button')
-          .first()
-          .evaluate((e) => parseFloat(getComputedStyle(e).fontSize))) >= 11,
-      );
-      // Observe before the click so protocol scheduling cannot miss a short
-      // entrance animation on a busy runner. Still require real painted frames.
-      const transformSamples = p.evaluate(async () => {
-        const samples = [];
-        for (let i = 0; i < 75; i++) {
-          await new Promise(requestAnimationFrame);
-          const el = document.querySelector('.app-scene');
-          if (el) samples.push(getComputedStyle(el).transform);
-        }
-        return [...new Set(samples)];
-      });
-      await nav(p, 'Chấm điểm');
-      const transforms = await transformSamples;
-      assert.ok(
-        transforms.length > 3,
-        'Screen transition must contain visible intermediate positions',
-      );
-      await p.getByRole('heading', { name: 'Chấm điểm', exact: true }).click();
-      const sparks = await p.locator('.spark-stage canvas[aria-hidden="true"]').count();
-      assert.ok(sparks > 0, 'A fresh interaction must render a real React Bits burst');
-      const scoreSamples = p.evaluate(async () => {
-        const samples = [];
-        for (let i = 0; i < 40; i++) {
-          await new Promise(requestAnimationFrame);
-          samples.push(
-            document.querySelector('.live-score .score [data-motion="number"] [aria-hidden="true"]')
-              ?.textContent,
-          );
-        }
-        return [...new Set(samples)];
-      });
-      await p.getByRole('slider', { name: 'Hương vị đồ uống', exact: true }).press('ArrowRight');
-      const values = await scoreSamples;
-      assert.ok(values.filter(Boolean).length > 2, 'Score must roll through intermediate values');
-      assert.equal(
-        (await readDoc(p)).reviews[0].totalScore,
-        6.5,
-        'Draft animation must not alter stored scores',
-      );
-      await p.emulateMedia({ reducedMotion: 'reduce' });
-      await p.waitForFunction(() => document.querySelectorAll('.spark-stage canvas').length === 0);
-      await p.getByRole('button', { name: 'Hủy', exact: true }).click();
-      await p.getByRole('button', { name: 'Bỏ bản nháp và rời màn hình', exact: true }).click();
-      assert.equal(
-        await p.locator('.spark-stage canvas').count(),
-        0,
-        'Reduced motion must suppress click sparks',
-      );
-      await p.emulateMedia({ reducedMotion: 'no-preference' });
-      await nav(p, 'Chấm điểm');
-      await p.getByRole('heading', { name: 'Chấm điểm', exact: true }).click();
-      assert.ok(
-        await p.locator('.spark-stage canvas[aria-hidden="true"]').count(),
-        'Motion must resume when the preference is restored',
-      );
-      await nav(p, 'Quán xá');
-      await assertNoOverflow(p);
+      const f = fixture(1);
+      f[0].name = '<img src=x onerror=alert(1)> <script>bad()</script>';
+      const { page: p, errors } = await setup({ legacy: JSON.stringify(f) });
+      await nav(p, 'Bản đồ');
+      await p.locator('.map-surface').waitFor();
+      assert.equal(await p.locator('.map-marker img').count(), 0);
+      await noOverflow(p);
       assert.deepEqual(errors, []);
-      await writeFile(
-        resolve(output, 'motion-results.json'),
-        JSON.stringify(
-          {
-            pass: true,
-            distinctScreenFrames: transforms.length,
-            distinctScoreValues: values.length,
-            touchSparks: sparks,
-            reducedMotionRespected: true,
-            compactCopy: true,
-          },
-          null,
-          2,
-        ),
-      );
-      await p.screenshot({ path: resolve(output, '08-kinetic-ui.png') });
-    },
-  );
-  await scenario(
-    'rapid tab changes never retain old screens; average contrast and dial geometry survive every breakpoint',
-    async () => {
-      const fixture = Array.from({ length: 5 }, (_, i) => ({
-        ...INITIAL_REVIEWS[0],
-        id: `layout-${i}`,
-        isDemo: false,
-        name:
-          i === 0
-            ? 'Quán có tên rất dài để kiểm tra bố cục trên điện thoại nhỏ'
-            : `Quán kiểm thử ${i + 1}`,
-        taste: [7, 8, 6, 9, 7.5][i],
-      }));
-      const { page: p, errors } = await setup({
-        legacy: JSON.stringify(fixture),
-        reducedMotion: 'no-preference',
-      });
-      const results = [];
-      await p.getByRole('button', { name: 'Đổi sang giao diện sáng', exact: true }).click();
-      const reviewBox = await p
-        .getByRole('navigation', { name: 'Điều hướng chính', exact: true })
-        .getByRole('button', { name: 'Chấm điểm', exact: true })
-        .boundingBox();
-      await p.touchscreen.tap(
-        reviewBox.x + reviewBox.width / 2,
-        reviewBox.y + reviewBox.height / 2,
-      );
-      await p.getByRole('heading', { name: 'Chấm điểm', exact: true }).waitFor();
-      await nav(p, 'Quán xá');
-      await p.getByRole('button', { name: 'Đổi sang giao diện tối', exact: true }).click();
-      await p.getByRole('button', { name: 'Đổi sang giao diện sáng', exact: true }).waitFor();
-      for (const width of [320, 360, 393, 412, 768, 1365]) {
-        await p.setViewportSize({ width, height: width > 1100 ? 900 : 852 });
-        const navigation = p.getByRole('navigation', {
-          name: width >= 1100 ? 'Điều hướng máy tính' : 'Điều hướng chính',
-          exact: true,
-        });
-        for (const label of [
-          'Thống kê',
-          'Quán xá',
-          'Bản đồ',
-          'Thống kê',
-          'Quán xá',
-          'Chấm điểm',
-          'Quán xá',
-          'Thống kê',
-        ]) {
-          await navigation.getByRole('button', { name: label, exact: true }).click();
-          await p.waitForTimeout(30);
-          assert.ok(
-            (await p.locator('.app-scene').count()) <= 1,
-            'Never paint two app routes in one frame',
-          );
-        }
-        await p.locator('.app-scene[data-screen-index="3"]:not([aria-hidden="true"])').waitFor();
-        await p.waitForTimeout(500);
-        assert.equal(await p.locator('.app-scene').count(), 1);
-        assert.equal(
-          await p.locator('.app-scene[inert]').count(),
-          0,
-          'Every old screen must unmount',
-        );
-        const value = await p.locator('[data-stat="average"]').innerText();
-        const expected = (await readDoc(p)).reviews.reduce((sum, r) => sum + r.totalScore, 0) / 5;
-        assert.equal(value, expected.toFixed(1));
-        const contrast = await p.locator('[data-stat="average"]').evaluate((element) => {
-          const luminance = (color) => {
-            const rgb = color
-              .match(/[\d.]+/g)
-              .slice(0, 3)
-              .map(Number)
-              .map((v) => {
-                const n = v / 255;
-                return n <= 0.04045 ? n / 12.92 : ((n + 0.055) / 1.055) ** 2.4;
-              });
-            return rgb[0] * 0.2126 + rgb[1] * 0.7152 + rgb[2] * 0.0722;
-          };
-          const fg = luminance(getComputedStyle(element).color),
-            bg = luminance(getComputedStyle(element.parentElement).backgroundColor);
-          return (Math.max(fg, bg) + 0.05) / (Math.min(fg, bg) + 0.05);
-        });
-        assert.ok(contrast >= 4.5, `Average score contrast ${contrast}`);
-        await assertNoOverflow(p);
-        if ([393, 1365].includes(width))
-          await p.screenshot({ path: resolve(output, `09-stats-${width}.png`) });
-        await navigation.getByRole('button', { name: 'Quán xá', exact: true }).click();
-        await p.locator('.app-scene[data-screen-index="0"]:not([aria-hidden="true"])').waitFor();
-        await p.waitForTimeout(550);
-        const circles = await p.locator('.score-dial').evaluateAll((elements) =>
-          elements
-            .filter((e) => e.getBoundingClientRect().width > 0)
-            .map((e) => {
-              const r = e.getBoundingClientRect(),
-                matrix = e.querySelector('svg').getScreenCTM();
-              return {
-                width: r.width,
-                height: r.height,
-                scaleX: Math.hypot(matrix.a, matrix.b),
-                scaleY: Math.hypot(matrix.c, matrix.d),
-              };
-            }),
-        );
-        for (const circle of circles) {
-          assert.ok(Math.abs(circle.width - circle.height) < 1, JSON.stringify(circle));
-          assert.ok(
-            Math.abs(circle.scaleX - circle.scaleY) < 0.01,
-            'SVG circle may not stretch into an ellipse',
-          );
-        }
-        await navigation.getByRole('button', { name: 'Chấm điểm', exact: true }).click();
-        await p.getByLabel('Tên quán', { exact: true }).waitFor();
-        await p.waitForTimeout(350);
-        const formCircle = await p.locator('.dial-mini').boundingBox();
-        assert.ok(Math.abs(formCircle.width - formCircle.height) < 1);
-        await assertNoOverflow(p);
-        if (width === 393) await p.screenshot({ path: resolve(output, '10-form-393.png') });
-        await navigation.getByRole('button', { name: 'Quán xá', exact: true }).click();
-        await p.locator('.app-scene[data-screen-index="0"]:not([aria-hidden="true"])').waitFor();
-        results.push({
-          width,
-          average: value,
-          contrast,
-          circles: circles.length,
-          routes: 1,
-          formCircle,
-        });
-      }
-      await p.setViewportSize({ width: 393, height: 852 });
-      await p.getByRole('button', { name: 'Đổi sang giao diện sáng', exact: true }).click();
-      await nav(p, 'Thống kê');
-      assert.equal(
-        await p
-          .locator('.stat-average')
-          .evaluate(
-            (e) => getComputedStyle(e).color === getComputedStyle(e.querySelector('strong')).color,
-          ),
-        true,
-      );
-      await p.screenshot({ path: resolve(output, '11-stats-light-393.png') });
-      assert.deepEqual(errors, []);
-      await writeFile(
-        resolve(output, 'layout-regression.json'),
-        JSON.stringify({ pass: true, results }, null, 2),
-      );
-    },
-  );
-  await scenario(
-    'dock keeps a circular review action and aligned labels at every text size',
-    async () => {
-      const { page: p, errors } = await setup({ reducedMotion: 'no-preference' });
-      const measurements = [];
-      for (const width of [320, 360, 384, 393, 412, 768]) {
-        await p.setViewportSize({ width, height: 852 });
-        for (const fontSize of [12, 15.6, 24]) {
-          const style = await p.addStyleTag({
-            content: `.bottom-dock button {font-size:${fontSize}px !important}`,
-          });
-          for (const label of ['Quán xá', 'Chấm điểm', 'Thống kê', 'Bản đồ']) {
-            await nav(p, label);
-            await p.waitForTimeout(300);
-            const geometry = await p.locator('.bottom-dock').evaluate((dock) => {
-              const box = dock.getBoundingClientRect();
-              return {
-                viewport: { width: innerWidth, height: innerHeight },
-                clearance: parseFloat(
-                  getComputedStyle(document.querySelector('.app-main')).paddingBottom,
-                ),
-                dockHeight: box.height,
-                dock: { x: box.x, y: box.y, right: box.right, bottom: box.bottom },
-                items: Array.from(dock.querySelectorAll('button')).map((button) => {
-                  const b = button.getBoundingClientRect(),
-                    icon = button.querySelector('.nav-icon').getBoundingClientRect(),
-                    caption = button.querySelector('.nav-label'),
-                    text = caption.getBoundingClientRect();
-                  return {
-                    label: button.textContent,
-                    width: b.width,
-                    height: b.height,
-                    iconWidth: icon.width,
-                    iconHeight: icon.height,
-                    textY: text.y,
-                    textBottom: text.bottom,
-                    buttonBottom: b.bottom,
-                    textWidth: caption.clientWidth,
-                    textScrollWidth: caption.scrollWidth,
-                  };
-                }),
-              };
-            });
-            assert.ok(geometry.dock.x >= 0 && geometry.dock.right <= width + 1);
-            assert.ok(geometry.dock.bottom <= geometry.viewport.height + 1);
-            assert.ok(
-              geometry.clearance >= geometry.dockHeight + 20,
-              `Content is covered by the dock: ${JSON.stringify(geometry)}`,
-            );
-            for (const item of geometry.items) {
-              assert.ok(
-                item.width >= 48 && item.height >= 48,
-                `Touch target ${JSON.stringify(item)}`,
-              );
-              assert.ok(
-                Math.abs(item.iconWidth - item.iconHeight) < 0.5,
-                `Circle ${JSON.stringify(item)}`,
-              );
-              assert.ok(
-                Math.abs(item.textY - geometry.items[0].textY) < 0.5,
-                `Caption alignment ${JSON.stringify(geometry.items)}`,
-              );
-              assert.ok(
-                item.textBottom <= item.buttonBottom + 1,
-                `Caption is clipped ${JSON.stringify(item)}`,
-              );
-              assert.ok(
-                item.textScrollWidth <= item.textWidth + 1,
-                `Caption overflows ${JSON.stringify(item)}`,
-              );
-            }
-            measurements.push({ width, fontSize, tab: label, geometry });
-          }
-          if (width === 384 && fontSize === 12)
-            await p.screenshot({ path: resolve(output, '12-dock-384.png') });
-          if (width === 320 && fontSize === 24)
-            await p.screenshot({ path: resolve(output, '13-dock-large-text-320.png') });
-          await style.evaluate((element) => element.remove());
-        }
-        await assertNoOverflow(p);
-      }
-      assert.deepEqual(errors, []);
-      await p.setViewportSize({ width: 384, height: 852 });
-      await p.getByRole('button', { name: 'Đổi sang giao diện sáng', exact: true }).click();
-      await nav(p, 'Chấm điểm');
-      const lightReviewContrast = await p
-        .locator('.bottom-dock button[data-nav-tab="review"]')
-        .evaluate((button) => {
-          const luminance = (color) => {
-            const c = color
-              .match(/[\d.]+/g)
-              .slice(0, 3)
-              .map(Number)
-              .map((v) => {
-                const n = v / 255;
-                return n <= 0.04045 ? n / 12.92 : ((n + 0.055) / 1.055) ** 2.4;
-              });
-            return c[0] * 0.2126 + c[1] * 0.7152 + c[2] * 0.0722;
-          };
-          const fg = luminance(getComputedStyle(button).color),
-            bg = luminance(
-              getComputedStyle(button.querySelector('.nav-indicator')).backgroundColor,
-            );
-          return (Math.max(fg, bg) + 0.05) / (Math.min(fg, bg) + 0.05);
-        });
-      assert.ok(lightReviewContrast >= 4.5, `Light review caption contrast ${lightReviewContrast}`);
-      await writeFile(
-        resolve(output, 'dock-regression.json'),
-        JSON.stringify({ pass: true, lightReviewContrast, measurements }, null, 2),
-      );
     },
   );
 } finally {
   for (const c of contexts) await c.close();
   await browser.close();
-  console.log('Artifacts:', output);
 }
+console.log(`${results.length} scenarios passed`);

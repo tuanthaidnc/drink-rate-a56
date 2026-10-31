@@ -58,7 +58,7 @@ export default function ReviewInspector({
       transition={{ duration: quiet ? 0 : 0.4 }}
     >
       <div className="inspector-heading">
-        <h2>{item.name}</h2>
+        <h2 className="sr-only">{item.name}</h2>
         <div className="inspector-actions">
           <motion.button
             whileTap={quiet ? undefined : { scale: 0.9 }}
@@ -95,6 +95,23 @@ export default function ReviewInspector({
           </button>
         </div>
       </div>
+      {!!item.photoIds.length && (
+        <motion.div
+          className="inspector-photos"
+          initial={quiet ? false : { scale: 0.96, clipPath: 'inset(4% round 20px)' }}
+          animate={{ scale: 1, clipPath: 'inset(0 round 20px)' }}
+          transition={{ duration: quiet ? 0 : 0.38, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <Photo id={item.photoIds[0]} alt={`Ảnh tại ${item.name}`} />
+          {item.photoIds.length > 1 && (
+            <div className="inspector-thumbnails">
+              {item.photoIds.slice(1).map((id, i) => (
+                <Photo key={id} id={id} alt={`Ảnh ${i + 2} tại ${item.name}`} />
+              ))}
+            </div>
+          )}
+        </motion.div>
+      )}
       <div className="inspector-meta">
         <strong>{item.priceK}k</strong>
         <span>·</span>
@@ -115,7 +132,7 @@ export default function ReviewInspector({
           .join(', ') || 'Chưa ghim'}
       </button>
       <div className="inspector-visual">
-        <ScoreDial value={item.totalScore} size={236} />
+        <ScoreDial value={item.totalScore} size={112} />
         <div className="score-breakdown">
           {parts.map(([label, value]) => (
             <CriterionBar key={label} label={label} value={value} />
@@ -131,13 +148,6 @@ export default function ReviewInspector({
           {item.dish && <strong>{item.dish}</strong>}
           {item.note && <p>{item.note}</p>}
         </section>
-      )}
-      {!!item.photoIds.length && (
-        <div className="photo-grid">
-          {item.photoIds.map((id, i) => (
-            <Photo key={id} id={id} alt={`Ảnh ${i + 1} bạn lưu tại ${item.name}`} />
-          ))}
-        </div>
       )}
       <div className="split small muted">
         {item.reviewedAt && <span>{formatDate(item.reviewedAt)}</span>}
