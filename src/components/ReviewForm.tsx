@@ -48,6 +48,7 @@ function ScoreSlider({
   max = 10,
   step = 0.5,
   display,
+  disabled = false,
 }: {
   label: string;
   value: number;
@@ -56,6 +57,7 @@ function ScoreSlider({
   max?: number;
   step?: number;
   display?: string;
+  disabled?: boolean;
 }) {
   const id = useId();
   return (
@@ -70,6 +72,7 @@ function ScoreSlider({
         max={max}
         step={step}
         value={[value]}
+        disabled={disabled}
         onValueChange={(values) => onChange(values[0])}
         aria-label={label}
       >
@@ -598,6 +601,7 @@ export default function ReviewForm({
           </ToggleGroup.Root>
           <fieldset className="quick-sliders stack" disabled={locked}>
             <ScoreSlider
+              disabled={locked}
               label={food ? 'Ngon' : 'Vị'}
               value={draft.taste}
               onChange={(v) => change('taste', v)}
@@ -605,11 +609,13 @@ export default function ReviewForm({
             {food ? (
               <>
                 <ScoreSlider
+                  disabled={locked}
                   label="Chất lượng"
                   value={draft.foodQuality}
                   onChange={(v) => change('foodQuality', v)}
                 />
                 <ScoreSlider
+                  disabled={locked}
                   label="Sạch"
                   value={draft.cleanliness}
                   onChange={(v) => change('cleanliness', v)}
@@ -618,6 +624,7 @@ export default function ReviewForm({
             ) : (
               <>
                 <ScoreSlider
+                  disabled={locked}
                   label="Lượng"
                   min={0}
                   max={4}
@@ -627,6 +634,7 @@ export default function ReviewForm({
                   onChange={(v) => change('volumeKey', VOLUME_OPTIONS[v].key)}
                 />
                 <ScoreSlider
+                  disabled={locked}
                   label="Ly"
                   value={draft.packaging}
                   onChange={(v) => change('packaging', v)}
@@ -635,6 +643,7 @@ export default function ReviewForm({
             )}
             {(food || draft.mode === 'dinein') && (
               <ScoreSlider
+                disabled={locked}
                 label="Không gian"
                 value={draft.space}
                 onChange={(v) => change('space', v)}

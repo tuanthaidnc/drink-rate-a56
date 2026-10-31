@@ -25,7 +25,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
 
 ## Motion and constraints
 
-The signature moment is shutter-to-photo development, followed by a locating spinner and explicit pin confirmation. Tile press and detail entry preserve the photograph's identity; layout density changes animate with bounded transforms. No permanent GPU loops or hidden data changes. Reduced motion removes the effects, not the steps. Page size 24 bounds DOM and image decoding. No GPS lookup or external reverse geocoding before the photo; address lookup remains explicit. No invented images for old reviews.
+The signature moment is shutter-to-photo development into the quick scoring screen, with a small GPS spinner running in the background. Pin confirmation is optional in the location editor. Tile press and detail entry preserve the photograph's identity; density changes replay a bounded entrance without per-tile layout projection. No permanent GPU loops or hidden data changes. Reduced motion removes the effects, not the steps. Page size 24 bounds DOM and image decoding. No GPS lookup or external reverse geocoding before the photo. No invented images for old reviews.
 
 
 ## Quick scoring steering
