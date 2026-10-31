@@ -37,7 +37,7 @@ async function scenario(name, run) {
       await p.screenshot({ path: resolve(output, 'failure.png') });
       await writeFile(resolve(output, 'failure.txt'), await p.locator('body').innerText());
     }
-    throw e;
+    console.error('FAIL', name, e.message);
   } finally {
     await writeFile(resolve(output, 'browser-results.json'), JSON.stringify(results, null, 2));
   }
@@ -877,4 +877,5 @@ try {
   for (const c of contexts) await c.close();
   await browser.close();
 }
-console.log(`${results.length} scenarios passed`);
+console.log(`${results.filter(r=>r.pass).length}/${results.length} scenarios passed`);
+if(results.some(r=>!r.pass))process.exitCode=1;
