@@ -82,6 +82,17 @@ export function applyThemeWithTransition(
     return;
   }
 
+  // Full-document snapshots briefly suppress input even before their animation
+  // is ready. On phones keep the real interface live and animate the toggle.
+  if (Capacitor.isNativePlatform() || window.matchMedia('(max-width: 1099px)').matches) {
+    applyDom();
+    originEvent?.currentTarget.animate(
+      [{ transform: 'rotate(-12deg) scale(0.9)' }, { transform: 'rotate(0) scale(1)' }],
+      { duration: 260, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
+    );
+    return;
+  }
+
   const x = originEvent ? originEvent.clientX : window.innerWidth - 40;
   const y = originEvent ? originEvent.clientY : 28;
   const endRadius = Math.hypot(
