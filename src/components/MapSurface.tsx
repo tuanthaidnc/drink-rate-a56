@@ -52,8 +52,7 @@ export default function MapSurface({
         bearing: 0,
         attributionControl: {
           compact: true,
-          customAttribution:
-            '<a href="https://openfreemap.org/" target="_blank" rel="noreferrer">OpenFreeMap</a> · <a href="https://openmaptiles.org/" target="_blank" rel="noreferrer">© OpenMapTiles</a> · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap</a> · <a href="/drink-rate-a56/data/map-style-licenses.txt" target="_blank" rel="noreferrer">Style: CARTO / OpenMapTiles</a>',
+          customAttribution: `<a href="${import.meta.env.BASE_URL}data/map-style-licenses.txt" target="_blank" rel="noreferrer">Style: CARTO / OpenMapTiles</a>`,
         },
         cooperativeGestures: true,
         dragRotate: false,
@@ -176,11 +175,6 @@ export default function MapSurface({
           {message}
         </p>
       )}
-      <p className="map-caption">
-        {onPin
-          ? 'Chạm để ghim · Hai ngón để di chuyển'
-          : ''}
-      </p>
     </div>
   );
 }

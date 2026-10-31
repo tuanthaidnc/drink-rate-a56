@@ -1,6 +1,6 @@
 export const SCHEMA_VERSION = 13 as const;
 export const SCORING_VERSION = '2026-10-v1' as const;
-export const APP_VERSION = '16.0.1';
+export const APP_VERSION = '16.0.2';
 export type PlaceCategory = 'drink' | 'food';
 export type DrinkMode = 'takeaway' | 'dinein';
 export type FoodVenueType = 'streetfood' | 'restaurant';

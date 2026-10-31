@@ -588,6 +588,30 @@ try {
     assert.equal(await p.locator('.place-pin img').count(), 0);
     assert.ok((await p.locator('.place-pin').innerText()).includes('<img'));
     assert.equal(await p.evaluate(() => window.__xss), undefined);
+    const mapLayout = await p.evaluate(() => {
+      const marker = document.querySelector('.place-pin').getBoundingClientRect();
+      const dock = document.querySelector('.bottom-dock').getBoundingClientRect();
+      return {
+        markerBottom: marker.bottom,
+        dockTop: dock.top,
+        toolbarHeight: document.querySelector('.map-toolbar').getBoundingClientRect().height,
+      };
+    });
+    assert.ok(
+      mapLayout.markerBottom < mapLayout.dockTop,
+      `The initial pin is hidden by navigation: ${JSON.stringify(mapLayout)}`,
+    );
+    assert.ok(
+      mapLayout.toolbarHeight <= 86,
+      `Map controls consume too much space: ${JSON.stringify(mapLayout)}`,
+    );
+    assert.equal(
+      await p.getByRole('heading', { name: 'Bản đồ trong bộ lọc', exact: true }).count(),
+      0,
+    );
+    await p.getByRole('button', { name: 'Chấm ghim mới', exact: true }).click();
+    await p.getByRole('button', { name: 'Dừng chấm ghim', exact: true }).waitFor();
+    await p.getByRole('button', { name: 'Dừng chấm ghim', exact: true }).click();
     await p.screenshot({ path: resolve(output, '06-confirmed-map.png') });
     assert.deepEqual(errors, []);
   });

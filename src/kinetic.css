@@ -1199,6 +1199,62 @@ h2 {
 .map-page > .panel {
   background: var(--bg-card);
 }
+.map-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 12px;
+}
+.map-count {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.map-actions {
+  display: flex;
+  gap: 8px;
+}
+.map-actions .icon-button {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 1px solid var(--border-card);
+  background: var(--bg-card);
+}
+.map-actions .icon-button[aria-pressed='true'] {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+.map-legacy {
+  grid-column: 1 / -1;
+  font-size: 12px;
+}
+[data-theme] .maplibregl-ctrl-group {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-elevated);
+  border-radius: 12px;
+}
+[data-theme] .maplibregl-ctrl-group:not(:empty) {
+  box-shadow: var(--shadow-soft);
+}
+[data-theme] .maplibregl-ctrl-group button + button {
+  border-top-color: var(--border-elevated);
+}
+[data-theme] .maplibregl-ctrl-group button:hover {
+  background: var(--bg-pill);
+}
+[data-theme='dark'] .maplibregl-ctrl-group .maplibregl-ctrl-icon {
+  filter: invert(1);
+}
+[data-platform='android'] .map-actions .icon-button,
+[data-platform='android'] .maplibregl-ctrl-group button {
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  min-height: 48px;
+}
 @keyframes spin {
   to {
     transform: rotate(360deg);

@@ -1455,8 +1455,7 @@ fieldset {
   max-height: 650px;
   width: 100%;
 }
-.map-status,
-.map-caption {
+.map-status {
   background: var(--bg-card);
   font-size: 11px;
   padding: 10px 12px;

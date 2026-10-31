@@ -6,7 +6,6 @@ import { distanceKm, type Position } from '../lib/geo.ts';
 export default function PlaceMap({
   items,
   theme,
-  summary,
   position,
   onLocate,
   onEdit,
@@ -16,7 +15,6 @@ export default function PlaceMap({
 }: {
   items: ReviewItem[];
   theme: 'light' | 'dark';
-  summary: string;
   position: Position | null;
   onLocate: () => void;
   onEdit: (item: ReviewItem) => void;
@@ -30,41 +28,48 @@ export default function PlaceMap({
   const [pin, setPin] = useState<Position | null>(null);
   const active = items.find((r) => r.id === id) ?? items.find(hasConfirmedLocation) ?? items[0];
   const confirmed = items.filter(hasConfirmedLocation).length;
+  const hasLegacyPins = items.some(
+    (r) => r.lat != null && r.lng != null && !hasConfirmedLocation(r),
+  );
   return (
-    <div className="stack">
-      <section className="panel compact">
-        <h2>Bản đồ trong bộ lọc</h2>
-        <p className="small muted">{summary}</p>
-        <div className="split">
-          <span>
-            {items.length} quán · {confirmed} ghim xác nhận
-          </span>
-          <button className="button secondary" onClick={onLocate}>
-            <LocateFixed size={17} />
-            GPS của tôi
-          </button>
-        </div>
-        <div className="split wrap">
-          <label className="check">
-            <input
-              type="checkbox"
-              checked={approximate}
-              onChange={(e) => setApproximate(e.target.checked)}
-            />
-            Hiện vị trí cũ chưa xác nhận
-          </label>
+    <div className="place-map stack">
+      <section className="map-toolbar" aria-label="Điều khiển bản đồ">
+        <span className="map-count">
+          {items.length} quán · {confirmed} ghim xác nhận
+        </span>
+        <div className="map-actions">
           <button
-            className="button secondary"
+            className="icon-button"
+            onClick={onLocate}
+            aria-label="GPS của tôi"
+            title="GPS của tôi"
+          >
+            <LocateFixed size={17} />
+          </button>
+          <button
+            className="icon-button"
             aria-pressed={picking}
+            aria-label={picking ? 'Dừng chấm ghim' : 'Chấm ghim mới'}
+            title={picking ? 'Dừng chấm ghim' : 'Chấm ghim mới'}
             onClick={() => {
               setPicking(!picking);
               setPin(null);
             }}
           >
             <MapPin size={16} />
-            {picking ? 'Đang chấm ghim' : 'Chấm ghim mới'}
           </button>
         </div>
+        {hasLegacyPins && (
+          <label className="check map-legacy">
+            <input
+              type="checkbox"
+              checked={approximate}
+              onChange={(e) => setApproximate(e.target.checked)}
+              aria-label="Hiện vị trí cũ chưa xác nhận"
+            />
+            Vị trí cũ
+          </label>
+        )}
       </section>
       <MapSurface
         theme={theme}
@@ -116,11 +121,11 @@ export default function PlaceMap({
           <p>
             {[active.address, active.street, active.ward, active.city].filter(Boolean).join(' • ')}
           </p>
-          {!hasConfirmedLocation(active) && (
-            <span className="small muted">Chưa ghim</span>
-          )}
+          {!hasConfirmedLocation(active) && <span className="small muted">Chưa ghim</span>}
           {position && hasConfirmedLocation(active) && (
-            <span className="small muted">{distanceKm(position, { lat: active.lat!, lng: active.lng! }).toFixed(1)} km</span>
+            <span className="small muted">
+              {distanceKm(position, { lat: active.lat!, lng: active.lng! }).toFixed(1)} km
+            </span>
           )}
           <div className="button-row">
             <button className="button" onClick={() => onDirections(active)}>

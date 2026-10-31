@@ -693,7 +693,6 @@ export default function App() {
                                 key={selected ?? 'map'}
                                 items={filtered}
                                 theme={theme}
-                                summary={summary}
                                 position={position}
                                 onLocate={() => void locate()}
                                 onEdit={edit}
