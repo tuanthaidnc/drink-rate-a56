@@ -618,16 +618,19 @@ try {
           .first()
           .evaluate((e) => parseFloat(getComputedStyle(e).fontSize))) >= 11,
       );
-      await nav(p, 'Chấm điểm');
-      const transforms = await p.evaluate(async () => {
+      // Observe before the click so protocol scheduling cannot miss a short
+      // entrance animation on a busy runner. Still require real painted frames.
+      const transformSamples = p.evaluate(async () => {
         const samples = [];
-        for (let i = 0; i < 24; i++) {
+        for (let i = 0; i < 75; i++) {
           await new Promise(requestAnimationFrame);
-          const el = document.querySelector('.app-scene:not([aria-hidden="true"])');
+          const el = document.querySelector('.app-scene');
           if (el) samples.push(getComputedStyle(el).transform);
         }
         return [...new Set(samples)];
       });
+      await nav(p, 'Chấm điểm');
+      const transforms = await transformSamples;
       assert.ok(
         transforms.length > 3,
         'Screen transition must contain visible intermediate positions',
@@ -635,8 +638,7 @@ try {
       await p.getByRole('heading', { name: 'Chấm điểm', exact: true }).click();
       const sparks = await p.locator('.spark-stage canvas[aria-hidden="true"]').count();
       assert.ok(sparks > 0, 'A fresh interaction must render a real React Bits burst');
-      await p.getByRole('slider', { name: 'Hương vị đồ uống', exact: true }).press('ArrowRight');
-      const values = await p.evaluate(async () => {
+      const scoreSamples = p.evaluate(async () => {
         const samples = [];
         for (let i = 0; i < 40; i++) {
           await new Promise(requestAnimationFrame);
@@ -647,6 +649,8 @@ try {
         }
         return [...new Set(samples)];
       });
+      await p.getByRole('slider', { name: 'Hương vị đồ uống', exact: true }).press('ArrowRight');
+      const values = await scoreSamples;
       assert.ok(values.filter(Boolean).length > 2, 'Score must roll through intermediate values');
       assert.equal(
         (await readDoc(p)).reviews[0].totalScore,
