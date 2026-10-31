@@ -97,8 +97,10 @@ public class NativeFlowTest {
             until("!document.querySelector('.capture-processing')");
             // Isolated emulator: exercise the actual image-file pipeline with a
             // synthetic canvas image. Physical capture is verified on the A56.
-            js("(()=>{const c=document.createElement('canvas');c.width=800;c.height=800;const x=c.getContext('2d');x.fillStyle='#c4b6a4';x.fillRect(0,0,800,800);c.toBlob(blob=>{const d=new DataTransfer();d.items.add(new File([blob],'emulator-qa.png',{type:'image/png'}));const i=document.querySelector('input[aria-label=\"Chọn ảnh để tiếp tục\"]');i.files=d.files;i.dispatchEvent(new Event('change',{bubbles:true}));});return true;})()");
-            until("document.querySelector('.review-form')?.dataset.stage==='location'");
+            js("(()=>{const c=document.createElement('canvas');c.width=800;c.height=800;const x=c.getContext('2d');x.fillStyle='#c4b6a4';x.fillRect(0,0,800,800);c.toBlob(blob=>{const d=new DataTransfer();d.items.add(new File([blob],'emulator-qa.png',{type:'image/png'}));const i=document.querySelector('input[aria-label=\"Chọn ảnh món ăn hoặc đồ uống\"]');i.files=d.files;i.dispatchEvent(new Event('change',{bubbles:true}));});return true;})()");
+            until("document.querySelector('.review-form')?.dataset.stage==='score'");
+            tap(".quick-location");
+            until("!!document.querySelector('[role=dialog]')");
             tap(".manual-coordinates");
             tap(".capture-location .two-columns label:nth-child(1) input");
             device.executeShellCommand("input text 16.066");
@@ -110,17 +112,19 @@ public class NativeFlowTest {
             tap(".capture-location > .stack > button");
             js("document.querySelector('.confirm-location').scrollIntoView({block:'center'})");
             tap(".confirm-location");
+            until("!document.querySelector('[role=dialog]')");
+            tap(".quick-more > summary");
             until("!!document.querySelector('#shop-name-input')");
             tap("#shop-name-input");
             device.executeShellCommand("input text Native-QA");
             until("document.querySelector('#shop-name-input').value==='Native-QA'");
             tap("#review-price");
-            device.executeShellCommand("input text 31");
+            device.executeShellCommand("input text 31,5");
             screenshot("native-keyboard");
             device.pressBack();
-            until("!!document.querySelector('.live-score')");
+            until("!!document.querySelector('.quick-toolbar')");
             js("document.querySelector('.review-form').scrollIntoView({block:'start'})");
-            tap(".live-score button");
+            tap(".quick-toolbar button[type=submit]");
             until("!!document.querySelector('.album-entry')");
             screenshot("native-list-dark");
             for (int i : new int[] {3, 0, 1, 3, 0, 3}) nav(i);
@@ -144,7 +148,9 @@ public class NativeFlowTest {
             tap(".inspector-actions button[title='Sửa đánh giá']");
             until("!!document.querySelector('#shop-name-input')");
             screenshot("native-form");
-            JSONObject circle = new JSONObject((String)js("JSON.stringify((()=>{const r=document.querySelector('.dial-mini').getBoundingClientRect();return {width:r.width,height:r.height}})())"));
+            assertEquals(0,((Number)js("document.querySelectorAll('input[type=date],input[type=time]').length")).intValue());
+            assertEquals(3,((Number)js("document.querySelectorAll('.quick-sliders [role=slider]').length")).intValue());
+            JSONObject circle = new JSONObject((String)js("JSON.stringify((()=>{const r=document.querySelector('.rating-slider-thumb').getBoundingClientRect();return {width:r.width,height:r.height}})())"));
             assertEquals(circle.getDouble("width"), circle.getDouble("height"), 1);
             device.pressBack();
             until("!!document.querySelector('.album-entry')");

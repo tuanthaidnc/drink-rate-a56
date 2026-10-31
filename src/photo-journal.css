@@ -783,3 +783,318 @@ textarea {
   animation: none;
   display: none;
 }
+/* Fast scoring: photo, price, three/four controls, one save. */
+.quick-review {
+  max-width: 560px;
+  gap: 12px;
+  padding-bottom: 16px;
+}
+.quick-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: sticky;
+  top: 0;
+  z-index: 12;
+  background: var(--bg-canvas);
+  min-height: 52px;
+  padding-block: 4px;
+}
+.quick-toolbar > .icon-button {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  border-radius: 50%;
+}
+.quick-toolbar h1 {
+  font-size: 24px;
+  letter-spacing: -0.035em;
+}
+.quick-toolbar .button {
+  margin-left: auto;
+  min-height: 44px;
+  padding: 10px 16px;
+  border-radius: 14px;
+}
+.quick-total {
+  display: flex;
+  gap: 4px;
+  align-items: baseline;
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.25;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent-bright);
+}
+.quick-total > small {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+.quick-photo-price {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 18px;
+  align-items: center;
+  padding-top: 4px;
+}
+.quick-photo {
+  width: 112px;
+  height: 112px;
+  aspect-ratio: 1;
+  position: relative;
+  border: 1px solid var(--border-elevated);
+  border-radius: 20px;
+  overflow: hidden;
+  background: var(--album-empty);
+}
+.quick-photo > .photo-preview,
+.quick-photo .review-photo,
+.quick-photo > .photo-empty {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: 1;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  object-fit: cover;
+}
+.quick-photo .review-photo {
+  animation: photo-develop 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.quick-photo > .retake-photo {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 11px;
+  border-radius: 50%;
+  color: #fff;
+  background: #101710d9;
+  border: 0;
+}
+.quick-photo-busy {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: var(--album-empty);
+}
+.quick-price-location {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.quick-review .quick-price-field {
+  gap: 5px;
+  font-size: 13px;
+}
+.quick-review .quick-price-field small {
+  color: var(--text-secondary);
+}
+.quick-review .quick-price-field input {
+  min-height: 56px;
+  height: 56px;
+  font-size: 27px;
+  font-weight: 650;
+  padding: 8px 12px;
+  border-radius: 14px;
+  line-height: 1.25;
+  width: 100%;
+}
+.quick-location {
+  align-self: flex-start;
+  min-height: 38px;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 3px 0;
+  text-align: left;
+}
+.quick-review .quick-category,
+.quick-review .quick-mode {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  background: none;
+  padding: 0;
+  min-height: 44px;
+}
+.quick-review .quick-category button,
+.quick-review .quick-mode button {
+  min-height: 44px;
+  font-size: 13px;
+  padding: 8px 10px;
+  border-radius: 13px;
+}
+.quick-review .quick-mode button {
+  min-height: 40px;
+  font-size: 12px;
+}
+.quick-sliders {
+  border: 0;
+  padding: 2px 0 0;
+  margin: 0;
+  min-width: 0;
+  gap: 8px;
+}
+.quick-sliders[disabled] {
+  pointer-events: none;
+  opacity: 0.7;
+}
+.quick-criterion {
+  min-width: 0;
+  padding: 6px 0 0;
+}
+.quick-criterion > .split {
+  min-height: 26px;
+  align-items: baseline;
+  font-size: 14px;
+  font-weight: 650;
+}
+.quick-criterion output {
+  color: var(--accent-bright);
+  font-size: 17px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.quick-criterion .rating-slider {
+  display: flex;
+  align-items: center;
+  height: 44px;
+  margin: 0;
+  width: 100%;
+  touch-action: pan-y;
+}
+.quick-criterion .rating-slider-track {
+  height: 5px;
+}
+.quick-criterion .rating-slider-thumb {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
+  max-width: 28px;
+  max-height: 28px;
+  border-radius: 50%;
+  aspect-ratio: 1;
+  padding: 0;
+}
+.quick-more {
+  margin-top: 4px;
+  border-top: 1px solid var(--border-card);
+  padding-top: 10px;
+  font-size: 12px;
+}
+.quick-more > summary {
+  min-height: 44px;
+  align-content: center;
+  color: var(--text-secondary);
+}
+.quick-more > .stack {
+  padding-top: 10px;
+  gap: 14px;
+}
+.quick-review input:not([type='checkbox']):not([type='file']),
+.quick-review textarea {
+  font-size: 16px;
+  min-height: 48px;
+  scroll-margin-block: 84px 24px;
+}
+.quick-review .quick-price-field input {
+  font-size: 27px;
+}
+.quick-more .two-columns {
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.6fr);
+  gap: 10px;
+}
+.not-app.is-typing .app-main {
+  padding-bottom: max(18px, env(safe-area-inset-bottom));
+}
+.quick-review .capture-stage {
+  padding-top: 10px;
+}
+.quick-review .capture-cover {
+  max-width: 300px;
+}
+.capture-location .maplibregl-ctrl-attrib {
+  font-size: 10px;
+}
+.maplibregl-ctrl-attrib-button {
+  min-width: 36px;
+  min-height: 36px;
+}
+@media (max-width: 360px) {
+  .quick-photo-price {
+    grid-template-columns: 96px minmax(0, 1fr);
+    gap: 12px;
+  }
+  .quick-photo {
+    width: 96px;
+    height: 96px;
+    border-radius: 18px;
+  }
+  .quick-total {
+    font-size: 27px;
+  }
+  .quick-review {
+    gap: 10px;
+  }
+}
+@media (min-width: 1100px) {
+  .quick-review {
+    max-width: 560px;
+    margin: 0 auto;
+  }
+  .quick-toolbar {
+    top: 0;
+  }
+  .quick-photo-price {
+    grid-template-columns: 144px minmax(0, 1fr);
+    gap: 24px;
+  }
+  .quick-photo {
+    width: 144px;
+    height: 144px;
+  }
+  .quick-sliders {
+    gap: 12px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .quick-photo .review-photo {
+    animation: none;
+  }
+}
+[data-reduced-motion='true'] .quick-photo .review-photo {
+  animation: none;
+}
+
+[data-platform='android'] .quick-toolbar {
+  top: env(safe-area-inset-top);
+}
+.quick-toolbar > .icon-button,
+.quick-toolbar .button {
+  min-height: 48px;
+  height: 48px;
+}
+.quick-toolbar > .icon-button {
+  width: 48px;
+}
+.quick-review input:not([type='checkbox']):not([type='file']),
+.quick-review textarea {
+  scroll-margin-block: calc(76px + env(safe-area-inset-top)) 24px;
+}
+.not-app[data-form='true'] .app-main {
+  scroll-padding-block: calc(72px + env(safe-area-inset-top)) 24px;
+}

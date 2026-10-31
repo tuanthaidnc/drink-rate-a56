@@ -9,7 +9,9 @@ export function reviewDraftSignature(
   firstVisit = false,
 ): string {
   const text = (v: string | undefined) => (v ?? '').trim();
-  const amount = price.trim() === '' ? '' : Number.isFinite(Number(price)) ? Number(price) : price;
+  const normalized = price.trim().replace(',', '.');
+  const amount =
+    normalized === '' ? '' : Number.isFinite(Number(normalized)) ? Number(normalized) : normalized;
   return JSON.stringify({
     category: review.category,
     name: text(review.name),
@@ -40,6 +42,25 @@ export function reviewDraftSignature(
     photoIds: review.photoIds,
     openingHours: review.openingHours,
   });
+}
+
+export function parseReviewPrice(raw: string): number | null {
+  const normalized = raw.trim().replace(',', '.');
+  if (!/^\d+(?:\.\d{0,2})?$/.test(normalized)) return null;
+  const value = Number(normalized);
+  return Number.isFinite(value) && value >= 1 && value <= 2000 ? value : null;
+}
+
+export function automaticReviewName(category: ReviewItem['category'], at: Date): string {
+  const time = new Intl.DateTimeFormat('vi-VN', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(at);
+  return `${category === 'food' ? 'Quán ăn' : 'Quán nước'} · ${time}`;
 }
 
 /** The native recovery callback and the form must derive exactly the same state. */

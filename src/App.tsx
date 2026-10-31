@@ -59,6 +59,7 @@ import {
 } from './lib/models.ts';
 import { createReview, validateReview, validateReviews, validateVisit } from './lib/validation.ts';
 import { reviewDraftIsDirty } from './lib/reviewDraft.ts';
+import { saveCaptureDraft } from './lib/storage.ts';
 import { DEFAULT_FILTERS, describeFilters, filterReviews, type Filters } from './lib/selection.ts';
 import { directionsUrl, distanceKm, getCurrentPosition, type Position } from './lib/geo.ts';
 import { INITIAL_REVIEWS as DEMO_REVIEWS } from './data/demo.ts';
@@ -102,6 +103,12 @@ export default function App() {
   const [dirty, setDirty] = useState(false);
   const [captureDraft, setCaptureDraft] = useState<CaptureDraft>();
   const [photoBusy, setPhotoBusy] = useState(false);
+  const [recoveryBusy, setRecoveryBusy] = useState(false);
+  const latestDraft = useRef<CaptureDraft | undefined>(undefined);
+  const rememberDraft = useCallback((snapshot: CaptureDraft) => {
+    latestDraft.current = snapshot;
+  }, []);
+  const cameraLocked = photoBusy || recoveryBusy;
   const [entryPhotos, setEntryPhotos] = useState<Promise<File[]>>();
   const [detailId, setDetailId] = useState<string | null>(null);
   const [density, setDensity] = useState<'medium' | 'small'>(() => {
@@ -124,8 +131,7 @@ export default function App() {
   const [selected, setSelected] = useState<string | null>(null),
     [undo, setUndo] = useState<ReviewItem | null>(null);
   const [message, setMessage] = useState(''),
-    [typing, setTyping] = useState(false),
-    [leaveTo, setLeaveTo] = useState<Tab | null>(null);
+    [typing, setTyping] = useState(false);
   const main = useRef<HTMLElement>(null),
     isForm = tab === 'review' && draft !== null;
   const formRef = useRef(isForm);
@@ -168,10 +174,17 @@ export default function App() {
     navigate('review');
   };
   const selectTab = (target: Tab) => {
-    if (photoBusy) return;
+    if (cameraLocked) return;
     if (target === tab) return;
     if (isForm && dirty && target !== tab) {
-      setLeaveTo(target);
+      const snapshot = latestDraft.current;
+      if (snapshot) {
+        setCaptureDraft(snapshot);
+        void saveCaptureDraft(snapshot).catch(() =>
+          setMessage('Chưa giữ được bản nháp. Mở Chấm điểm để lưu.'),
+        );
+      }
+      navigate(target);
       return;
     }
     if (target === 'review') {
@@ -204,24 +217,27 @@ export default function App() {
   useEffect(() => {
     history.replaceState({ notTab: 'places' }, '', location.href);
     const pop = (e: PopStateEvent) => {
-      if (formRef.current) {
-        setLeaveTo(
-          e.state?.notTab === 'review' ? 'places' : ((e.state?.notTab as Tab) ?? 'places'),
-        );
-        history.pushState({ notTab: 'review' }, '', location.href);
-        return;
+      const snapshot = latestDraft.current;
+      if (formRef.current && snapshot) {
+        setCaptureDraft(snapshot);
+        void saveCaptureDraft(snapshot).catch(() => setMessage('Chưa giữ được bản nháp.'));
       }
       const next = e.state?.notTab;
-      setDraft(null);
-      setDirty(false);
-      setTab(next !== 'review' && tabs.some((t) => t.id === next) ? next : 'places');
+      if (next === 'review' && snapshot) {
+        setDraft(snapshot.original);
+        setEditing(snapshot.isEdit);
+        setCaptureDraft(snapshot);
+        setTab('review');
+      } else setTab(tabs.some((t) => t.id === next) && next !== 'review' ? next : 'places');
     };
     window.addEventListener('popstate', pop);
     return () => window.removeEventListener('popstate', pop);
   }, []);
   useEffect(
     () =>
-      watchCaptureRecovery(({ snapshot, error }) => {
+      watchCaptureRecovery(({ snapshot, error, processing }) => {
+        latestDraft.current = snapshot;
+        setRecoveryBusy(processing === true);
         setDraft(snapshot.original);
         setEditing(snapshot.isEdit);
         setCaptureDraft(snapshot);
@@ -245,9 +261,9 @@ export default function App() {
       e.preventDefault();
       e.returnValue = '';
     };
-    if (isForm && (dirty || photoBusy)) window.addEventListener('beforeunload', prevent);
+    if (isForm && (cameraLocked || store.busy)) window.addEventListener('beforeunload', prevent);
     return () => window.removeEventListener('beforeunload', prevent);
-  }, [isForm, dirty, photoBusy]);
+  }, [isForm, cameraLocked, store.busy]);
   useEffect(() => {
     syncStatusBarThemeColor(theme);
   }, [theme]);
@@ -256,6 +272,7 @@ export default function App() {
   }, [reduced]);
   useEffect(() => {
     let fullHeight = window.innerHeight;
+    let fullWidth = window.innerWidth;
     const viewport = window.visualViewport;
     const update = () => {
       const active = document.activeElement;
@@ -264,8 +281,12 @@ export default function App() {
           !['range', 'checkbox', 'radio', 'file', 'button', 'submit'].includes(active.type)) ||
         active instanceof HTMLTextAreaElement;
       const height = Math.min(window.innerHeight, viewport?.height ?? window.innerHeight);
+      if (Math.abs(window.innerWidth - fullWidth) > 40) {
+        fullWidth = window.innerWidth;
+        fullHeight = height;
+      }
       if (!editable) fullHeight = Math.max(fullHeight, height);
-      setTyping(!!editable && height < fullHeight - 120);
+      setTyping((current) => height < fullHeight - 120 && (!!editable || current));
     };
     document.addEventListener('focusin', update);
     document.addEventListener('focusout', update);
@@ -355,6 +376,7 @@ export default function App() {
           (firstVisit ? [{ id: newId('visit'), visitedAt: new Date().toISOString() }] : []);
         const next = validateReview({
           ...item,
+          reviewedAt: changed ? new Date().toISOString() : item.reviewedAt,
           visitLog,
           visits: visitLog.map((v) => v.visitedAt),
           ratingHistory: changed
@@ -385,6 +407,7 @@ export default function App() {
       await forgetCaptureRecovery().catch(() => {});
       setCaptureDraft(undefined);
       setDraft(null);
+      latestDraft.current = undefined;
       setDirty(false);
       setSelected(item.id);
       setFilters({ ...DEFAULT_FILTERS });
@@ -597,7 +620,9 @@ export default function App() {
                 </div>
               </div>
             </header>
-            {doc && <AppNavigation desktop value={tab} onChange={selectTab} locked={photoBusy} />}
+            {doc && (
+              <AppNavigation desktop value={tab} onChange={selectTab} locked={cameraLocked} />
+            )}
             <main id="main" ref={main} className="app-main" tabIndex={-1}>
               <div className="content-width stack">
                 {store.loading ? (
@@ -799,6 +824,7 @@ export default function App() {
                               key={`${draft.id}-${captureDraft?.recoveryId ?? ''}`}
                               initial={draft}
                               recovered={captureDraft}
+                              recovering={recoveryBusy}
                               entryPhotos={entryPhotos}
                               isEdit={editing}
                               theme={theme}
@@ -808,14 +834,15 @@ export default function App() {
                               onSave={saveReview}
                               onDirtyChange={setDirty}
                               onPhotoBusyChange={setPhotoBusy}
-                              onCancel={() => {
-                                if (dirty) setLeaveTo('places');
-                                else {
-                                  setDraft(null);
-                                  setCaptureDraft(undefined);
-                                  void forgetCaptureRecovery().catch(() => {});
-                                  navigate('places');
-                                }
+                              onDraftSnapshot={rememberDraft}
+                              onCancel={() => selectTab('places')}
+                              onDiscard={() => {
+                                setDraft(null);
+                                setCaptureDraft(undefined);
+                                latestDraft.current = undefined;
+                                setDirty(false);
+                                void forgetCaptureRecovery().catch(() => {});
+                                navigate('places');
                               }}
                             />
                           ) : null,
@@ -846,7 +873,7 @@ export default function App() {
               </div>
             </main>
             {doc && !(isForm && typing) && (
-              <AppNavigation value={tab} onChange={selectTab} locked={photoBusy} />
+              <AppNavigation value={tab} onChange={selectTab} locked={cameraLocked} />
             )}
             {inspector && (
               <Dialog title={inspector.name} wide onClose={() => setDetailId(null)}>
@@ -928,30 +955,6 @@ export default function App() {
                   ×
                 </button>
               </div>
-            )}
-            {leaveTo && (
-              <Dialog title="Rời phần đang nhập?" onClose={() => setLeaveTo(null)}>
-                <div className="stack">
-                  <p>Chưa lưu thay đổi.</p>
-                  <button className="button" onClick={() => setLeaveTo(null)}>
-                    Tiếp tục nhập
-                  </button>
-                  <button
-                    className="button secondary"
-                    onClick={() => {
-                      const target = leaveTo;
-                      setDraft(null);
-                      setDirty(false);
-                      setCaptureDraft(undefined);
-                      void forgetCaptureRecovery().catch(() => {});
-                      setLeaveTo(null);
-                      navigate(target);
-                    }}
-                  >
-                    Bỏ bản nháp và rời màn hình
-                  </button>
-                </div>
-              </Dialog>
             )}
             {deleteItem && (
               <Dialog title="Xóa quán đã lưu?" onClose={() => setDeleteItem(null)}>

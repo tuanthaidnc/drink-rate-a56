@@ -245,14 +245,6 @@ export default function FilterBar({
               />
               Chỉ quán còn lượt gợi ý trong chu kỳ
             </label>
-            <label className="check">
-              <input
-                type="checkbox"
-                checked={filters.onlyOpen}
-                onChange={(e) => set('onlyOpen', e.target.checked)}
-              />
-              Đang mở theo giờ tôi đã kiểm tra
-            </label>
             <></>
             <label className="field">
               <span>Tránh quán vừa ghé</span>

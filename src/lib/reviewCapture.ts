@@ -2,6 +2,7 @@ import type { PhotoData, ReviewItem } from './models.ts';
 import { newId } from './models.ts';
 import { clearCaptureDraft, compressPhoto, getCaptureDraft, saveCaptureDraft } from './storage.ts';
 import { isNativeApp } from './platform.ts';
+import { reviewDraftIsDirty } from './reviewDraft.ts';
 
 export interface CaptureDraft {
   original: ReviewItem;
@@ -14,8 +15,9 @@ export interface CaptureDraft {
   recoveryId: string;
   stage?: 'capture' | 'location' | 'score';
   gpsAttempted?: boolean;
+  replaceCover?: boolean;
 }
-type Recovered = { snapshot: CaptureDraft; error?: string };
+type Recovered = { snapshot: CaptureDraft; error?: string; processing?: boolean };
 let recovered: Recovered | undefined;
 const listeners = new Set<(value: Recovered) => void>();
 const publish = (value: Recovered) => {
@@ -44,7 +46,6 @@ async function attachCameraPhoto(
   result: { webPath?: string },
 ): Promise<CaptureDraft> {
   if (!result.webPath) throw new Error('Camera không trả về ảnh.');
-  if (snapshot.draft.photoIds.length >= 3) throw new Error('Mỗi quán tối đa 3 ảnh.');
   const response = await fetch(result.webPath);
   if (!response.ok) throw new Error('Không đọc được ảnh vừa chụp.');
   const photo = await compressPhoto(
@@ -52,9 +53,9 @@ async function attachCameraPhoto(
   );
   return {
     ...snapshot,
-    draft: { ...snapshot.draft, photoIds: [...snapshot.draft.photoIds, photo.id] },
-    photos: [...snapshot.photos, photo],
-    stage: snapshot.isEdit || snapshot.stage === 'score' ? 'score' : 'location',
+    draft: { ...snapshot.draft, photoIds: [photo.id] },
+    photos: [photo],
+    stage: 'score',
     recoveryId: newId('capture'),
   };
 }
@@ -79,22 +80,34 @@ export async function takeReviewPhoto(snapshot: CaptureDraft): Promise<CaptureDr
     await saveCaptureDraft(next);
     return next;
   } catch (error) {
-    await clearCaptureDraft();
+    if (
+      reviewDraftIsDirty(
+        snapshot.original,
+        snapshot.draft,
+        snapshot.price,
+        snapshot.reviewDate,
+        snapshot.isEdit,
+        snapshot.firstVisit,
+      )
+    )
+      await saveCaptureDraft(snapshot);
+    else await clearCaptureDraft();
     if (isCameraCancellation(error)) return null;
     throw new Error(cameraError(error));
   }
 }
 // Registered before React mounts: Capacitor retains restored results until a listener exists.
 export async function initializeCaptureRecovery(): Promise<void> {
-  if (!isNativeApp) return;
-  const pending = await getCaptureDraft();
+  let pending = await getCaptureDraft();
   if (pending) publish({ snapshot: pending });
+  if (!isNativeApp) return;
   const { App } = await import('@capacitor/app');
   await App.addListener('appRestoredResult', (event) => {
     if (event.pluginId !== 'Camera' || event.methodName !== 'getPhoto') return;
     void (async () => {
       const snapshot = (await getCaptureDraft()) ?? pending;
       if (!snapshot) return;
+      if (event.success) publish({ snapshot, processing: true });
       let next = snapshot;
       let error: string | undefined;
       if (event.success) {

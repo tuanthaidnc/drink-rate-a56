@@ -97,10 +97,10 @@ try {
   await p.getByRole('button', { name: 'Cập nhật', exact: true }).waitFor({ timeout: 45000 });
   await p.locator('.album-tile').click();
   await p.getByRole('button', { name: /^Sửa / }).click();
+  await p.locator('.quick-more>summary').click();
   await p.getByLabel('Tên quán').fill('Bản nháp trước cập nhật');
   assert.equal(await p.getByRole('button', { name: 'Cập nhật', exact: true }).isDisabled(), true);
-  await p.getByRole('button', { name: 'Hủy', exact: true }).click();
-  await p.getByRole('button', { name: 'Bỏ bản nháp và rời màn hình', exact: true }).click();
+  await p.getByRole('button', { name: 'Bỏ bản nháp', exact: true }).click();
   await Promise.all([
     p.waitForEvent('load'),
     p.getByRole('button', { name: 'Cập nhật', exact: true }).click(),

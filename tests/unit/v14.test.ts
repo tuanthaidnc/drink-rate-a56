@@ -1,6 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { reviewDraftSignature, reviewDraftIsDirty } from '../../src/lib/reviewDraft.ts';
+import {
+  reviewDraftSignature,
+  reviewDraftIsDirty,
+  parseReviewPrice,
+  automaticReviewName,
+} from '../../src/lib/reviewDraft.ts';
 import {
   createReview,
   validateReviews,
@@ -134,4 +139,17 @@ test('manual confirmed pins are preserved and source evidence survives backup va
     now,
   );
   assert.equal(backup.reviews[0].placeResolution!.officialName, 'Nốt Tea');
+});
+
+test('quick scoring accepts Vietnamese decimals and uses current Vietnam time for unnamed reviews', () => {
+  assert.equal(parseReviewPrice('31,5'), 31.5);
+  assert.equal(parseReviewPrice(' 31.50 '), 31.5);
+  assert.equal(parseReviewPrice(''), null);
+  assert.equal(parseReviewPrice('1e3'), null);
+  assert.equal(parseReviewPrice('-1'), null);
+  assert.equal(parseReviewPrice('2000.1'), null);
+  const label = automaticReviewName('food', new Date('2026-10-30T23:15:00Z'));
+  assert.match(label, /^Quán ăn · /);
+  assert.ok(label.includes('06:15'));
+  assert.ok(label.includes('31\/10'));
 });

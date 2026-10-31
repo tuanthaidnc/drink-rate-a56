@@ -52,9 +52,13 @@ export default function MapSurface({
         bearing: 0,
         attributionControl: {
           compact: true,
-          customAttribution: `<a href="${import.meta.env.BASE_URL}data/map-style-licenses.txt" target="_blank" rel="noreferrer">Style: CARTO / OpenMapTiles</a>`,
         },
-        cooperativeGestures: !onPin,
+        cooperativeGestures: false,
+        locale: {
+          'AttributionControl.ToggleAttribution': 'Nguồn bản đồ',
+          'NavigationControl.ZoomIn': 'Phóng to',
+          'NavigationControl.ZoomOut': 'Thu nhỏ',
+        },
         dragRotate: false,
         touchPitch: false,
       });
@@ -65,6 +69,11 @@ export default function MapSurface({
     mapRef.current = map;
     map.touchZoomRotate.disableRotation();
     map.addControl(new NavigationControl({ showCompass: false }), 'top-right');
+    map.on('load', () => {
+      const attribution = element.current?.querySelector('.maplibregl-ctrl-attrib');
+      attribution?.classList.remove('maplibregl-compact-show');
+      attribution?.removeAttribute('open');
+    });
     map.on('load', () =>
       setMessage(
         navigator.onLine
