@@ -1,4 +1,5 @@
 import { Store, Map, Plus, ChartColumn } from 'lucide-react';
+import { useLayoutEffect, useRef } from 'react';
 import { motion } from 'motion/react';
 import { useQuietMotion } from './motion/kinetic.tsx';
 import {
@@ -23,8 +24,26 @@ export default function AppNavigation({
   desktop?: boolean;
 }) {
   const quiet = useQuietMotion();
+  const dock = useRef<HTMLElement>(null);
+  useLayoutEffect(() => {
+    if (desktop || !dock.current) return;
+    const element = dock.current;
+    const update = () =>
+      document.documentElement.style.setProperty(
+        '--not-dock-height',
+        `${Math.ceil(element.getBoundingClientRect().height)}px`,
+      );
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(element);
+    return () => {
+      observer.disconnect();
+      document.documentElement.style.removeProperty('--not-dock-height');
+    };
+  }, [desktop]);
   return (
     <BottomNavigation
+      ref={dock}
       value={value}
       onValueChange={(v) => onChange(v as AppTab)}
       scrollBehavior="none"

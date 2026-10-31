@@ -145,7 +145,7 @@ h2 {
   height: 18px;
 }
 .app-main {
-  padding: 14px 18px calc(115px + env(safe-area-inset-bottom));
+  padding: 14px 18px calc(var(--not-dock-height, 82px) + 33px + env(safe-area-inset-bottom));
   scrollbar-width: none;
 }
 .content-width {
@@ -229,9 +229,9 @@ h2 {
   white-space: nowrap;
   font-weight: 650;
 }
-.category-tabs button[data-state='on'] {
-  /* The primitive uses an inline transparent background and a separate moving
-     highlight. Keep text readable while that highlight is travelling. */
+.category-tabs button[data-animate-ui-toggle-item][data-state='on'] {
+  /* Outrank the primitive's transparent surface rule, including while its
+     separate selection highlight is travelling. */
   background: var(--accent) !important;
   color: var(--accent-fg);
   box-shadow: none;
@@ -968,8 +968,10 @@ h2 {
   aspect-ratio: 1;
 }
 .bottom-dock .nav-label {
+  min-width: 0;
   max-width: 100%;
   white-space: normal !important;
+  overflow-wrap: anywhere;
   text-align: center;
   line-height: 1.4;
 }
@@ -985,6 +987,9 @@ h2 {
 }
 .bottom-dock button[data-nav-tab='review'][data-active='true'] {
   color: var(--accent-secondary);
+}
+.toast {
+  bottom: calc(var(--not-dock-height, 82px) + 25px + env(safe-area-inset-bottom));
 }
 .not-dialog {
   border-radius: 25px;

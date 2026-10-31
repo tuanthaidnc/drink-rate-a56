@@ -841,6 +841,10 @@ try {
               const box = dock.getBoundingClientRect();
               return {
                 viewport: { width: innerWidth, height: innerHeight },
+                clearance: parseFloat(
+                  getComputedStyle(document.querySelector('.app-main')).paddingBottom,
+                ),
+                dockHeight: box.height,
                 dock: { x: box.x, y: box.y, right: box.right, bottom: box.bottom },
                 items: Array.from(dock.querySelectorAll('button')).map((button) => {
                   const b = button.getBoundingClientRect(),
@@ -864,6 +868,10 @@ try {
             });
             assert.ok(geometry.dock.x >= 0 && geometry.dock.right <= width + 1);
             assert.ok(geometry.dock.bottom <= geometry.viewport.height + 1);
+            assert.ok(
+              geometry.clearance >= geometry.dockHeight + 20,
+              `Content is covered by the dock: ${JSON.stringify(geometry)}`,
+            );
             for (const item of geometry.items) {
               assert.ok(
                 item.width >= 48 && item.height >= 48,
