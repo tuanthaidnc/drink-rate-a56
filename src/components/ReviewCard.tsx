@@ -91,8 +91,8 @@ export default function ReviewCard({
       inert={!present || undefined}
       layout="position"
       data-motion="card"
-      initial={quiet ? false : { opacity: 0, y: 26, scale: 0.97, filter: 'blur(5px)' }}
-      animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+      initial={quiet ? false : { opacity: 0.4, y: 18, scale: 0.985 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -16, scale: 0.96 }}
       transition={{
         duration: quiet ? 0 : 0.45,

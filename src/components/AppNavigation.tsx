@@ -37,6 +37,7 @@ export default function AppNavigation({
             type="button"
             aria-current={value === id ? 'page' : undefined}
             data-active={value === id}
+            data-nav-tab={id}
           >
             {value === id && (
               <motion.span
@@ -50,17 +51,21 @@ export default function AppNavigation({
                 }}
               />
             )}
-            <motion.span
-              className="nav-icon"
-              animate={{
-                rotate: value === id && id === 'review' ? 90 : 0,
-                y: value === id ? -2 : 0,
-              }}
-              transition={{ type: 'spring', stiffness: 360, damping: 20 }}
-            >
-              <Icon />
-            </motion.span>
-            <BottomNavigationLabel>{label}</BottomNavigationLabel>
+            <span className="nav-icon" aria-hidden="true">
+              <motion.span
+                className="nav-glyph"
+                animate={{
+                  rotate: value === id && id === 'review' ? 90 : 0,
+                  y: value === id && id !== 'review' ? -2 : 0,
+                }}
+                transition={
+                  quiet ? { duration: 0 } : { type: 'spring', stiffness: 360, damping: 20 }
+                }
+              >
+                <Icon />
+              </motion.span>
+            </span>
+            <BottomNavigationLabel className="nav-label">{label}</BottomNavigationLabel>
           </button>
         </BottomNavigationItem>
       ))}

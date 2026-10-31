@@ -56,6 +56,10 @@ public class NativeFlowTest {
         assertTrue(device.takeScreenshot(new File(proof, name + ".png")));
     }
 
+    private void assertDockGeometry() throws Exception {
+        assertTrue("Circular action, aligned labels, and visible touch targets", (Boolean) js("(()=>{const buttons=[...document.querySelectorAll('.bottom-dock button')];const labels=buttons.map(b=>b.querySelector('.nav-label').getBoundingClientRect());return buttons.length===4&&buttons.every((b,i)=>{const r=b.getBoundingClientRect(),icon=b.querySelector('.nav-icon').getBoundingClientRect(),label=labels[i];return r.width>=48&&r.height>=48&&Math.abs(icon.width-icon.height)<0.5&&Math.abs(label.y-labels[0].y)<0.5&&label.bottom<=r.bottom+1})})()"));
+    }
+
     @Test public void nativeWebViewFlowAndInsets() throws Exception {
         String oldScale = device.executeShellCommand("settings get system font_scale").trim();
         proof = new File(InstrumentationRegistry.getInstrumentation().getTargetContext().getExternalFilesDir(null), "qa");
@@ -63,6 +67,7 @@ public class NativeFlowTest {
         try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
             scenario.onActivity(activity -> web = activity.getBridge().getWebView());
             until("!!document.querySelector('.bottom-dock')");
+            assertDockGeometry();
             assertEquals("android", js("document.documentElement.dataset.platform"));
             assertEquals("https://localhost", js("location.origin"));
             assertFalse("No service worker is needed for bundled assets", (Boolean) js("!!navigator.serviceWorker.controller"));
@@ -84,6 +89,7 @@ public class NativeFlowTest {
             assertTrue((Boolean)js("(()=>{const e=document.querySelector('[data-stat=average]');return getComputedStyle(e).color!==getComputedStyle(e.parentElement).backgroundColor})()"));
             assertTrue((Boolean)js("document.documentElement.scrollWidth<=innerWidth"));
             screenshot("native-insights-dark");
+            assertDockGeometry();
             tap(".theme-toggle");
             until("document.documentElement.dataset.theme==='light'");
             screenshot("native-insights-light");
@@ -104,6 +110,7 @@ public class NativeFlowTest {
             until("!!document.querySelector('.bottom-dock')");
             nav(3);
             screenshot("native-font-130");
+            assertDockGeometry();
             assertTrue((Boolean)js("document.documentElement.scrollWidth<=innerWidth"));
             device.setOrientationLeft();
             until("innerWidth>innerHeight");

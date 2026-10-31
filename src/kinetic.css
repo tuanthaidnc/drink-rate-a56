@@ -230,7 +230,9 @@ h2 {
   font-weight: 650;
 }
 .category-tabs button[data-state='on'] {
-  background: var(--accent);
+  /* The primitive uses an inline transparent background and a separate moving
+     highlight. Keep text readable while that highlight is travelling. */
+  background: var(--accent) !important;
   color: var(--accent-fg);
   box-shadow: none;
 }
@@ -894,7 +896,8 @@ h2 {
   width: auto;
   max-width: 470px;
   margin: 0 auto;
-  height: 74px;
+  min-height: 82px;
+  height: auto;
   padding: 7px;
   gap: 3px;
   border: 1px solid var(--border-elevated);
@@ -923,18 +926,31 @@ h2 {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex: none;
 }
-.nav-icon > svg {
+.nav-glyph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.nav-glyph > svg {
   width: 23px;
   height: 23px;
   stroke-width: 1.7;
 }
 .bottom-dock button {
+  display: grid;
+  grid-template-rows: 34px auto;
+  align-content: start;
+  align-items: center;
+  justify-items: center;
   border: 0;
   border-radius: 99px;
-  padding: 6px 2px;
-  min-height: 58px;
-  font-size: 10.5px;
+  padding: 4px 2px;
+  min-height: 66px;
+  gap: 4px;
+  font-size: 12px;
   line-height: 1.4;
   font-weight: 500;
 }
@@ -944,22 +960,30 @@ h2 {
 .bottom-dock button[data-active='true']:not(:nth-child(3)) {
   background: none;
 }
-.bottom-dock button:nth-child(3) .nav-icon {
+.bottom-dock .nav-icon {
   width: 34px;
   height: 34px;
+  min-width: 34px;
+  min-height: 34px;
+  aspect-ratio: 1;
+}
+.bottom-dock .nav-label {
+  max-width: 100%;
+  white-space: normal !important;
+  text-align: center;
+  line-height: 1.4;
+}
+.bottom-dock button[data-nav-tab='review'] .nav-icon {
   border-radius: 50%;
   background: var(--lilac);
   color: #241a42;
 }
-.bottom-dock button:nth-child(3) .nav-icon > svg {
+.bottom-dock button[data-nav-tab='review'] .nav-glyph > svg {
   width: 24px;
   height: 24px;
   stroke-width: 2;
 }
-.bottom-dock button:nth-child(3) {
-  gap: 2px;
-}
-.bottom-dock button:nth-child(3)[data-active='true'] {
+.bottom-dock button[data-nav-tab='review'][data-active='true'] {
   color: var(--accent-secondary);
 }
 .not-dialog {
@@ -1118,6 +1142,13 @@ h2 {
 [data-platform='android'] .segmented button {
   min-height: 48px;
 }
+[data-platform='android'] .bottom-dock {
+  background: var(--bg-card);
+  backdrop-filter: none;
+}
+[data-platform='android'] .dialog-backdrop {
+  backdrop-filter: none;
+}
 @media (max-width: 1099px) {
   [data-platform='android'] .not-app {
     grid-template-rows: calc(80px + env(safe-area-inset-top)) minmax(0, 1fr);
@@ -1248,7 +1279,7 @@ h2 {
     color: var(--accent-fg);
     background: none;
   }
-  .desktop-nav .nav-icon > svg {
+  .desktop-nav .nav-glyph > svg {
     width: 23px;
     height: 23px;
   }

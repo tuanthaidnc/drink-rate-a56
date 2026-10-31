@@ -606,6 +606,18 @@ try {
         'NỐT 15.0.0',
       ])
         assert.ok(!copy.includes(text), text);
+      const selectedFilter = p.locator('.category-tabs button[data-state="on"]');
+      assert.notEqual(
+        await selectedFilter.evaluate((e) => getComputedStyle(e).backgroundColor),
+        'rgba(0, 0, 0, 0)',
+        'Selected filter must carry its own readable background',
+      );
+      assert.ok(
+        (await p
+          .locator('.bottom-dock button')
+          .first()
+          .evaluate((e) => parseFloat(getComputedStyle(e).fontSize))) >= 11,
+      );
       await nav(p, 'Chấm điểm');
       const transforms = await p.evaluate(async () => {
         const samples = [];
@@ -808,6 +820,86 @@ try {
       await writeFile(
         resolve(output, 'layout-regression.json'),
         JSON.stringify({ pass: true, results }, null, 2),
+      );
+    },
+  );
+  await scenario(
+    'dock keeps a circular review action and aligned labels at every text size',
+    async () => {
+      const { page: p, errors } = await setup({ reducedMotion: 'no-preference' });
+      const measurements = [];
+      for (const width of [320, 360, 384, 393, 412, 768]) {
+        await p.setViewportSize({ width, height: 852 });
+        for (const fontSize of [12, 15.6, 24]) {
+          const style = await p.addStyleTag({
+            content: `.bottom-dock button {font-size:${fontSize}px !important}`,
+          });
+          for (const label of ['Quán xá', 'Chấm điểm', 'Thống kê', 'Bản đồ']) {
+            await nav(p, label);
+            await p.waitForTimeout(300);
+            const geometry = await p.locator('.bottom-dock').evaluate((dock) => {
+              const box = dock.getBoundingClientRect();
+              return {
+                viewport: { width: innerWidth, height: innerHeight },
+                dock: { x: box.x, y: box.y, right: box.right, bottom: box.bottom },
+                items: Array.from(dock.querySelectorAll('button')).map((button) => {
+                  const b = button.getBoundingClientRect(),
+                    icon = button.querySelector('.nav-icon').getBoundingClientRect(),
+                    caption = button.querySelector('.nav-label'),
+                    text = caption.getBoundingClientRect();
+                  return {
+                    label: button.textContent,
+                    width: b.width,
+                    height: b.height,
+                    iconWidth: icon.width,
+                    iconHeight: icon.height,
+                    textY: text.y,
+                    textBottom: text.bottom,
+                    buttonBottom: b.bottom,
+                    textWidth: caption.clientWidth,
+                    textScrollWidth: caption.scrollWidth,
+                  };
+                }),
+              };
+            });
+            assert.ok(geometry.dock.x >= 0 && geometry.dock.right <= width + 1);
+            assert.ok(geometry.dock.bottom <= geometry.viewport.height + 1);
+            for (const item of geometry.items) {
+              assert.ok(
+                item.width >= 48 && item.height >= 48,
+                `Touch target ${JSON.stringify(item)}`,
+              );
+              assert.ok(
+                Math.abs(item.iconWidth - item.iconHeight) < 0.5,
+                `Circle ${JSON.stringify(item)}`,
+              );
+              assert.ok(
+                Math.abs(item.textY - geometry.items[0].textY) < 0.5,
+                `Caption alignment ${JSON.stringify(geometry.items)}`,
+              );
+              assert.ok(
+                item.textBottom <= item.buttonBottom + 1,
+                `Caption is clipped ${JSON.stringify(item)}`,
+              );
+              assert.ok(
+                item.textScrollWidth <= item.textWidth + 1,
+                `Caption overflows ${JSON.stringify(item)}`,
+              );
+            }
+            measurements.push({ width, fontSize, tab: label, geometry });
+          }
+          if (width === 384 && fontSize === 12)
+            await p.screenshot({ path: resolve(output, '12-dock-384.png') });
+          if (width === 320 && fontSize === 24)
+            await p.screenshot({ path: resolve(output, '13-dock-large-text-320.png') });
+          await style.evaluate((element) => element.remove());
+        }
+        await assertNoOverflow(p);
+      }
+      assert.deepEqual(errors, []);
+      await writeFile(
+        resolve(output, 'dock-regression.json'),
+        JSON.stringify({ pass: true, measurements }, null, 2),
       );
     },
   );

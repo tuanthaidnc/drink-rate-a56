@@ -11,6 +11,7 @@ on:
         'package*.json',
         'capacitor.config.ts',
         'vite.config.ts',
+        'scripts/android-emulator-check.sh',
         '.github/workflows/android.yml',
       ]
   workflow_dispatch:
@@ -50,17 +51,13 @@ jobs:
           profile: pixel_6
           disable-animations: false
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
-          script: |
-            adb logcat -c
-            cd android && ./gradlew :app:connectedDebugAndroidTest --no-daemon
+          script: bash scripts/android-emulator-check.sh
       - name: Collect native proof and signing utility
         if: always()
         run: |
           mkdir -p /tmp/not-android/qa
           cp android/app/build/outputs/apk/release/*.apk /tmp/not-android/ 2>/dev/null || true
           cp "$ANDROID_HOME/build-tools/36.0.0/lib/apksigner.jar" /tmp/not-android/ 2>/dev/null || true
-          adb pull /sdcard/Android/data/com.tuanthaidnc.notfood/files/qa /tmp/not-android/ 2>/dev/null || true
-          adb logcat -d > /tmp/not-android/logcat.txt 2>/dev/null || true
           cp -r android/app/build/outputs/androidTest-results /tmp/not-android/ 2>/dev/null || true
           cp android/app/build/reports/lint-results-release.html /tmp/not-android/ 2>/dev/null || true
       - uses: actions/upload-artifact@v4

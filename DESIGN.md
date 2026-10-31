@@ -20,7 +20,7 @@ Một sổ quán cá nhân với điểm, giá và địa chỉ làm nội dung 
 | Thao tác       | Chuyển động                                            |
 | -------------- | ------------------------------------------------------ |
 | Đổi tab        | Fade-through: thoát 120ms, vào 240ms, trượt 18px; chỉ một màn; gỡ DOM khi thoát |
-| Hiện thẻ quán  | Trượt/scale/blur 450ms, trễ tối đa 375ms cho danh sách |
+| Hiện thẻ quán  | Trượt/scale/fade 450ms, trễ tối đa 375ms cho danh sách |
 | Mở thẻ         | Chiều cao tự nhiên và opacity 380ms                    |
 | Điểm           | Vòng vẽ 950ms; số chạy bằng spring 120/22              |
 | Thanh tiêu chí | Thanh mở từ trái 750–800ms                             |
@@ -39,3 +39,5 @@ Rà soát theo [Impeccable](https://github.com/pbakaus/impeccable), commit `0252
 Giữ ba nhóm Tất cả/Nước/Ăn, không thêm nhóm Ăn vặt mà ảnh desktop tự sinh. Giữ bốn tab gốc, không thêm tab Ăn gì trong form. Giá nhập bằng số, không có slider thay đổi điểm giá trực tiếp. Giữ đủ năm mức lượng và trọng số gốc. Form mới để trống tên; điểm đã lưu chỉ đổi khi lưu thật. Không dựng đồng hồ/pin điện thoại giả, avatar hoặc ảnh quán giả. Không đặt hồ sơ Thanh Hương vào form quán khác.
 
 Nốt Tea vẫn 6,5 từ các tiêu chí 7/7/4/9, tại 38 Phan Thanh theo Maps đã kiểm tra. Bếp Trang mẫu được bỏ; Thanh Hương chỉ là ứng viên địa điểm. Thiết kế và animation không sửa công thức, lượt ghé, lịch sử hoặc chi tiêu.
+
+Dock: four equal icon rows (34 px), captions aligned at 12 px, non-shrinking circular review action. The glyph rotates inside the circle. Height expands with larger text; Android dock and modal backdrop avoid costly blur.
