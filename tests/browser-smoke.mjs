@@ -385,13 +385,11 @@ try {
       await p.getByRole('heading', { name: 'Sửa đánh giá', exact: true }).waitFor();
       await p.locator('.photo-grid img').nth(1).waitFor();
       assert.deepEqual(await readDoc(p), saved);
-      await p
-        .getByLabel('Thêm ảnh món ăn hoặc quán')
-        .setInputFiles({
-          name: 'broken.jpg',
-          mimeType: 'image/jpeg',
-          buffer: Buffer.from('not an image'),
-        });
+      await p.getByLabel('Thêm ảnh món ăn hoặc quán').setInputFiles({
+        name: 'broken.jpg',
+        mimeType: 'image/jpeg',
+        buffer: Buffer.from('not an image'),
+      });
       await p.getByRole('alert').filter({ hasText: 'Ảnh bị lỗi hoặc không đọc được' }).waitFor();
       assert.equal(await p.locator('.photo-grid img').count(), 2);
       await p.evaluate(() => {
@@ -1004,6 +1002,17 @@ try {
         reducedMotion: 'no-preference',
       });
       const results = [];
+      await p.getByRole('button', { name: 'Đổi sang giao diện sáng', exact: true }).click();
+      const reviewBox = await p
+        .getByRole('navigation', { name: 'Điều hướng chính', exact: true })
+        .getByRole('button', { name: 'Chấm điểm', exact: true })
+        .boundingBox();
+      await p.touchscreen.tap(
+        reviewBox.x + reviewBox.width / 2,
+        reviewBox.y + reviewBox.height / 2,
+      );
+      await p.getByRole('heading', { name: 'Chấm điểm', exact: true }).waitFor();
+      await nav(p, 'Quán xá');
       for (const width of [320, 360, 393, 412, 768, 1365]) {
         await p.setViewportSize({ width, height: width > 1100 ? 900 : 852 });
         const navigation = p.getByRole('navigation', {

@@ -43,11 +43,22 @@ export function syncStatusBarThemeColor(nextTheme: AppTheme) {
   }
 }
 
+type ThemeTransition = {
+  ready: Promise<void>;
+  finished: Promise<void>;
+  skipTransition: () => void;
+};
+let activeThemeTransition: ThemeTransition | undefined;
+export function finishThemeTransition() {
+  activeThemeTransition?.skipTransition();
+  activeThemeTransition = undefined;
+}
 export function applyThemeWithTransition(
   nextTheme: AppTheme,
   setThemeState: (t: AppTheme) => void,
   originEvent?: React.MouseEvent<HTMLElement>,
 ) {
+  finishThemeTransition();
   const applyDom = () => {
     syncStatusBarThemeColor(nextTheme);
     try {
@@ -59,7 +70,7 @@ export function applyThemeWithTransition(
   };
 
   const doc = document as Document & {
-    startViewTransition?: (cb: () => void) => { ready: Promise<void> };
+    startViewTransition?: (cb: () => void) => ThemeTransition;
   };
 
   if (
@@ -83,9 +94,16 @@ export function applyThemeWithTransition(
       applyDom();
     });
   });
+  activeThemeTransition = transition;
+  void transition.finished
+    .finally(() => {
+      if (activeThemeTransition === transition) activeThemeTransition = undefined;
+    })
+    .catch(() => {});
 
   transition.ready
     .then(() => {
+      if (activeThemeTransition !== transition) return;
       document.documentElement.animate(
         {
           clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${endRadius}px at ${x}px ${y}px)`],

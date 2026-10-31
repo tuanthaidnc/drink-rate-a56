@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import {
   applyThemeWithTransition,
+  finishThemeTransition,
   syncStatusBarThemeColor,
   type AppTheme,
 } from './components/animate-ui/primitives.tsx';
@@ -116,6 +117,7 @@ export default function App() {
   const reduced = doc?.settings.reducedMotion === true;
   const systemReduced = useSystemReducedMotion();
   const navigate = useCallback((target: Tab, push = true) => {
+    finishThemeTransition();
     setTab(target);
     if (push) history.pushState({ notTab: target }, '', location.href);
     main.current?.scrollTo({ top: 0 });

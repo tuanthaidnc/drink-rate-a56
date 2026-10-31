@@ -1733,6 +1733,10 @@ th {
   font-size: 11px;
   color: var(--text-muted);
 }
+/* Theme snapshots must never swallow the next navigation tap. */
+::view-transition {
+  pointer-events: none;
+}
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation: none;
