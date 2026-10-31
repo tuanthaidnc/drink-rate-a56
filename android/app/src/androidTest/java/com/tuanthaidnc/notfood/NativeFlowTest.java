@@ -6,6 +6,8 @@ import androidx.test.core.app.ActivityScenario;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 import androidx.test.uiautomator.UiDevice;
+import androidx.test.uiautomator.By;
+import androidx.test.uiautomator.Until;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -67,6 +69,10 @@ public class NativeFlowTest {
         try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
             scenario.onActivity(activity -> web = activity.getBridge().getWebView());
             until("!!document.querySelector('.bottom-dock')");
+            // DOM can be ready while the system launch splash still owns input.
+            // Wait for the native accessibility surface before the first touch.
+            assertTrue("Native navigation is visible", device.wait(Until.hasObject(By.text("Chấm điểm")), 10000));
+            device.waitForIdle();
             assertDockGeometry();
             assertEquals("android", js("document.documentElement.dataset.platform"));
             assertEquals("https://localhost", js("location.origin"));
