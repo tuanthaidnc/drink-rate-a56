@@ -23,7 +23,6 @@ export default memo(function ReviewCard({
       data-selected={selected}
       data-category={item.category}
       data-motion="card"
-      layout={quiet ? false : 'position'}
       initial={quiet ? false : { opacity: 0.6, y: 12, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{

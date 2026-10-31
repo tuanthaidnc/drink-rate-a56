@@ -4,7 +4,7 @@ Sổ trải nghiệm cá nhân để chọn quán hợp gu, giá và vị trí; 
 
 ## Dùng ứng dụng
 
-- Chấm điểm một lần trải nghiệm; ghi món nên gọi, ảnh, địa chỉ và ghim đã kiểm tra. Chọn quán hoặc mở Maps không tự ghi đã ghé.
+- Chấm điểm mới tự mở camera; bắt buộc có ảnh trước khi tự lấy GPS. Sửa/ghim thủ công nếu cần, xác nhận vị trí rồi nhập tên/giá/điểm và lưu. Hủy camera không gọi GPS. Chỉnh sửa quán cũ giữ ảnh/tọa độ và không tự chụp hay định vị lại. Chọn quán hoặc mở Maps không tự ghi đã ghé.
 - Ghi lượt ghé riêng với ngày, món và tiền thực trả. Tiền để trống được hiển thị là chưa biết, không suy từ giá chấm điểm.
 - Tìm/lọc cùng một tập quán trong danh sách, bản đồ, vòng quay và thống kê quán. Chi tiêu chu kỳ được ghi rõ là toàn bộ quán thật.
 - Xuất JSON ở Thống kê. File gồm đánh giá, ảnh, lịch sử điểm, lượt ghé và tùy chọn; giữ một bản ngoài ứng dụng trước khi đổi máy hoặc xóa dữ liệu Chrome.
@@ -13,9 +13,9 @@ Sổ trải nghiệm cá nhân để chọn quán hợp gu, giá và vị trí; 
 
 ## Giao diện và chuyển động
 
-Nền mực, xanh acid, tím nhạt và điểm số dạng vòng tròn lớn. Điện thoại dùng dock nổi; máy tính dùng rail và khung tiêu chí. Bỏ lời giới thiệu, hướng dẫn thường trực và phiên bản khỏi UI. Giữ dữ liệu, nhãn thao tác và phản hồi lỗi cần thiết.
+Ảnh chụp là thẻ vuông có viền nhẹ, điểm/giá ở góc và tên/đường bên dưới. Điện thoại có lưới hai cột hoặc ba cột; máy tính có bốn/năm cột và rail. Chi tiết mở khi chạm ảnh, phân trang 24 quán. Nền sáng/mực, xanh acid và tím nhạt giữ vai trò điều khiển. Bỏ lời giới thiệu, hướng dẫn thường trực và phiên bản khỏi UI. Giữ dữ liệu, nhãn thao tác và phản hồi lỗi cần thiết.
 
-[React Bits](https://github.com/DavidHDev/react-bits) cung cấp ClickSpark; [Motion Primitives](https://github.com/ibelick/motion-primitives) cung cấp AnimatedNumber và TransitionPanel đã điều chỉnh cho điểm thập phân và khả năng truy cập. [Animate UI](https://github.com/imskyleen/animate-ui) tiếp tục xử lý Dialog, Slider, ToggleGroup và BottomNavigation; các trường nhập/nút dựa trên [shadcn/ui](https://github.com/shadcn-ui/ui). Chuyển màn, thẻ mở rộng, số, vòng điểm, thanh tiêu chí và dock có chuyển động thật. Giảm chuyển động theo hệ thống/ứng dụng vẫn được tôn trọng và cập nhật ngay khi đổi tùy chọn. Xem [DESIGN.md](DESIGN.md) về nguồn, thời gian và cấu trúc.
+[React Bits](https://github.com/DavidHDev/react-bits) cung cấp ClickSpark; [Motion Primitives](https://github.com/ibelick/motion-primitives) cung cấp AnimatedNumber và TransitionPanel đã điều chỉnh cho điểm thập phân và khả năng truy cập. [Animate UI](https://github.com/imskyleen/animate-ui) tiếp tục xử lý Dialog, Slider, ToggleGroup và BottomNavigation; các trường nhập/nút dựa trên [shadcn/ui](https://github.com/shadcn-ui/ui). Ảnh có hiệu ứng hiện hình, lưới đổi mật độ/ấn thẻ, mở ảnh chi tiết, chuyển màn, điểm, thanh tiêu chí và dock có chuyển động. GPS có hiệu ứng chờ trong thời gian định vị; không có vòng vẽ nền thường trực. Giảm chuyển động theo hệ thống/ứng dụng vẫn được tôn trọng và cập nhật ngay khi đổi tùy chọn. Xem [DESIGN.md](DESIGN.md) về nguồn, thời gian và cấu trúc.
 
 - Nốt được đối chiếu bằng [liên kết Maps do chủ ứng dụng cung cấp](https://maps.app.goo.gl/TSXSAzECjtmbwCVC9): **Nốt Tea, 38 Phan Thanh, Thanh Khê, Đà Nẵng**, ghim **16.06528, 108.2083**. Chỉ cập nhật địa điểm, giữ điểm cá nhân **6,50** và lịch sử. Ghim GPS/thủ công đã xác nhận được giữ.
 - Bỏ mẫu **Bếp Trang** nguyên trạng theo yêu cầu. Nếu bản ghi có ảnh, lượt ghé, lịch sử điểm hoặc đã là trải nghiệm cá nhân thì giữ lại. Bản thô trước chuyển đổi và bản dự phòng vẫn có thể khôi phục.

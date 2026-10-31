@@ -714,7 +714,7 @@ export default function App() {
                                     </button>
                                   </section>
                                 ) : (
-                                  <div className="album-grid" data-density={density}>
+                                  <div className="album-grid" data-density={density} key={density}>
                                     {sorted
                                       .slice(activePage * 24, (activePage + 1) * 24)
                                       .map((item, index) => (

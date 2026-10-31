@@ -563,9 +563,6 @@ textarea {
   font-size: 12px;
   color: var(--text-primary);
 }
-.capture-map[data-locating='true'] .gps-dot {
-  animation: gps-breathe 1.3s ease-in-out infinite;
-}
 .location-tools > span {
   display: flex;
   align-items: center;
@@ -630,12 +627,6 @@ textarea {
     opacity: 1;
     filter: brightness(1) saturate(1);
     clip-path: inset(0 round 0);
-  }
-}
-@keyframes gps-breathe {
-  50% {
-    transform: scale(1.2);
-    opacity: 0.55;
   }
 }
 @media (max-width: 1099px) {
@@ -769,16 +760,14 @@ textarea {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .capture-cover.has-photo .review-photo,
-  .capture-map[data-locating='true'] .gps-dot {
+  .capture-cover.has-photo .review-photo {
     animation: none;
   }
   .album-tile .review-photo {
     transition: none;
   }
 }
-[data-reduced-motion='true'] .capture-cover.has-photo .review-photo,
-[data-reduced-motion='true'] .capture-map[data-locating='true'] .gps-dot {
+[data-reduced-motion='true'] .capture-cover.has-photo .review-photo {
   animation: none;
 }
 [data-reduced-motion='true'] .album-tile .review-photo {
