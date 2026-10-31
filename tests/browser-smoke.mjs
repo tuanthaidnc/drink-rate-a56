@@ -542,6 +542,7 @@ try {
             };
           }),
       );
+      await writeFile(resolve(output,'capture-before-reload.json'), JSON.stringify({pending:await store(p,'capture-drafts','pending'),writes:await p.evaluate(()=>window.__draftWrites)},null,2));
       await p.reload();
       try {
         await p.getByLabel('Tên quán').waitFor();
