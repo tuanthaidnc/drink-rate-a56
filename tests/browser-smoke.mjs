@@ -385,10 +385,26 @@ try {
       await p.getByRole('heading', { name: 'Sửa đánh giá', exact: true }).waitFor();
       await p.locator('.photo-grid img').nth(1).waitFor();
       assert.deepEqual(await readDoc(p), saved);
-      await p.getByRole('button', { name: 'Lưu đánh giá & vị trí', exact: true }).click();
+      await p
+        .getByLabel('Thêm ảnh món ăn hoặc quán')
+        .setInputFiles({
+          name: 'broken.jpg',
+          mimeType: 'image/jpeg',
+          buffer: Buffer.from('not an image'),
+        });
+      await p.getByRole('alert').filter({ hasText: 'Ảnh bị lỗi hoặc không đọc được' }).waitFor();
+      assert.equal(await p.locator('.photo-grid img').count(), 2);
+      await p.evaluate(() => {
+        window.__cancelCamera = false;
+      });
+      await p.getByRole('button', { name: 'Chụp', exact: true }).click();
+      await p.locator('.photo-grid img').nth(2).waitFor();
+      assert.equal(await p.getByRole('button', { name: 'Chụp', exact: true }).isDisabled(), true);
+      assert.equal(await p.getByLabel('Thêm ảnh món ăn hoặc quán').isDisabled(), true);
+      await p.getByRole('button', { name: 'Lưu cập nhật quán', exact: true }).click();
       await p.getByRole('heading', { name: 'Quán xá (1)', exact: true }).waitFor();
       const restored = await readDoc(p);
-      assert.equal(restored.reviews[0].photoIds.length, 2);
+      assert.equal(restored.reviews[0].photoIds.length, 3);
       assert.equal(restored.reviews[0].note, 'Ghi chú chưa lưu');
       assert.equal(restored.reviews[0].totalScore, saved.reviews[0].totalScore);
       await writeFile(
