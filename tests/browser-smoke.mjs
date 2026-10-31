@@ -417,7 +417,7 @@ try {
       await p.getByRole('button', { name: 'Hủy', exact: true }).click();
       assert.equal(await p.getByRole('dialog').count(), 0);
       await nav(p, 'Bản đồ');
-      await p.getByRole('heading', { name: 'Bản đồ trong bộ lọc' }).waitFor();
+      await p.getByRole('region', { name: 'Điều khiển bản đồ', exact: true }).waitFor();
       await p.screenshot({ path: resolve(output, '03-mobile-offline-map.png') });
       assert.deepEqual(errors, []);
       await p.goto(new URL('assets/index.html', base).href);
@@ -933,9 +933,33 @@ try {
         await assertNoOverflow(p);
       }
       assert.deepEqual(errors, []);
+      await p.setViewportSize({ width: 384, height: 852 });
+      await p.getByRole('button', { name: 'Đổi sang giao diện sáng', exact: true }).click();
+      await nav(p, 'Chấm điểm');
+      const lightReviewContrast = await p
+        .locator('.bottom-dock button[data-nav-tab="review"]')
+        .evaluate((button) => {
+          const luminance = (color) => {
+            const c = color
+              .match(/[\d.]+/g)
+              .slice(0, 3)
+              .map(Number)
+              .map((v) => {
+                const n = v / 255;
+                return n <= 0.04045 ? n / 12.92 : ((n + 0.055) / 1.055) ** 2.4;
+              });
+            return c[0] * 0.2126 + c[1] * 0.7152 + c[2] * 0.0722;
+          };
+          const fg = luminance(getComputedStyle(button).color),
+            bg = luminance(
+              getComputedStyle(button.querySelector('.nav-indicator')).backgroundColor,
+            );
+          return (Math.max(fg, bg) + 0.05) / (Math.min(fg, bg) + 0.05);
+        });
+      assert.ok(lightReviewContrast >= 4.5, `Light review caption contrast ${lightReviewContrast}`);
       await writeFile(
         resolve(output, 'dock-regression.json'),
-        JSON.stringify({ pass: true, measurements }, null, 2),
+        JSON.stringify({ pass: true, lightReviewContrast, measurements }, null, 2),
       );
     },
   );
