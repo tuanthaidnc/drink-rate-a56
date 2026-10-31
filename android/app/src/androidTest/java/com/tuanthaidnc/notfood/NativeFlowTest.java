@@ -43,6 +43,7 @@ public class NativeFlowTest {
     private void tap(String selector) throws Exception {
         String quoted = JSONObject.quote(selector);
         until("!!document.querySelector(" + quoted + ")");
+        js("document.querySelector(" + quoted + ").scrollIntoView({block:'center',inline:'nearest'})");
         JSONObject box = new JSONObject((String) js("JSON.stringify((()=>{const r=document.querySelector(" + quoted + ").getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2,viewport:innerWidth}})())"));
         int[] origin = new int[2];
         InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> web.getLocationOnScreen(origin));
@@ -66,6 +67,9 @@ public class NativeFlowTest {
         String oldScale = device.executeShellCommand("settings get system font_scale").trim();
         proof = new File(InstrumentationRegistry.getInstrumentation().getTargetContext().getExternalFilesDir(null), "qa");
         assertTrue(proof.exists() || proof.mkdirs());
+        // Isolated CI emulator permissions; physical A56 permissions are user-controlled.
+        InstrumentationRegistry.getInstrumentation().getUiAutomation().grantRuntimePermission("com.tuanthaidnc.notfood", android.Manifest.permission.ACCESS_COARSE_LOCATION);
+        InstrumentationRegistry.getInstrumentation().getUiAutomation().grantRuntimePermission("com.tuanthaidnc.notfood", android.Manifest.permission.ACCESS_FINE_LOCATION);
         try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
             scenario.onActivity(activity -> web = activity.getBridge().getWebView());
             until("!!document.querySelector('.bottom-dock')");

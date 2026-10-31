@@ -49,6 +49,10 @@ textarea {
   font-weight: 500;
 }
 .page-heading .spin-trigger {
+  width: auto;
+  height: 40px;
+  flex-direction: row;
+  border-radius: 14px;
   min-height: 40px;
   padding: 8px 12px;
   font-size: 13px;
@@ -526,6 +530,25 @@ textarea {
 .capture-map .map-surface {
   height: 100%;
   min-height: 0;
+}
+.picked-pin {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: var(--accent);
+  border: 3px solid var(--bg-canvas);
+  border-radius: 50%;
+  box-shadow: 0 3px 8px #0004;
+}
+.picked-pin::after {
+  content: '';
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: #182100;
+  border-radius: 50%;
+  left: 8px;
+  top: 8px;
 }
 .gps-status {
   position: absolute;

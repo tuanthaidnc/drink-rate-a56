@@ -531,7 +531,23 @@ try {
           }),
       );
       await p.reload();
-      await p.getByLabel('Tên quán').waitFor();
+      try {
+        await p.getByLabel('Tên quán').waitFor();
+      } catch (error) {
+        await writeFile(
+          resolve(output, 'capture-reload-debug.json'),
+          JSON.stringify(
+            {
+              pending: await store(p, 'capture-drafts', 'pending'),
+              calls: await p.evaluate(() => window.__calls),
+              body: await p.locator('body').innerText(),
+            },
+            null,
+            2,
+          ),
+        );
+        throw error;
+      }
       assert.equal(await p.getByLabel('Tên quán').inputValue(), 'Bản nháp khôi phục');
       assert.deepEqual(await p.evaluate(() => window.__calls), []);
       assert.equal((await readDoc(p)).reviews.length, 0);
@@ -802,7 +818,7 @@ try {
       await importText(p, JSON.stringify(backup));
       await p.getByRole('button', { name: 'Xác nhận khôi phục' }).click();
       await p.waitForFunction(() => document.querySelectorAll('[role=dialog]').length === 1);
-      assert.deepEqual((await readDoc(p)).reviews, backup.reviews);
+      assert.deepEqual(JSON.parse(JSON.stringify((await readDoc(p)).reviews)), backup.reviews);
     },
   );
   await scenario('delete has a working undo and preserves original review', async () => {
@@ -877,5 +893,5 @@ try {
   for (const c of contexts) await c.close();
   await browser.close();
 }
-console.log(`${results.filter(r=>r.pass).length}/${results.length} scenarios passed`);
-if(results.some(r=>!r.pass))process.exitCode=1;
+console.log(`${results.filter((r) => r.pass).length}/${results.length} scenarios passed`);
+if (results.some((r) => !r.pass)) process.exitCode = 1;

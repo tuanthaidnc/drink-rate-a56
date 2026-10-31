@@ -54,7 +54,7 @@ export default function MapSurface({
           compact: true,
           customAttribution: `<a href="${import.meta.env.BASE_URL}data/map-style-licenses.txt" target="_blank" rel="noreferrer">Style: CARTO / OpenMapTiles</a>`,
         },
-        cooperativeGestures: true,
+        cooperativeGestures: !onPin,
         dragRotate: false,
         touchPitch: false,
       });
@@ -137,7 +137,8 @@ export default function MapSurface({
     if (pin) {
       const el = document.createElement('div');
       el.className = 'picked-pin';
-      el.textContent = '📍 Vị trí đã ghim';
+      el.setAttribute('role', 'img');
+      el.setAttribute('aria-label', 'Ghim quán');
       const marker = new Marker({ element: el, anchor: 'bottom', draggable: true })
         .setLngLat([pin.lng, pin.lat])
         .addTo(map);
