@@ -52,14 +52,17 @@ export function parseReviewPrice(raw: string): number | null {
 }
 
 export function automaticReviewName(category: ReviewItem['category'], at: Date): string {
-  const time = new Intl.DateTimeFormat('vi-VN', {
+  const parts = new Intl.DateTimeFormat('vi-VN', {
     timeZone: 'Asia/Ho_Chi_Minh',
     day: '2-digit',
     month: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
-  }).format(at);
+  }).formatToParts(at);
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((item) => item.type === type)?.value ?? '';
+  const time = `${part('hour')}:${part('minute')} ${part('day')}/${part('month')}`;
   return `${category === 'food' ? 'Quán ăn' : 'Quán nước'} · ${time}`;
 }
 

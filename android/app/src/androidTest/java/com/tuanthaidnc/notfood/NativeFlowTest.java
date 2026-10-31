@@ -14,6 +14,7 @@ import java.nio.file.Files;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 import org.junit.Test;
@@ -73,11 +74,18 @@ public class NativeFlowTest {
         try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
             scenario.onActivity(activity -> web = activity.getBridge().getWebView());
             until("!!document.querySelector('.bottom-dock')");
-            // DOM can be ready while the system launch splash still owns input.
-            // Wait for the native accessibility surface before the first touch.
+            // The emulator can omit the WebView accessibility root on cold launch.
+            // Native window focus, followed by an actual camera-launch touch, is
+            // the input readiness signal; an empty AX tree is not a UI failure.
             device.waitForIdle();
             screenshot("native-launch");
-            assertTrue("NỐT foreground native window is visible", device.wait(Until.hasObject(By.pkg("com.tuanthaidnc.notfood").depth(0)), 15000));
+            AtomicBoolean focused = new AtomicBoolean(false);
+            long focusDeadline = System.currentTimeMillis() + 15000;
+            do {
+                scenario.onActivity(activity -> focused.set(activity.hasWindowFocus() && web.isShown()));
+                if (!focused.get()) Thread.sleep(100);
+            } while (!focused.get() && System.currentTimeMillis() < focusDeadline);
+            assertTrue("NỐT native window is visible and has input focus", focused.get());
             assertDockGeometry();
             assertEquals("android", js("document.documentElement.dataset.platform"));
             assertEquals("https://localhost", js("location.origin"));
