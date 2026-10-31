@@ -571,7 +571,7 @@ export default function App() {
                       className="icon-button update-button"
                       aria-label="Cập nhật"
                       title="Cập nhật"
-                      disabled={dirty || store.busy || !!visitItem}
+                      disabled={dirty || photoBusy || store.busy || !!visitItem}
                       onClick={() => pwa.apply()}
                     >
                       <RefreshCw />
@@ -802,6 +802,8 @@ export default function App() {
                                 if (dirty) setLeaveTo('places');
                                 else {
                                   setDraft(null);
+                                  setCaptureDraft(undefined);
+                                  void forgetCaptureRecovery().catch(() => {});
                                   navigate('places');
                                 }
                               }}

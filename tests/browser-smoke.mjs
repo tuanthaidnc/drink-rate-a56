@@ -199,7 +199,11 @@ const readDoc = (p) =>
           const db = q.result,
             r = db.transaction('documents').objectStore('documents').get('current');
           r.onsuccess = () => {
-            resolve(r.result);
+            resolve(
+              r.result?.blob
+                ? { ...r.result, blob: { size: r.result.blob.size, type: r.result.blob.type } }
+                : r.result,
+            );
             db.close();
           };
           r.onerror = () => reject(r.error);
@@ -215,7 +219,11 @@ async function store(p, name, key) {
           const db = q.result,
             r = db.transaction(name).objectStore(name).get(key);
           r.onsuccess = () => {
-            resolve(r.result);
+            resolve(
+              r.result?.blob
+                ? { ...r.result, blob: { size: r.result.blob.size, type: r.result.blob.type } }
+                : r.result,
+            );
             db.close();
           };
         };
@@ -260,13 +268,11 @@ async function tools(p) {
   await p.getByRole('dialog', { name: 'Tùy chọn', exact: true }).waitFor();
 }
 async function importText(p, text) {
-  await p
-    .getByLabel('Chọn file JSON để khôi phục')
-    .setInputFiles({
-      name: 'backup.json',
-      mimeType: 'application/json',
-      buffer: Buffer.from(text),
-    });
+  await p.getByLabel('Chọn file JSON để khôi phục').setInputFiles({
+    name: 'backup.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(text),
+  });
 }
 async function noOverflow(p) {
   assert.ok(
@@ -402,13 +408,11 @@ try {
     assert.equal(await p.getByRole('button', { name: 'Lưu quán' }).count(), 0);
     assert.deepEqual(await p.evaluate(() => window.__calls), ['camera']);
     const img = await p.evaluate(() => window.__cameraImage.split(',')[1]);
-    await p
-      .getByLabel('Chọn ảnh để tiếp tục')
-      .setInputFiles({
-        name: 'photo.jpg',
-        mimeType: 'image/jpeg',
-        buffer: Buffer.from(img, 'base64'),
-      });
+    await p.getByLabel('Chọn ảnh để tiếp tục').setInputFiles({
+      name: 'photo.jpg',
+      mimeType: 'image/jpeg',
+      buffer: Buffer.from(img, 'base64'),
+    });
     await p.getByRole('heading', { name: 'Vị trí quán', exact: true }).waitFor();
     await p.getByRole('button', { name: 'Dùng vị trí này' }).click();
     await save(p);
@@ -579,13 +583,11 @@ try {
     async () => {
       const { page: p } = await setup();
       await scoreStep(p);
-      await p
-        .getByLabel('Thêm ảnh món ăn hoặc quán')
-        .setInputFiles({
-          name: 'broken.jpg',
-          mimeType: 'image/jpeg',
-          buffer: Buffer.from('broken'),
-        });
+      await p.getByLabel('Thêm ảnh món ăn hoặc quán').setInputFiles({
+        name: 'broken.jpg',
+        mimeType: 'image/jpeg',
+        buffer: Buffer.from('broken'),
+      });
       await p.getByRole('alert').filter({ hasText: 'Ảnh bị lỗi' }).waitFor();
       assert.equal(await p.locator('.photo-grid img').count(), 1);
       await p.getByRole('button', { name: 'Chụp', exact: true }).click();
@@ -793,7 +795,9 @@ try {
       await p.getByLabel(/Thay toàn bộ/).check();
       await p.getByLabel(/Tôi đã kiểm tra file/).check();
       await p.getByRole('button', { name: 'Xác nhận khôi phục' }).click();
-      await p.getByRole('dialog', { name: /Khôi phục/ }).waitFor({ state: 'detached' });
+      await p
+        .getByRole('dialog', { name: 'Nhập dữ liệu', exact: true })
+        .waitFor({ state: 'detached' });
       assert.equal((await readDoc(p)).reviews.length, 0);
       await importText(p, JSON.stringify(backup));
       await p.getByRole('button', { name: 'Xác nhận khôi phục' }).click();

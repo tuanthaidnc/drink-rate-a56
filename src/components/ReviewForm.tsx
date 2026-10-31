@@ -178,6 +178,8 @@ export default function ReviewForm({
   const gpsAttempted = useRef(recovered?.gpsAttempted ?? false);
   const manualPin = useRef(initial.locationSource === 'manual' && hasConfirmedLocation(initial));
   const autoOpened = useRef(false);
+  const saving = useRef(false);
+  const previouslyDirty = useRef(false);
   const alive = useRef(true);
   const quiet = useQuietMotion();
   useEffect(() => {
@@ -306,10 +308,13 @@ export default function ReviewForm({
     signature !== baseline || (!isEdit && !initial.isDemo && hasConfirmedLocation(initial));
   useEffect(() => {
     onDirtyChange(dirty);
+    if (!dirty && previouslyDirty.current && !photoBusy) void clearCaptureDraft().catch(() => {});
+    previouslyDirty.current = dirty;
   }, [dirty, onDirtyChange]);
   useEffect(() => {
-    if (!isNativeApp || photoBusy || !draft.photoIds.length) return;
+    if (!isNativeApp || photoBusy || busy || !dirty || saving.current) return;
     const timer = setTimeout(() => {
+      if (saving.current) return;
       void saveCaptureDraft({
         original: initial,
         isEdit,
@@ -335,6 +340,8 @@ export default function ReviewForm({
     initial,
     isEdit,
     recovered?.recoveryId,
+    busy,
+    dirty,
   ]);
   const change = <K extends keyof ReviewItem>(key: K, value: ReviewItem[K]) =>
     setDraft((r) => {
@@ -419,7 +426,13 @@ export default function ReviewForm({
       if (target) document.getElementById(target)?.focus();
       return;
     }
-    await onSave(item, photos, firstVisit, initial.updatedAt);
+    saving.current = true;
+    try {
+      if (!(await onSave(item, photos, firstVisit, initial.updatedAt))) saving.current = false;
+    } catch (error) {
+      saving.current = false;
+      setError((error as Error).message);
+    }
   };
   return (
     <form

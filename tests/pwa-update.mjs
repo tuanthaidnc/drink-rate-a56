@@ -95,7 +95,8 @@ try {
     await r.update();
   });
   await p.getByRole('button', { name: 'Cập nhật', exact: true }).waitFor({ timeout: 45000 });
-  await p.getByRole('navigation').getByRole('button', { name: 'Chấm điểm', exact: true }).click();
+  await p.locator('.album-tile').click();
+  await p.getByRole('button', { name: /^Sửa / }).click();
   await p.getByLabel('Tên quán').fill('Bản nháp trước cập nhật');
   assert.equal(await p.getByRole('button', { name: 'Cập nhật', exact: true }).isDisabled(), true);
   await p.getByRole('button', { name: 'Hủy', exact: true }).click();
