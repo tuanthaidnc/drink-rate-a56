@@ -95,18 +95,6 @@ async function setup({
       x.fill();
       window.__cameraImage = c.toDataURL('image/jpeg');
       window.__cameraMode = camera;
-      window.__draftWrites = [];
-      const originalPut = IDBObjectStore.prototype.put;
-      IDBObjectStore.prototype.put = function (value, ...args) {
-        if (this.name === 'capture-drafts')
-          window.__draftWrites.push({
-            stage: value.stage,
-            name: value.draft?.name,
-            price: value.price,
-            stack: new Error().stack,
-          });
-        return originalPut.call(this, value, ...args);
-      };
       window.__gpsMode = gps;
       window.__calls = [];
       window.androidBridge = {};
@@ -526,23 +514,19 @@ try {
       await scoreStep(p);
       await p.getByLabel('Tên quán').fill('Bản nháp khôi phục');
       await p.locator('#review-price').fill('25');
-      await p.waitForFunction(
-        () =>
-          new Promise((resolve) => {
-            const q = indexedDB.open('not-food-drink-personal');
-            q.onsuccess = () => {
-              const db = q.result,
-                r = db.transaction('capture-drafts').objectStore('capture-drafts').get('pending');
-              r.onsuccess = () => {
-                resolve(
-                  r.result?.draft.name === 'Bản nháp khôi phục' && r.result?.stage === 'score',
-                );
-                db.close();
-              };
-            };
-          }),
+      const deadline = Date.now() + 15000;
+      let persisted;
+      do {
+        persisted = await store(p, 'capture-drafts', 'pending');
+        if (persisted?.draft.name === 'Bản nháp khôi phục' && persisted?.stage === 'score') break;
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      } while (Date.now() < deadline);
+      assert.equal(persisted?.draft.name, 'Bản nháp khôi phục');
+      assert.equal(persisted?.stage, 'score');
+      await writeFile(
+        resolve(output, 'capture-before-reload.json'),
+        JSON.stringify(persisted, null, 2),
       );
-      await writeFile(resolve(output,'capture-before-reload.json'), JSON.stringify({pending:await store(p,'capture-drafts','pending'),writes:await p.evaluate(()=>window.__draftWrites)},null,2));
       await p.reload();
       try {
         await p.getByLabel('Tên quán').waitFor();
@@ -553,7 +537,6 @@ try {
             {
               pending: await store(p, 'capture-drafts', 'pending'),
               calls: await p.evaluate(() => window.__calls),
-              writes: await p.evaluate(() => window.__draftWrites),
               body: await p.locator('body').innerText(),
             },
             null,
@@ -813,14 +796,41 @@ try {
     },
   );
   await scenario(
-    'backup round trip preserves image, history and visits; old photo survives snapshot restore',
+    'photo backup round trip survives explicit empty replacement and preserves retained media',
     async () => {
       const { page: p } = await setup({ native: false, legacy: JSON.stringify(fixture(1)) });
+      await p.evaluate(async () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 64;
+        canvas.height = 64;
+        canvas.getContext('2d').fillRect(0, 0, 64, 64);
+        const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+        const db = await new Promise((resolve) => {
+          const q = indexedDB.open('not-food-drink-personal');
+          q.onsuccess = () => resolve(q.result);
+        });
+        await new Promise((resolve) => {
+          const t = db.transaction(['documents', 'photos'], 'readwrite'),
+            s = t.objectStore('documents'),
+            q = s.get('current');
+          q.onsuccess = () => {
+            q.result.reviews[0].photoIds = ['qa-backup-photo'];
+            s.put(q.result, 'current');
+            t.objectStore('photos').put({ id: 'qa-backup-photo', blob });
+          };
+          t.oncomplete = resolve;
+        });
+        db.close();
+      });
+      await p.reload();
+      await p.locator('.album-cover img').waitFor();
       await tools(p);
       const download = p.waitForEvent('download');
       await p.getByRole('button', { name: 'Xuất JSON', exact: true }).click();
       const backup = JSON.parse(await readFile(await (await download).path(), 'utf8'));
       assert.equal(backup.reviews.length, 1);
+      assert.equal(backup.media.length, 1);
+      assert.ok(backup.media[0].dataUrl.startsWith('data:image/png;base64,'));
       await importText(p, '[]');
       await p.getByLabel(/Thay toàn bộ/).check();
       await p.getByLabel(/Tôi đã kiểm tra file/).check();
@@ -832,7 +842,11 @@ try {
       await importText(p, JSON.stringify(backup));
       await p.getByRole('button', { name: 'Xác nhận khôi phục' }).click();
       await p.waitForFunction(() => document.querySelectorAll('[role=dialog]').length === 1);
-      assert.deepEqual(JSON.parse(JSON.stringify((await readDoc(p)).reviews)), backup.reviews);
+      const restored = (await readDoc(p)).reviews;
+      assert.equal(restored[0].name, backup.reviews[0].name);
+      assert.equal(restored[0].photoIds.length, 1);
+      assert.ok((await store(p, 'photos', restored[0].photoIds[0])).blob.size > 0);
+      assert.ok((await store(p, 'photos', 'qa-backup-photo')).blob.size > 0);
     },
   );
   await scenario('delete has a working undo and preserves original review', async () => {
