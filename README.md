@@ -4,12 +4,12 @@ Sổ trải nghiệm cá nhân để chọn quán hợp gu, giá và vị trí; 
 
 ## Dùng ứng dụng
 
-- Chấm điểm mới tự mở camera; bắt buộc có ảnh trước khi tự lấy GPS. Sửa/ghim thủ công nếu cần, xác nhận vị trí rồi nhập tên/giá/điểm và lưu. Hủy camera không gọi GPS. Chỉnh sửa quán cũ giữ ảnh/tọa độ và không tự chụp hay định vị lại. Chọn quán hoặc mở Maps không tự ghi đã ghé.
+- Chấm điểm mới tự mở camera; nhận một ảnh rồi vào thẳng giá và ba/bốn thanh điểm. GPS chạy nền; chỉ mở ghim để sửa nếu cần, GPS lỗi vẫn lưu được. Chỉ cần ảnh và giá; tên/ghi chú ở Thông tin thêm. Tên trống dùng loại quán và thời gian, không đoán tên địa điểm. Tự ghi thời gian khi lưu, không nhập ngày hay giờ mở cửa. Chụp lại thay ảnh hiện tại; hủy camera giữ nguyên ảnh/bản nháp trước đó. Chỉnh sửa quán cũ không tự chụp hay định vị lại. Chọn quán hoặc mở Maps không tự ghi đã ghé.
 - Ghi lượt ghé riêng với ngày, món và tiền thực trả. Tiền để trống được hiển thị là chưa biết, không suy từ giá chấm điểm.
 - Tìm/lọc cùng một tập quán trong danh sách, bản đồ, vòng quay và thống kê quán. Chi tiêu chu kỳ được ghi rõ là toàn bộ quán thật.
 - Xuất JSON ở Thống kê. File gồm đánh giá, ảnh, lịch sử điểm, lượt ghé và tùy chọn; giữ một bản ngoài ứng dụng trước khi đổi máy hoặc xóa dữ liệu Chrome.
 - Ứng dụng chuẩn bị các màn hình để mở và lưu dữ liệu không cần mạng; chỉ hiện biểu tượng khi ngoại tuyến hoặc cần thử lại. Nền bản đồ, tra địa chỉ và Google Maps cần mạng.
-- Bản cập nhật hiện biểu tượng ↻; chỉ cần lưu hoặc hủy nếu đã sửa nội dung. Mở form nhưng chưa sửa, hoặc sửa rồi hoàn tác, có thể đổi tab ngay. Giữ nguyên URL và ứng dụng đã cài để giữ cùng kho dữ liệu.
+- Chuyển tab giữ bản nháp để nhập tiếp, không hỏi rời màn hình. Muốn bỏ hẳn dùng Bỏ bản nháp trong Thông tin thêm. Bản cập nhật hiện biểu tượng ↻ sau khi lưu hoặc bỏ bản nháp. Giữ nguyên URL và ứng dụng đã cài để giữ cùng kho dữ liệu.
 
 ## Giao diện và chuyển động
 
@@ -51,7 +51,7 @@ Chưa có tài khoản hay đồng bộ đám mây. Dữ liệu máy tính và �
 ## Nguồn địa điểm và bản đồ
 
 - Danh mục 34 tỉnh/thành và 3.321 phường/xã/đặc khu theo [Quyết định 19/2025/QĐ-TTg](https://vanban.chinhphu.vn/?docid=214409&pageid=27160). Bản chuyển dạng từ [VietnamProvinces](https://provinces.open-api.vn/), tải 30/10/2026, lưu cùng app. Kiểm tra số lượng/mã duy nhất; chưa đối chiếu thủ công toàn bộ với PDF ký số hoặc xác nhận mọi thay đổi sau 01/07/2025.
-- MapLibre GL + [OpenFreeMap](https://openfreemap.org/), OpenMapTiles và OpenStreetMap. Style địa phương giữ tên đường, bỏ nhãn POI. Không dùng tham số Google tile không công bố; không vẽ lộ trình giả.
+- MapLibre GL + [OpenFreeMap](https://openfreemap.org/), OpenMapTiles và OpenStreetMap. Style địa phương giữ tên đường, bỏ nhãn POI; kéo bằng một ngón, nguồn thu gọn trong nút thông tin. Không dùng tham số Google tile không công bố; không vẽ lộ trình giả.
 - Tra địa chỉ Nominatim chỉ khi người dùng bấm, có cache và giới hạn tối thiểu 1,1 giây/đề nghị, khóa đồng thời giữa cửa sổ. Không tự động tra khi lưu. [Chính sách nguồn](https://operations.osmfoundation.org/policies/nominatim/).
 - Font Plus Jakarta Sans và JetBrains Mono được lưu tại chỗ, kèm giấy phép OFL. Làm mới bằng `python scripts/vendor-fonts.py`.
 
