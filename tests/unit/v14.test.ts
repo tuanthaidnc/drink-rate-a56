@@ -151,5 +151,5 @@ test('quick scoring accepts Vietnamese decimals and uses current Vietnam time fo
   const label = automaticReviewName('food', new Date('2026-10-30T23:15:00Z'));
   assert.match(label, /^Quán ăn · /);
   assert.ok(label.includes('06:15'));
-  assert.ok(label.includes('31\/10'));
+  assert.ok(label.includes('31/10'));
 });

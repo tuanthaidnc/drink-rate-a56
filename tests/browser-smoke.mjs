@@ -965,8 +965,7 @@ try {
     await nav(p, 'Quán xá');
     await p.locator('.album-tile').waitFor();
     await editFirst(p);
-    await p.locator('.form-address>summary').click();
-    await p.getByRole('button', { name: 'Chọn từ danh mục' }).click();
+    await p.getByRole('button', { name: 'Đà Nẵng', exact:true }).click();
     await p
       .getByRole('button', { name: /Phường Thanh Khê/ })
       .first()
