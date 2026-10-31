@@ -154,6 +154,7 @@ export default function ReviewForm({
     recovered?.reviewDate ?? dateInput(initial.reviewedAt ?? initial.createdAt),
   );
   const [error, setError] = useState('');
+  const [photoError, setPhotoError] = useState('');
   const [location, setLocation] = useState(false);
   const [pinPicker, setPinPicker] = useState(false);
   const [photos, setPhotos] = useState<PhotoData[]>(recovered?.photos ?? []);
@@ -172,22 +173,24 @@ export default function ReviewForm({
       photoIds: [...current.photoIds, ...added.map((photo) => photo.id)],
     }));
     setError('');
+    setPhotoError('');
   };
   const importPhotos = async (files: File[]) => {
     if (!files.length || photoOperation.current) return;
     if (draft.photoIds.length + files.length > 3) {
-      setError('Mỗi quán tối đa 3 ảnh.');
+      setPhotoError('Mỗi quán tối đa 3 ảnh.');
       return;
     }
     photoOperation.current = true;
     setPhotoBusy(true);
+    setPhotoError('');
     try {
       const added: PhotoData[] = [];
       // Sequential decoding bounds peak memory when selecting three large photos.
       for (const file of files) added.push(await compressPhoto(file));
       attach(added);
     } catch (error) {
-      setError((error as Error).message);
+      setPhotoError((error as Error).message);
     } finally {
       photoOperation.current = false;
       setPhotoBusy(false);
@@ -201,6 +204,7 @@ export default function ReviewForm({
     if (photoOperation.current || draft.photoIds.length >= 3) return;
     photoOperation.current = true;
     setPhotoBusy(true);
+    setPhotoError('');
     try {
       const next = await takeReviewPhoto({
         original: initial,
@@ -215,7 +219,7 @@ export default function ReviewForm({
       if (next) attach(next.photos.filter((photo) => !photos.some((p) => p.id === photo.id)));
       await clearCaptureDraft();
     } catch (error) {
-      setError((error as Error).message);
+      setPhotoError((error as Error).message);
     } finally {
       photoOperation.current = false;
       setPhotoBusy(false);
@@ -697,6 +701,11 @@ export default function ReviewForm({
             <LoaderCircle className="photo-spinner" size={18} /> Đang xử lý ảnh…
           </div>
         )}
+        {photoError && (
+          <p role="alert" className="alert">
+            {photoError}
+          </p>
+        )}
         <div className="photo-grid">
           {draft.photoIds.map((id, index) => (
             <div className="photo-item" key={id}>
@@ -804,11 +813,6 @@ export default function ReviewForm({
           )}
         </div>
       </details>
-      {error && (
-        <p role="alert" className="alert">
-          {error}
-        </p>
-      )}
       <Button type="submit" className="w-full" disabled={busy || photoBusy}>
         {busy
           ? 'Đang lưu trên thiết bị…'

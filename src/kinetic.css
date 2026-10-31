@@ -1172,6 +1172,9 @@ h2 {
   min-height: 44px;
   gap: 7px;
 }
+[data-platform='android'] .photo-actions .button {
+  min-height: 48px;
+}
 .photo-actions [data-disabled='true'] {
   opacity: 0.45;
   cursor: default;
