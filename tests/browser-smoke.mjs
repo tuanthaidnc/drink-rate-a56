@@ -118,6 +118,7 @@ async function setup({
           { name: 'NotDisplay', methods: [{ name: 'preferences', rtype: 'promise' }] },
         ],
         nativeCallback: (plugin, method, options, callback) => {
+          if (options.eventName === 'appRestoredResult') window.__restoredCallback = callback;
           if (
             options.eventName === 'appRestoredResult' &&
             sessionStorage.getItem('restore-camera')
@@ -394,6 +395,60 @@ try {
       assert.deepEqual(await p.evaluate(() => window.__calls), ['camera']);
       assert.equal(await p.evaluate(() => window.__persistedBeforeCamera), true);
       assert.equal(await p.getByLabel('Tên quán').count(), 0);
+      await nav(p, 'Thống kê');
+      await p.locator('.stat-grid').waitFor();
+      assert.equal(await p.getByRole('dialog').count(), 0);
+      assert.equal((await readDoc(p)).reviews.length, 0);
+    },
+  );
+  await scenario(
+    'late restored camera cancellation does not mark an empty form dirty',
+    async () => {
+      const { page: p } = await setup({ camera: 'cancel' });
+      await nav(p, 'Chấm điểm');
+      await p.waitForFunction(() => !document.querySelector('.capture-processing'));
+      const original = createReview();
+      const date = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Ho_Chi_Minh',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(new Date(original.createdAt));
+      await p.evaluate(
+        async ({ original, date }) => {
+          const db = await new Promise((r) => {
+            const q = indexedDB.open('not-food-drink-personal');
+            q.onsuccess = () => r(q.result);
+          });
+          await new Promise((r) => {
+            const t = db.transaction('capture-drafts', 'readwrite');
+            t.objectStore('capture-drafts').put(
+              {
+                original,
+                isEdit: false,
+                draft: original,
+                price: '',
+                reviewDate: date,
+                firstVisit: false,
+                photos: [],
+                recoveryId: 'qa-cancel-recovery',
+                stage: 'capture',
+              },
+              'pending',
+            );
+            t.oncomplete = r;
+          });
+          db.close();
+          window.__restoredCallback({
+            pluginId: 'Camera',
+            methodName: 'getPhoto',
+            success: false,
+            error: { message: 'User cancelled photos app' },
+          });
+        },
+        { original, date },
+      );
+      await p.getByRole('heading', { name: 'Chụp ảnh', exact: true }).waitFor();
       await nav(p, 'Thống kê');
       await p.locator('.stat-grid').waitFor();
       assert.equal(await p.getByRole('dialog').count(), 0);

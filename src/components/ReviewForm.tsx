@@ -6,7 +6,7 @@ import { Textarea } from './ui/textarea.tsx';
 import { Field, FieldLabel, FieldGroup } from './ui/field.tsx';
 import * as ToggleGroup from '@animate-ui/react/primitives/radix-ui/toggle-group';
 import * as Slider from '@animate-ui/react/primitives/radix-ui/slider';
-import { reviewDraftSignature } from '../lib/reviewDraft.ts';
+import { reviewDraftIsDirty } from '../lib/reviewDraft.ts';
 import {
   Check,
   MapPin,
@@ -294,18 +294,7 @@ export default function ReviewForm({
         if (alive.current) void importPhotos(files);
       });
   }, []);
-  const baseline = useMemo(
-    () =>
-      reviewDraftSignature(
-        initial,
-        isEdit ? String(initial.priceK) : '',
-        dateInput(initial.reviewedAt ?? initial.createdAt),
-      ),
-    [initial, isEdit],
-  );
-  const signature = reviewDraftSignature(draft, price, reviewDate, firstVisit);
-  const dirty =
-    signature !== baseline || (!isEdit && !initial.isDemo && hasConfirmedLocation(initial));
+  const dirty = reviewDraftIsDirty(initial, draft, price, reviewDate, isEdit, firstVisit);
   useEffect(() => {
     onDirtyChange(dirty);
     if (!dirty && previouslyDirty.current && !photoBusy) void clearCaptureDraft().catch(() => {});

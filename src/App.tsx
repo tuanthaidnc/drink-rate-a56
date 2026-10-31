@@ -58,6 +58,7 @@ import {
   type Visit,
 } from './lib/models.ts';
 import { createReview, validateReview, validateReviews, validateVisit } from './lib/validation.ts';
+import { reviewDraftIsDirty } from './lib/reviewDraft.ts';
 import { DEFAULT_FILTERS, describeFilters, filterReviews, type Filters } from './lib/selection.ts';
 import { directionsUrl, distanceKm, getCurrentPosition, type Position } from './lib/geo.ts';
 import { INITIAL_REVIEWS as DEMO_REVIEWS } from './data/demo.ts';
@@ -224,7 +225,16 @@ export default function App() {
         setDraft(snapshot.original);
         setEditing(snapshot.isEdit);
         setCaptureDraft(snapshot);
-        setDirty(true);
+        setDirty(
+          reviewDraftIsDirty(
+            snapshot.original,
+            snapshot.draft,
+            snapshot.price,
+            snapshot.reviewDate,
+            snapshot.isEdit,
+            snapshot.firstVisit,
+          ),
+        );
         navigate('review');
         if (error) setMessage(error);
       }),

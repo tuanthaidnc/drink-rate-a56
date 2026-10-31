@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { reviewDraftSignature } from '../../src/lib/reviewDraft.ts';
+import { reviewDraftSignature, reviewDraftIsDirty } from '../../src/lib/reviewDraft.ts';
 import {
   createReview,
   validateReviews,
@@ -32,6 +32,15 @@ test('pristine form and changes reverted to baseline are clean', () => {
   assert.notEqual(reviewDraftSignature({ ...r, photoIds: ['photo-new'] }, '31', date), baseline);
   assert.equal(reviewDraftSignature(structuredClone(r), '31', date), baseline);
 });
+test('native recovery and form share a clean baseline for cancelled new captures', () => {
+  const r = createReview('drink', now),
+    date = '2026-10-30';
+  assert.equal(reviewDraftIsDirty(r, structuredClone(r), '', date, false), false);
+  assert.equal(reviewDraftIsDirty(r, structuredClone(r), '31', date, true), false);
+  assert.equal(reviewDraftIsDirty(r, { ...r, photoIds: ['captured'] }, '', date, false), true);
+  assert.equal(reviewDraftIsDirty(r, { ...r, name: 'Giữ bản nháp' }, '', date, false), true);
+});
+
 test('Nốt remap uses the user supplied Maps entity, preserving personal ratings and visits', () => {
   const reviews = validateReviews(INITIAL_REVIEWS, true, now);
   const original = structuredClone(reviews);

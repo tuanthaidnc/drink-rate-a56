@@ -1,4 +1,5 @@
-import type { ReviewItem } from './models.ts';
+import { hasConfirmedLocation, type ReviewItem } from './models.ts';
+import { localDayParts } from './frequency.ts';
 
 /** Compare content, not mount/focus events or automatically generated timestamps. */
 export function reviewDraftSignature(
@@ -39,4 +40,22 @@ export function reviewDraftSignature(
     photoIds: review.photoIds,
     openingHours: review.openingHours,
   });
+}
+
+/** The native recovery callback and the form must derive exactly the same state. */
+export function reviewDraftIsDirty(
+  initial: ReviewItem,
+  draft: ReviewItem,
+  price: string,
+  reviewedDate: string,
+  isEdit: boolean,
+  firstVisit = false,
+): boolean {
+  const p = localDayParts(new Date(initial.reviewedAt ?? initial.createdAt));
+  const initialDate = `${p.year}-${String(p.month + 1).padStart(2, '0')}-${String(p.day).padStart(2, '0')}`;
+  return (
+    reviewDraftSignature(draft, price, reviewedDate, firstVisit) !==
+      reviewDraftSignature(initial, isEdit ? String(initial.priceK) : '', initialDate) ||
+    (!isEdit && !initial.isDemo && hasConfirmedLocation(initial))
+  );
 }
