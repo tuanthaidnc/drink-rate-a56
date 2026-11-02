@@ -18,7 +18,16 @@ test('food portion rebalances takeaway and dine-in; the existing sausage inputs 
     scoringVersion: LEGACY_SCORING_VERSION,
   });
   assert.equal(original.totalScore, 9);
-  const other = validateReview({ ...original, id: 'other', name: 'Một quán khác' });
+  const other = validateReview({
+    ...original,
+    id: 'other',
+    name: 'Một quán khác',
+    taste: 8,
+    foodQuality: 8,
+    cleanliness: 8,
+    space: 7,
+    priceK: 28,
+  });
   const doc = { ...emptyDocument(), reviews: [original, other] };
   const next = applyFoodPortionMigration(doc);
   assert.equal(next.reviews[0].totalScore, 9);
@@ -33,7 +42,10 @@ test('food portion rebalances takeaway and dine-in; the existing sausage inputs 
     'photoIds',
   ] as const)
     assert.deepEqual(next.reviews[0][key], original[key]);
-  assert.deepEqual(next.reviews[1], other);
+  assert.equal(next.reviews[1].portionKey, 'medium');
+  assert.equal(next.reviews[1].totalScore, 7.88);
+  assert.equal(next.reviews[1].taste, other.taste);
+  assert.equal(next.reviews[1].photoIds, other.photoIds);
   assert.deepEqual(applyFoodPortionMigration(next), next);
   assert.equal(
     calculateFoodScore({ ...original, portionKey: 'medium', mode: 'takeaway' }).total,

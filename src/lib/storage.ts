@@ -17,7 +17,11 @@ import {
 } from './validation.ts';
 
 import { applyPlaceCorrections, needsPlaceCorrections } from './placeCorrections.ts';
-import { applyFoodPortionMigration, needsFoodPortionMigration } from './foodPortionMigration.ts';
+import {
+  applyFoodPortionMigration,
+  needsFoodPortionMigration,
+  withDefaultFoodPortion,
+} from './foodPortionMigration.ts';
 import type { CaptureDraft } from './reviewCapture.ts';
 import { isNativeApp } from './platform.ts';
 export const DB_NAME = 'not-food-drink-personal';
@@ -143,7 +147,7 @@ export async function loadDocument(): Promise<ReviewDocument> {
     // photos and original criteria before the explicitly requested migration.
     const { Filesystem, Directory, Encoding } = await import('@capacitor/filesystem');
     await Filesystem.writeFile({
-      path: 'backups/before-v18.json',
+      path: `backups/before-v18-portions-${existing.revision}.json`,
       directory: Directory.External,
       encoding: Encoding.UTF8,
       recursive: true,
@@ -152,7 +156,7 @@ export async function loadDocument(): Promise<ReviewDocument> {
     const drafts = await listCaptureDrafts();
     if (drafts.length)
       await Filesystem.writeFile({
-        path: 'backups/before-v18-drafts.json',
+        path: `backups/before-v18-drafts-${existing.revision}.json`,
         directory: Directory.External,
         encoding: Encoding.UTF8,
         recursive: true,
@@ -178,7 +182,7 @@ export async function loadDocument(): Promise<ReviewDocument> {
   const legacy = readLegacy();
   let initial = emptyDocument();
   if (legacy) initial.reviews = legacy.reviews;
-  initial = applyPlaceCorrections(initial);
+  initial = applyFoodPortionMigration(applyPlaceCorrections(initial));
   const d = await db();
   // Recheck inside the write transaction: two opening tabs must not re-migrate over each other.
   return new Promise((resolve, reject) => {
@@ -365,7 +369,16 @@ export async function saveCaptureDraft(draft: CaptureDraft): Promise<void> {
 }
 export async function getCaptureDraft(): Promise<CaptureDraft | undefined> {
   const d = await db();
-  return request(d.transaction('capture-drafts').objectStore('capture-drafts').get('pending'));
+  const draft = (await request(
+    d.transaction('capture-drafts').objectStore('capture-drafts').get('pending'),
+  )) as CaptureDraft | undefined;
+  return draft
+    ? {
+        ...draft,
+        original: withDefaultFoodPortion(draft.original),
+        draft: withDefaultFoodPortion(draft.draft),
+      }
+    : undefined;
 }
 export async function listCaptureDrafts(): Promise<CaptureDraft[]> {
   const d = await db();
@@ -373,7 +386,12 @@ export async function listCaptureDrafts(): Promise<CaptureDraft[]> {
   const all = (await request(t.objectStore('capture-drafts').getAll())) as CaptureDraft[];
   const grouped = new Map<string, CaptureDraft>();
   for (const draft of all)
-    if (draft?.original?.id && draft.draft) grouped.set(draft.original.id, draft);
+    if (draft?.original?.id && draft.draft)
+      grouped.set(draft.original.id, {
+        ...draft,
+        original: withDefaultFoodPortion(draft.original),
+        draft: withDefaultFoodPortion(draft.draft),
+      });
   return [...grouped.values()];
 }
 export async function clearCaptureDraft(id?: string): Promise<void> {

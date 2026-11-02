@@ -1186,7 +1186,7 @@ try {
     },
   );
   await scenario(
-    'an unrated legacy portion can explicitly choose its current medium slider position',
+    'all legacy food reviews receive the approved medium portion and a recalculated score',
     async () => {
       const food = validateReview({
         ...createReview('food'),
@@ -1195,12 +1195,13 @@ try {
       });
       const { page: p, errors } = await setup({ legacy: JSON.stringify([food]) });
       await editFirst(p);
-      assert.equal(await p.getByText('Chưa chấm', { exact: true }).count(), 1);
+      assert.equal((await readDoc(p)).reviews[0].portionKey, 'medium');
       await p.getByRole('slider', { name: 'Khẩu phần', exact: true }).click();
       await p.getByText('Vừa · 7', { exact: true }).waitFor();
       await p.getByRole('button', { name: 'Cập nhật đánh giá', exact: true }).click();
       await p.locator('.album-tile').waitFor();
       assert.equal((await readDoc(p)).reviews[0].portionKey, 'medium');
+      assert.notEqual((await readDoc(p)).reviews[0].totalScore, food.totalScore);
       assert.deepEqual(errors, []);
     },
   );
