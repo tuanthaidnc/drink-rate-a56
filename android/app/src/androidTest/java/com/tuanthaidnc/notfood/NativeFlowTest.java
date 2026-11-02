@@ -287,6 +287,8 @@ public class NativeFlowTest {
             device.executeShellCommand("settings put system font_scale 1.0");
             Thread.sleep(900);
             scenario.onActivity(activity -> web = activity.getBridge().getWebView());
+            until("!!document.querySelector('.bottom-dock')");
+            nav(4);
             until("!!document.querySelector('[data-stat=average]')");
             assertSystemBarTheme(true);
             screenshot("native-insights-dark");
