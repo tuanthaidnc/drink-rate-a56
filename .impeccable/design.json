@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-02T01:59:35.510Z",
+  "generatedAt": "2026-11-02T04:46:25.932099Z",
   "title": "Design System: NỐT · Photo journal",
   "extensions": {
     "colorMeta": {
@@ -558,6 +558,96 @@
           "oklch(85% 0.13543 120.85)",
           "oklch(95% 0.13543 120.85)"
         ]
+      },
+      "photo-control": {
+        "role": "neutral",
+        "displayName": "Photograph controls and journal labels",
+        "canonical": "#171c17",
+        "tonalRamp": [
+          "oklch(15% 0.01218 145.15)",
+          "oklch(27% 0.01218 145.15)",
+          "oklch(38% 0.01218 145.15)",
+          "oklch(50% 0.01218 145.15)",
+          "oklch(62% 0.01218 145.15)",
+          "oklch(74% 0.01218 145.15)",
+          "oklch(85% 0.01218 145.15)",
+          "oklch(95% 0.01218 145.15)"
+        ]
+      },
+      "camera-ground": {
+        "role": "neutral",
+        "displayName": "Square camera ground",
+        "canonical": "#0e110d",
+        "tonalRamp": [
+          "oklch(15% 0.00943 137.86)",
+          "oklch(27% 0.00943 137.86)",
+          "oklch(38% 0.00943 137.86)",
+          "oklch(50% 0.00943 137.86)",
+          "oklch(62% 0.00943 137.86)",
+          "oklch(74% 0.00943 137.86)",
+          "oklch(85% 0.00943 137.86)",
+          "oklch(95% 0.00943 137.86)"
+        ]
+      },
+      "camera-empty": {
+        "role": "neutral",
+        "displayName": "Square camera waiting surface",
+        "canonical": "#1e211d",
+        "tonalRamp": [
+          "oklch(15% 0.00868 137.82)",
+          "oklch(27% 0.00868 137.82)",
+          "oklch(38% 0.00868 137.82)",
+          "oklch(50% 0.00868 137.82)",
+          "oklch(62% 0.00868 137.82)",
+          "oklch(74% 0.00868 137.82)",
+          "oklch(85% 0.00868 137.82)",
+          "oklch(95% 0.00868 137.82)"
+        ]
+      },
+      "reel-scrim": {
+        "role": "neutral",
+        "displayName": "Reel caption scrim",
+        "canonical": "rgb(0 0 0 / 85%)",
+        "tonalRamp": [
+          "oklch(15% 0.00000 0.00 / 85%)",
+          "oklch(27% 0.00000 0.00 / 85%)",
+          "oklch(38% 0.00000 0.00 / 85%)",
+          "oklch(50% 0.00000 0.00 / 85%)",
+          "oklch(62% 0.00000 0.00 / 85%)",
+          "oklch(74% 0.00000 0.00 / 85%)",
+          "oklch(85% 0.00000 0.00 / 85%)",
+          "oklch(95% 0.00000 0.00 / 85%)"
+        ]
+      },
+      "calendar-scrim": {
+        "role": "neutral",
+        "displayName": "Photograph day scrim",
+        "canonical": "#0008",
+        "tonalRamp": [
+          "oklch(15% 0.00000 0.00 / 53.3333%)",
+          "oklch(27% 0.00000 0.00 / 53.3333%)",
+          "oklch(38% 0.00000 0.00 / 53.3333%)",
+          "oklch(50% 0.00000 0.00 / 53.3333%)",
+          "oklch(62% 0.00000 0.00 / 53.3333%)",
+          "oklch(74% 0.00000 0.00 / 53.3333%)",
+          "oklch(85% 0.00000 0.00 / 53.3333%)",
+          "oklch(95% 0.00000 0.00 / 53.3333%)"
+        ]
+      },
+      "photo-text-shadow": {
+        "role": "neutral",
+        "displayName": "Photograph date text shadow",
+        "canonical": "#000",
+        "tonalRamp": [
+          "oklch(15% 0.00000 0.00)",
+          "oklch(27% 0.00000 0.00)",
+          "oklch(38% 0.00000 0.00)",
+          "oklch(50% 0.00000 0.00)",
+          "oklch(62% 0.00000 0.00)",
+          "oklch(74% 0.00000 0.00)",
+          "oklch(85% 0.00000 0.00)",
+          "oklch(95% 0.00000 0.00)"
+        ]
       }
     },
     "typographyMeta": {
@@ -620,6 +710,34 @@
       "slider-value": {
         "displayName": "Slider Value",
         "purpose": "Tabular quick-score value or the named volume choice."
+      },
+      "metadata": {
+        "displayName": "Metadata",
+        "purpose": "Reel metadata, calendar weekday, review time/score labels and journal counts."
+      },
+      "status": {
+        "displayName": "Status",
+        "purpose": "Reel selection in progress."
+      },
+      "section-title": {
+        "displayName": "Section Title",
+        "purpose": "Reel result name and journal month heading."
+      },
+      "dialog-title": {
+        "displayName": "Dialog Title",
+        "purpose": "Reel sheet and web square-camera title."
+      },
+      "experience-title": {
+        "displayName": "Experience Title",
+        "purpose": "The two entry choices only."
+      },
+      "journal-title": {
+        "displayName": "Journal Title",
+        "purpose": "Selected review day heading."
+      },
+      "calendar-count": {
+        "displayName": "Calendar Count",
+        "purpose": "Supplementary count badge on a day with multiple reviews only; never primary data or actions."
       }
     },
     "shadows": [
@@ -667,6 +785,11 @@
         "name": "slider-thumb-hover",
         "value": "0 0 0 6px color-mix(in srgb, var(--accent) 14%, transparent)",
         "purpose": "Hover halo around the quick-score thumb."
+      },
+      {
+        "name": "calendar-date",
+        "value": "0 1px 4px #000",
+        "purpose": "Keeps the date legible over actual calendar photographs."
       }
     ],
     "motion": [
@@ -748,7 +871,27 @@
       {
         "name": "quick-score-entry",
         "value": "280ms; y 8px → 0",
-        "purpose": "Successful photo enters directly into the photo/price row. No mandatory location stage."
+        "purpose": "Successful square capture enters the photo/price row; takeaway has already locked the venue pin."
+      },
+      {
+        "name": "photo-reel",
+        "value": "4600ms; cubic-bezier(.09,.68,.12,1)",
+        "purpose": "Decelerates into the preselected weighted winner, at most 37 cells; shared photo blob URLs. Quiet motion or a single candidate resolves immediately."
+      },
+      {
+        "name": "reel-reveal",
+        "value": "500ms; cubic-bezier(0.22,1,0.36,1); brightness 1.5 to 1",
+        "purpose": "One bounded reveal after landing; disabled by both reduced-motion mechanisms."
+      },
+      {
+        "name": "journal-month",
+        "value": "300ms; x 14px to 0; cubic-bezier(0.22,1,0.36,1)",
+        "purpose": "Month changes only; quiet motion uses duration zero."
+      },
+      {
+        "name": "experience-press",
+        "value": "200ms; scale(0.97)",
+        "purpose": "Entry-choice press response; global reduced-motion rules apply."
       }
     ],
     "breakpoints": [
@@ -816,18 +959,18 @@
       "css": ".ds-album{display:flex;flex-direction:column;width:100%;min-width:0;padding:0;border:0;border-radius:20px 20px 5px 5px;background:transparent;color:var(--text-primary,#12170e);text-align:left;font-family:var(--font-app,'Plus Jakarta Sans',system-ui,sans-serif);cursor:pointer}.ds-cover{display:block;position:relative;aspect-ratio:1;width:100%;overflow:hidden;isolation:isolate;border:1px solid var(--border-elevated,#d3d8c9);border-radius:20px;background:var(--album-empty,#e9ede4)}.ds-missing{display:grid;place-items:center;width:100%;height:100%;color:var(--text-secondary,#4b5346)}.ds-initial{font-size:clamp(40px,13vw,68px);font-weight:800;line-height:1;color:var(--text-muted,#6c7467);opacity:.6}.ds-missing svg{position:absolute;right:13px;bottom:13px;width:19px;height:19px;opacity:.7}.ds-score,.ds-price{position:absolute;z-index:1;display:flex;align-items:baseline;border-radius:9px;background:#0b100de6;color:#fff;font-variant-numeric:tabular-nums;line-height:1}.ds-score{top:8px;right:8px;padding:7px 8px;font-size:17px;font-weight:750;letter-spacing:-.025em}.ds-price{bottom:8px;left:8px;padding:6px 8px;font-size:13px;font-weight:650}.ds-price small{font-size:11px;margin-left:1px}.ds-caption{display:flex;flex-direction:column;gap:3px;padding:7px 1px 0;width:100%;min-width:0}.ds-caption strong{font-size:13px;font-weight:750;line-height:1.45;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere}.ds-caption>span{font-size:11px;line-height:1.5;color:var(--text-secondary,#4b5346);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ds-album:hover .ds-cover{border-color:var(--accent-bright,#425a00)}.ds-album:focus-visible{outline:3px solid var(--ring,#849e19);outline-offset:4px}.ds-album:active{transform:scale(.96)}@media(prefers-reduced-motion:reduce){.ds-album:active{transform:none}}"
     },
     {
-      "name": "Four-slot Dock",
+      "name": "Five-slot Dock",
       "kind": "nav",
       "refersTo": "bottom-dock",
-      "description": "Static preview of the real four-slot mobile navigation; the camera circle stays lilac.",
-      "html": "<nav class=\"ds-dock\" aria-label=\"Điều hướng chính\"><button class=\"ds-nav-item\" type=\"button\" aria-current=\"page\"><span class=\"ds-nav-icon\"><svg viewBox=\"0 0 24 24\" width=\"23\" height=\"23\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M15 21v-5a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v5\"/><path d=\"M17.774 10.31a1.12 1.12 0 0 0-1.549 0 2.5 2.5 0 0 1-3.451 0 1.12 1.12 0 0 0-1.548 0 2.5 2.5 0 0 1-3.452 0 1.12 1.12 0 0 0-1.549 0 2.5 2.5 0 0 1-3.77-3.248l2.889-4.184A2 2 0 0 1 7 2h10a2 2 0 0 1 1.653.873l2.895 4.192a2.5 2.5 0 0 1-3.774 3.244\"/><path d=\"M4 10.95V19a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8.05\"/></svg></span><span>Quán xá</span></button><button class=\"ds-nav-item\" type=\"button\"><span class=\"ds-nav-icon\"><svg viewBox=\"0 0 24 24\" width=\"23\" height=\"23\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z\"/><path d=\"M15 5.764v15\"/><path d=\"M9 3.236v15\"/></svg></span><span>Bản đồ</span></button><button class=\"ds-nav-item ds-nav-camera\" type=\"button\"><span class=\"ds-nav-icon\"><svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M13.997 4a2 2 0 0 1 1.76 1.05l.486.9A2 2 0 0 0 18.003 7H20a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1.997a2 2 0 0 0 1.759-1.048l.489-.904A2 2 0 0 1 10.004 4z\"/><circle cx=\"12\" cy=\"13\" r=\"3\"/></svg></span><span>Chấm điểm</span></button><button class=\"ds-nav-item\" type=\"button\"><span class=\"ds-nav-icon\"><svg viewBox=\"0 0 24 24\" width=\"23\" height=\"23\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 3v16a2 2 0 0 0 2 2h16\"/><path d=\"M18 17V9\"/><path d=\"M13 17V5\"/><path d=\"M8 17v-3\"/></svg></span><span>Thống kê</span></button></nav>",
-      "css": ".ds-dock{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px;width:100%;max-width:470px;min-height:82px;border:1px solid var(--border-elevated,#d3d8c9);border-radius:99px;padding:7px;background:var(--bg-card,#f6f7f3);box-shadow:0 8px 24px #00000014}.ds-nav-item{display:grid;grid-template-rows:34px auto;align-content:start;align-items:center;justify-items:center;gap:4px;min-height:66px;min-width:0;padding:4px 2px;border:0;border-radius:99px;background:transparent;color:var(--text-secondary,#4b5346);font-family:var(--font-app,'Plus Jakarta Sans',system-ui,sans-serif);font-size:12px;font-weight:500;line-height:1.4;cursor:pointer}.ds-nav-item[aria-current=page]{background:var(--accent-soft,#eaf5bc);color:var(--accent-bright,#425a00)}.ds-nav-item>span:last-child{max-width:100%;overflow-wrap:anywhere;text-align:center}.ds-nav-icon{display:flex;align-items:center;justify-content:center;flex:none;width:34px;height:34px;min-width:34px;min-height:34px;aspect-ratio:1}.ds-nav-camera .ds-nav-icon{border-radius:50%;background:var(--lilac,#b8a4ff);color:#241a42}.ds-nav-camera .ds-nav-icon svg{width:24px;height:24px}.ds-nav-item:focus-visible{outline:2px solid var(--ring,#849e19);outline-offset:3px;}.ds-nav-item:hover{filter:brightness(.97)}@media(max-width:360px){.ds-nav-item>span:last-child{font-size:11px}}"
+      "description": "Five destinations in source order; capture remains centered and lilac. Desktop uses the same order in a rail.",
+      "html": "<nav class=\"ds-dock\" aria-label=\"Điều hướng chính\"><button class=\"ds-nav-item\" type=\"button\" aria-current=\"page\"><span class=\"ds-nav-icon\"><svg viewBox=\"0 0 24 24\" width=\"23\" height=\"23\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M15 21v-5a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v5\"/><path d=\"M17.774 10.31a1.12 1.12 0 0 0-1.549 0 2.5 2.5 0 0 1-3.451 0 1.12 1.12 0 0 0-1.548 0 2.5 2.5 0 0 1-3.452 0 1.12 1.12 0 0 0-1.549 0 2.5 2.5 0 0 1-3.77-3.248l2.889-4.184A2 2 0 0 1 7 2h10a2 2 0 0 1 1.653.873l2.895 4.192a2.5 2.5 0 0 1-3.774 3.244\"/><path d=\"M4 10.95V19a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8.05\"/></svg></span><span>Quán xá</span></button><button class=\"ds-nav-item\" type=\"button\"><span class=\"ds-nav-icon\"><svg viewBox=\"0 0 24 24\" width=\"23\" height=\"23\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z\"/><path d=\"M15 5.764v15\"/><path d=\"M9 3.236v15\"/></svg></span><span>Bản đồ</span></button><button class=\"ds-nav-item ds-nav-camera\" type=\"button\"><span class=\"ds-nav-icon\"><svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M13.997 4a2 2 0 0 1 1.76 1.05l.486.9A2 2 0 0 0 18.003 7H20a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1.997a2 2 0 0 0 1.759-1.048l.489-.904A2 2 0 0 1 10.004 4z\"/><circle cx=\"12\" cy=\"13\" r=\"3\"/></svg></span><span>Chấm</span></button><button class=\"ds-nav-item\" type=\"button\"><span class=\"ds-nav-icon\"><svg viewBox=\"0 0 24 24\" width=\"23\" height=\"23\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M8 2v4m8-4v4M3 10h18\"/><rect x=\"3\" y=\"4\" width=\"18\" height=\"18\" rx=\"2\"/><path d=\"M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01\"/></svg></span><span>Nhật ký</span></button><button class=\"ds-nav-item\" type=\"button\"><span class=\"ds-nav-icon\"><svg viewBox=\"0 0 24 24\" width=\"23\" height=\"23\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 3v16a2 2 0 0 0 2 2h16\"/><path d=\"M18 17V9\"/><path d=\"M13 17V5\"/><path d=\"M8 17v-3\"/></svg></span><span>Thống kê</span></button></nav>",
+      "css": ".ds-dock{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:3px;width:100%;max-width:500px;min-height:82px;border:1px solid var(--border-elevated,#d3d8c9);border-radius:99px;padding:7px;background:var(--bg-card,#f6f7f3);box-shadow:0 8px 24px #00000014}.ds-nav-item{display:grid;grid-template-rows:34px auto;align-content:start;align-items:center;justify-items:center;gap:4px;min-height:66px;min-width:0;padding:4px 2px;border:0;border-radius:99px;background:transparent;color:var(--text-secondary,#4b5346);font-family:var(--font-app,'Plus Jakarta Sans',system-ui,sans-serif);font-size:11px;font-weight:500;line-height:1.4;cursor:pointer}.ds-nav-item[aria-current=page]{background:var(--accent-soft,#eaf5bc);color:var(--accent-bright,#425a00)}.ds-nav-item>span:last-child{max-width:100%;white-space:nowrap;overflow-wrap:normal;text-align:center}.ds-nav-icon{display:flex;align-items:center;justify-content:center;flex:none;width:34px;height:34px;min-width:34px;min-height:34px;aspect-ratio:1}.ds-nav-camera .ds-nav-icon{border-radius:50%;background:var(--lilac,#b8a4ff);color:#241a42}.ds-nav-camera .ds-nav-icon svg{width:24px;height:24px}.ds-nav-item:focus-visible{outline:2px solid var(--ring,#849e19);outline-offset:3px;}.ds-nav-item:hover{filter:brightness(.97)}@media(max-width:360px){.ds-nav-item>span:last-child{font-size:11px}}"
     },
     {
       "name": "Capture Cover",
       "kind": "custom",
       "refersTo": "capture-cover",
-      "description": "The empty camera stage before a mandatory new-review photo; no step indicator or synthetic photograph.",
+      "description": "Honest empty capture-stage fallback after a locked takeaway pin or an at-venue start/cancel. Opens the in-app square camera; direct shutter return has no system confirmation.",
       "html": "<section class=\"ds-capture\"><span class=\"ds-capture-cover\"><svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M13.997 4a2 2 0 0 1 1.76 1.05l.486.9A2 2 0 0 0 18.003 7H20a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1.997a2 2 0 0 0 1.759-1.048l.489-.904A2 2 0 0 1 10.004 4z\"/><circle cx=\"12\" cy=\"13\" r=\"3\"/></svg></span><button type=\"button\" class=\"ds-shutter\"><svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M13.997 4a2 2 0 0 1 1.76 1.05l.486.9A2 2 0 0 0 18.003 7H20a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1.997a2 2 0 0 0 1.759-1.048l.489-.904A2 2 0 0 1 10.004 4z\"/><circle cx=\"12\" cy=\"13\" r=\"3\"/></svg>Chụp ảnh</button></section>",
       "css": ".ds-capture{display:flex;flex-direction:column;gap:14px;font-family:var(--font-app,'Plus Jakarta Sans',system-ui,sans-serif);}.ds-capture-cover{display:grid;place-items:center;position:relative;aspect-ratio:1;width:100%;max-width:300px;align-self:center;overflow:hidden;border:1px solid var(--border-elevated,#d3d8c9);border-radius:24px;background:var(--album-empty,#e9ede4);color:var(--text-secondary,#4b5346)}.ds-capture-cover svg{width:48px;height:48px}.ds-shutter{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;border:1px solid transparent;border-radius:99px;padding:10px 16px;background:var(--accent,#d7ff3f);color:var(--accent-fg,#162000);font-family:var(--font-app,'Plus Jakarta Sans',system-ui,sans-serif);font-size:13px;font-weight:700;line-height:1.45;cursor:pointer;transition:background .16s,opacity .16s}.ds-shutter:hover{filter:brightness(.97)}.ds-shutter:focus-visible{outline:2px solid var(--ring,#849e19);outline-offset:3px;}"
     },
@@ -835,7 +978,7 @@
       "name": "Quick Price and Save",
       "kind": "custom",
       "refersTo": "quick-price",
-      "description": "Immediate Save beside the current score, one square photo shell and price; GPS and details remain optional. Specimen values are illustrative, with no fabricated photograph.",
+      "description": "Current score/Save plus square photo and decimal price. The takeaway venue is already locked; at-venue GPS runs once in the background. Specimen values are illustrative, with no photograph supplied.",
       "html": "<section class=\"ds-quick\"><header class=\"ds-quick-toolbar\"><button class=\"ds-quick-back\" type=\"button\" aria-label=\"Về quán xá\"><svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m12 19-7-7 7-7\"/><path d=\"M19 12H5\"/></svg></button><output class=\"ds-quick-total\" aria-label=\"Điểm đánh giá\">7.50<small>/10</small></output><button class=\"ds-quick-save\" type=\"button\"><svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M20 6 9 17l-5-5\"/></svg>Lưu</button></header><div class=\"ds-quick-row\"><span class=\"ds-quick-photo\" role=\"img\" aria-label=\"Mẫu ô ảnh, chưa có ảnh\"><svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M13.997 4a2 2 0 0 1 1.76 1.05l.486.9A2 2 0 0 0 18.003 7H20a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1.997a2 2 0 0 0 1.759-1.048l.489-.904A2 2 0 0 1 10.004 4z\"/><circle cx=\"12\" cy=\"13\" r=\"3\"/></svg></span><div class=\"ds-quick-price-location\"><label class=\"ds-quick-price\"><span>Giá <small>(k)</small></span><input type=\"text\" inputmode=\"decimal\" enterkeyhint=\"done\" aria-label=\"Giá (k)\" value=\"31,5\" /></label><button class=\"ds-quick-location\" type=\"button\" aria-label=\"Chỉnh vị trí quán\"><svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0\"/><circle cx=\"12\" cy=\"10\" r=\"3\"/></svg>Vị trí</button></div></div></section>",
       "css": ".ds-quick{display:flex;flex-direction:column;gap:12px;width:100%;max-width:560px;font-family:var(--font-app,'Plus Jakarta Sans',system-ui,sans-serif);color:var(--text-primary,#12170e)}.ds-quick-toolbar{display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:12;min-height:52px;padding-block:4px;background:var(--bg-canvas,#f7f8f5)}.ds-quick-back{display:inline-flex;align-items:center;justify-content:center;flex:none;width:48px;min-width:48px;height:48px;min-height:48px;padding:10px;border:1px solid transparent;border-radius:50%;background:transparent;color:var(--text-secondary,#4b5346);cursor:pointer}.ds-quick-total{display:flex;align-items:baseline;gap:4px;color:var(--accent-bright,#425a00);font-size:30px;font-weight:800;line-height:1.25;font-variant-numeric:tabular-nums}.ds-quick-total small{font-size:12px;font-weight:500;color:var(--text-secondary,#4b5346)}.ds-quick-save{display:inline-flex;align-items:center;justify-content:center;gap:8px;margin-left:auto;min-height:48px;height:48px;padding:10px 16px;border:1px solid transparent;border-radius:14px;background:var(--accent,#d7ff3f);color:var(--accent-fg,#162000);font-family:var(--font-app,'Plus Jakarta Sans',system-ui,sans-serif);font-size:13px;font-weight:700;line-height:1.45;cursor:pointer;transition:background .16s,opacity .16s}.ds-quick-save:hover{filter:brightness(.97)}.ds-quick-save:disabled{opacity:.5;cursor:default}.ds-quick-back:focus-visible,.ds-quick-save:focus-visible,.ds-quick-location:focus-visible{outline:2px solid var(--ring,#849e19);outline-offset:3px;}.ds-quick-row{display:grid;grid-template-columns:112px minmax(0,1fr);gap:18px;align-items:center;padding-top:4px}.ds-quick-photo{display:grid;place-items:center;aspect-ratio:1;width:112px;height:112px;border:1px solid var(--border-elevated,#d3d8c9);border-radius:20px;background:var(--album-empty,#e9ede4);color:var(--text-secondary,#4b5346);overflow:hidden}.ds-quick-price-location{display:flex;flex-direction:column;gap:6px;min-width:0}.ds-quick-price{display:flex;flex-direction:column;gap:5px;font-size:13px;line-height:1.5}.ds-quick-price small{color:var(--text-secondary,#4b5346)}.ds-quick-price input{width:100%;min-width:0;min-height:56px;height:56px;padding:8px 12px;border:1px solid var(--border-elevated,#d3d8c9);border-radius:14px;background:var(--bg-card,#f6f7f3);color:var(--text-primary,#12170e);font-family:var(--font-app,'Plus Jakarta Sans',system-ui,sans-serif);font-size:27px;font-weight:650;line-height:1.25;caret-color:var(--accent-bright,#425a00)}.ds-quick-price input:focus-visible{outline:2px solid var(--ring,#849e19);outline-offset:3px;}.ds-quick-location{display:inline-flex;align-items:center;align-self:flex-start;gap:5px;min-height:38px;padding:3px 0;border:0;background:transparent;color:var(--text-secondary,#4b5346);font-family:var(--font-app,'Plus Jakarta Sans',system-ui,sans-serif);font-size:12px;text-align:left;cursor:pointer}@media(max-width:360px){.ds-quick{gap:10px}.ds-quick-row{grid-template-columns:96px minmax(0,1fr);gap:12px}.ds-quick-photo{width:96px;height:96px;border-radius:18px}.ds-quick-total{font-size:27px}}@media(min-width:1100px){.ds-quick-row{grid-template-columns:144px minmax(0,1fr);gap:24px}.ds-quick-photo{width:144px;height:144px}}"
     },
@@ -846,6 +989,22 @@
       "description": "Static criterion specimen showing the actual label, value, 44px hit area, 5px track and circular 28px thumb. The app uses Animate UI for interaction.",
       "html": "<div class=\"ds-criterion\"><div class=\"ds-criterion-heading\"><span id=\"ds-criterion-name\">Vị</span><output>7.0</output></div><div class=\"ds-slider\"><span class=\"ds-slider-track\"><span class=\"ds-slider-range\"></span></span><button type=\"button\" class=\"ds-slider-thumb\" role=\"slider\" aria-labelledby=\"ds-criterion-name\" aria-valuemin=\"1\" aria-valuemax=\"10\" aria-valuenow=\"7\" aria-valuetext=\"7 trên 10\"></button></div></div>",
       "css": ".ds-criterion{min-width:0;padding-top:6px;font-family:var(--font-app,'Plus Jakarta Sans',system-ui,sans-serif);color:var(--text-primary,#12170e)}.ds-criterion-heading{display:flex;align-items:baseline;justify-content:space-between;gap:12px;min-height:26px;font-size:14px;font-weight:650;line-height:1.5}.ds-criterion-heading output{color:var(--accent-bright,#425a00);font-size:17px;font-weight:700;font-variant-numeric:tabular-nums}.ds-slider{display:flex;align-items:center;position:relative;height:44px;width:100%;margin:0;touch-action:pan-y}.ds-slider-track{display:block;position:relative;height:5px;width:100%;border-radius:4px;overflow:hidden;background:var(--slider-track,#dce2d4)}.ds-slider-range{display:block;position:absolute;height:100%;width:66.667%;border-radius:4px;background:var(--chart-fill,#6b8100)}.ds-slider-thumb{display:block;position:absolute;left:calc(66.667% - 14px);top:50%;transform:translateY(-50%);width:28px;height:28px;min-width:28px;min-height:28px;max-width:28px;max-height:28px;padding:0;border:0;border-radius:50%;aspect-ratio:1;background:var(--text-primary,#12170e);box-shadow:0 2px 6px #0003;cursor:pointer}.ds-slider-thumb:hover{box-shadow:0 0 0 6px color-mix(in srgb,var(--accent,#d7ff3f) 14%,transparent)}.ds-slider-thumb:focus-visible{outline:3px solid color-mix(in srgb,var(--accent,#d7ff3f) 25%,transparent);outline-offset:3px}"
+    },
+    {
+      "name": "Photo Reel",
+      "kind": "custom",
+      "refersTo": "reel-photo",
+      "description": "Static honest missing-photo specimen of the bounded strip and center marker. The app supplies private review photos at runtime and lands a preselected weighted winner.",
+      "html": "<section class=\"ds-reel\" aria-label=\"Dải ảnh chọn quán\"><span class=\"ds-reel-marker\" aria-hidden=\"true\"></span><div class=\"ds-reel-track\"><div class=\"ds-reel-photo ds-reel-selected\"><svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M13.997 4a2 2 0 0 1 1.76 1.05l.486.9A2 2 0 0 0 18.003 7H20a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1.997a2 2 0 0 0 1.759-1.048l.489-.904A2 2 0 0 1 10.004 4z\"/><circle cx=\"12\" cy=\"13\" r=\"3\"/></svg><span class=\"ds-reel-caption\"><strong>Chưa có ảnh</strong><span>Ô ảnh đánh giá</span></span></div><div class=\"ds-reel-photo\"><svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M13.997 4a2 2 0 0 1 1.76 1.05l.486.9A2 2 0 0 0 18.003 7H20a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1.997a2 2 0 0 0 1.759-1.048l.489-.904A2 2 0 0 1 10.004 4z\"/><circle cx=\"12\" cy=\"13\" r=\"3\"/></svg><span class=\"ds-reel-caption\"><strong>Chưa có ảnh</strong><span>Ô ảnh đánh giá</span></span></div></div></section>",
+      "css": ".ds-reel{--case-size:clamp(112px,36vw,172px);position:relative;overflow:hidden;isolation:isolate;padding-block:16px;border-radius:16px;background:var(--bg-elevated,#edf0e7);font-family:var(--font-app,'Plus Jakarta Sans',system-ui,sans-serif)}.ds-reel-track{display:flex;gap:10px;padding-left:calc(50% - var(--case-size)/2)}.ds-reel-photo{position:relative;flex:0 0 var(--case-size);width:var(--case-size);aspect-ratio:1;display:grid;place-items:center;overflow:hidden;border-radius:12px;background:var(--album-empty,#e9ede4);color:var(--text-secondary,#4b5346)}.ds-reel-caption{position:absolute;inset:auto 0 0;padding:28px 10px 10px;background:linear-gradient(transparent,rgb(0 0 0 / 85%));color:#fff}.ds-reel-caption strong{display:block;font-size:13px;line-height:1.35}.ds-reel-caption>span{font-size:12px;opacity:.88}.ds-reel-selected{outline:2px solid var(--accent-bright,#425a00);outline-offset:-2px}.ds-reel-marker{position:absolute;left:50%;top:2px;bottom:2px;width:2px;z-index:2;background:var(--accent-bright,#425a00)}.ds-reel-marker:before,.ds-reel-marker:after{content:'';position:absolute;left:-4px;width:10px;height:10px;background:var(--accent-bright,#425a00);transform:rotate(45deg)}.ds-reel-marker:after{bottom:0}"
+    },
+    {
+      "name": "Review Journal",
+      "kind": "custom",
+      "refersTo": "journal-photo",
+      "description": "Existing-review day and square entry geometry, using an honest missing-photo specimen. No per-visit archive or invented personal photo.",
+      "html": "<section class=\"ds-journal\"><button class=\"ds-journal-day\" type=\"button\" aria-pressed=\"true\" aria-label=\"Ngày được chọn\">2<span aria-hidden=\"true\"></span></button><button class=\"ds-journal-entry\" type=\"button\" aria-label=\"Mẫu đánh giá chưa có ảnh\"><span class=\"ds-journal-photo\"><svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M13.997 4a2 2 0 0 1 1.76 1.05l.486.9A2 2 0 0 0 18.003 7H20a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1.997a2 2 0 0 0 1.759-1.048l.489-.904A2 2 0 0 1 10.004 4z\"/><circle cx=\"12\" cy=\"13\" r=\"3\"/></svg><time>12:00</time><strong>7,0</strong></span><span class=\"ds-journal-caption\"><strong>Mẫu đánh giá</strong><span>30k</span></span></button></section>",
+      "css": ".ds-journal{display:grid;grid-template-columns:48px minmax(0,200px);gap:16px;font-family:var(--font-app,'Plus Jakarta Sans',system-ui,sans-serif);color:var(--text-primary,#12170e)}.ds-journal-day{position:relative;width:48px;height:48px;border:3px solid var(--bg-canvas,#f7f8f5);border-radius:14px;background:var(--bg-elevated,#edf0e7);color:var(--text-secondary,#4b5346);font:600 13px var(--font-app,'Plus Jakarta Sans',system-ui,sans-serif);outline:2px solid var(--accent-bright,#425a00);outline-offset:-2px}.ds-journal-day>span{position:absolute;bottom:5px;left:calc(50% - 2px);width:4px;height:4px;border-radius:50%;background:var(--accent-bright,#425a00)}.ds-journal-entry{padding:0;border:0;background:none;color:inherit;text-align:left;cursor:pointer}.ds-journal-photo{position:relative;display:grid;place-items:center;aspect-ratio:1;overflow:hidden;border-radius:16px;outline:1px solid var(--border-elevated,#d3d8c9);outline-offset:-1px;background:var(--album-empty,#e9ede4);color:var(--text-secondary,#4b5346)}.ds-journal-photo time,.ds-journal-photo>strong{position:absolute;top:8px;padding:4px 7px;border-radius:8px;background:#171c17;color:#fff;font-size:12px;font-variant-numeric:tabular-nums}.ds-journal-photo time{left:8px}.ds-journal-photo>strong{right:8px;background:var(--accent,#d7ff3f);color:var(--accent-fg,#162000)}.ds-journal-caption{display:flex;gap:8px;padding:8px 1px;font-size:13px}.ds-journal-caption>span{margin-left:auto;color:var(--text-secondary,#4b5346)}.ds-journal-entry:focus-visible,.ds-journal-day:focus-visible{outline:2px solid var(--ring,#849e19);outline-offset:3px}.ds-journal-entry:hover{filter:brightness(.97)}.ds-journal-entry:active{transform:scale(.97)}@media(prefers-reduced-motion:reduce){.ds-journal-entry:active{transform:none}}"
     }
   ],
   "narrative": {
@@ -855,7 +1014,7 @@
       "Ảnh vuông có một đường viền đều bốn cạnh; tên và địa chỉ nằm dưới ảnh.",
       "Điểm ở góc trên phải, giá ở góc dưới trái; vị trí giữ nguyên qua sắp xếp và đổi mật độ.",
       "Acid cho lựa chọn, lilac cho chụp; nền và chữ đổi theo sáng/tối.",
-      "Thao tác mới đi từ một ảnh thẳng tới giá, ba/bốn slider và Lưu; GPS chạy nền, ghim và tên là tùy chọn.",
+      "Năm nơi đến cùng một hệ điều khiển; dải chọn ảnh, nhật ký và camera giữ ảnh vuông làm điểm neo.",
       "Hiệu ứng có giới hạn và tôn trọng giảm chuyển động của ứng dụng, trình duyệt và Android."
     ],
     "rules": [
@@ -885,7 +1044,8 @@
       "Do giữ ảnh vuông, hairline đều và góc điểm/giá cố định ở mọi số cột.",
       "Do dùng token sáng/tối tương ứng và Plus Jakarta Sans tự lưu cho chữ tiếng Việt.",
       "Do giữ focus thấy rõ, nhãn truy cập, mục tiêu chạm phù hợp và dock tăng cao theo chữ.",
-      "Do cho lưu ngay khi ảnh/giá hợp lệ, giữ GPS ở nền và chỉnh ghim tùy chọn; giữ nguyên ngữ cảnh khi sửa đánh giá.",
+      "Do xác nhận ghim mang về trước khi chụp ở nhà, giữ ghim đã khóa; tại quán lấy GPS nền sau ảnh và cho Lưu khi ảnh/giá hợp lệ.",
+      "Do giữ giờ/điểm/tên/giá của đánh giá trong nhật ký; dùng ảnh thật trong reel và kết quả trọng số có sẵn.",
       "Do tôn trọng giảm chuyển động, giới hạn một trang album ở 24 đánh giá và dừng hiệu ứng trạng thái khi xong."
     ],
     "donts": [
@@ -893,7 +1053,8 @@
       "Don't dùng các rãnh vé, vòng điểm lớn và inspector thường trực của danh sách cũ làm mẫu cho album mới.",
       "Don't biến mỗi tile thành một thẻ có bóng hoặc thêm mô tả thường trực, phiên bản hay lời chào vào chrome.",
       "Don't dùng chữ acid nhạt trên nền sáng hoặc thay họ neutral mực bằng slate cũ.",
-      "Don't bỏ ảnh bắt buộc của đánh giá mới, chặn Lưu vì GPS, ép nhập tên/xác nhận ghim, tự mở camera khi sửa hay tự thay tọa độ cũ.",
+      "Don't bỏ ảnh bắt buộc của đánh giá mới, chặn Lưu tại quán vì GPS, ép nhập tên, tự mở camera khi sửa hay thay ghim mang về bằng GPS tại nhà.",
+      "Don't biến nhật ký thành kho ảnh lượt ghé, tăng xác suất vì có ảnh hoặc tự ghi lượt ghé/chi tiêu từ kết quả reel.",
       "Don't thêm ngày/giờ mở cửa/bộ đếm ảnh vào quick form hoặc hỏi bỏ bản nháp chỉ vì đổi tab.",
       "Don't coi build, ảnh chụp trình duyệt hoặc thông số animation là bằng chứng 120 fps hay kiểm thử camera/GPS trên thiết bị thật."
     ]

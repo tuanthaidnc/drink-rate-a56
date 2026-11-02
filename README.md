@@ -4,16 +4,18 @@ Sổ trải nghiệm cá nhân để chọn quán hợp gu, giá và vị trí; 
 
 ## Dùng ứng dụng
 
-- Chấm điểm mới tự mở camera; nhận một ảnh rồi vào thẳng giá và ba/bốn thanh điểm. GPS chạy nền; chỉ mở ghim để sửa nếu cần, GPS lỗi vẫn lưu được. Chỉ cần ảnh và giá; tên/ghi chú ở Thông tin thêm. Tên trống dùng loại quán và thời gian, không đoán tên địa điểm. Tự ghi thời gian khi lưu, không nhập ngày hay giờ mở cửa. Chụp lại thay ảnh hiện tại; hủy camera giữ nguyên ảnh/bản nháp trước đó. Chỉnh sửa quán cũ không tự chụp hay định vị lại. Chọn quán hoặc mở Maps không tự ghi đã ghé.
+- Đánh giá mới chọn **Mang về** hoặc **Tại quán**. Mang về lấy GPS mới hoặc ghim tay tại quán, xác nhận và giữ bản nháp; khi về nhà tiếp tục chụp, chọn trải nghiệm, nhập giá và ba/bốn thanh điểm rồi Lưu. Vị trí quán đã khóa không bị GPS ở nhà ghi đè khi chụp/xóa/chụp lại. Tại quán mở camera ngay; sau ảnh thử GPS nền một lần, GPS lỗi vẫn lưu được. Tên/ghi chú tùy chọn; tên trống dùng loại quán và thời gian. Lưu ghi thời gian hiện tại, không nhập ngày/giờ mở cửa hay tự đoán tên địa điểm.
+- Camera vuông trong app: Android dùng CameraX với ViewPort 1:1 chung preview/capture; web dùng getUserMedia với crop vuông ở tâm. Chụp xong trả thẳng form, không có màn xác nhận riêng. Mỗi đánh giá mới cần một ảnh; đánh giá cũ chưa có ảnh vẫn sửa được. Chụp lại chỉ thay ảnh sau thành công; hủy giữ ảnh cũ. Xóa/chụp lại giữ giá, tiêu chí và ghim đã khóa; có thể chọn một ảnh từ thư viện. Ảnh lịch sử vẫn được giữ.
+- Năm nơi đến: Quán xá, Bản đồ, Chấm điểm ở giữa, Nhật ký, Thống kê. Nhật ký duyệt đánh giá đang có theo ngày `Asia/Ho_Chi_Minh`, không tạo kho ảnh cho từng lượt ghé. Dải ảnh chọn quán chọn trước bằng trọng số, giảm tốc trong 4,6 giây, tối đa 37 ô và dùng chung blob URL; giảm chuyển động cho kết quả ngay. Ảnh có sẵn chỉ ưu tiên phần xem trước, không tăng xác suất. Chọn quán hoặc mở Maps không tự ghi đã ghé/chi tiêu.
 - Ghi lượt ghé riêng với ngày, món và tiền thực trả. Tiền để trống được hiển thị là chưa biết, không suy từ giá chấm điểm.
 - Tìm/lọc cùng một tập quán trong danh sách, bản đồ, vòng quay và thống kê quán. Chi tiêu chu kỳ được ghi rõ là toàn bộ quán thật.
 - Xuất JSON ở Thống kê. File gồm đánh giá, ảnh, lịch sử điểm, lượt ghé và tùy chọn; giữ một bản ngoài ứng dụng trước khi đổi máy hoặc xóa dữ liệu Chrome.
 - Ứng dụng chuẩn bị các màn hình để mở và lưu dữ liệu không cần mạng; chỉ hiện biểu tượng khi ngoại tuyến hoặc cần thử lại. Nền bản đồ, tra địa chỉ và Google Maps cần mạng.
-- Chuyển tab giữ bản nháp để nhập tiếp, không hỏi rời màn hình. Muốn bỏ hẳn dùng Bỏ bản nháp trong Thông tin thêm. Bản cập nhật hiện biểu tượng ↻ sau khi lưu hoặc bỏ bản nháp. Giữ nguyên URL và ứng dụng đã cài để giữ cùng kho dữ liệu.
+- Giữ được nhiều bản nháp bền vững, gồm ảnh, trong kho riêng. Chuyển tab giữ để nhập tiếp, không hỏi rời màn hình. Lưu hoặc Bỏ bản nháp chỉ xóa bản khớp đánh giá đang làm. JSON xuất đánh giá không bao gồm kho nháp. Bản cập nhật hiện biểu tượng ↻ sau khi lưu hoặc bỏ bản nháp. Giữ nguyên URL và ứng dụng đã cài để giữ cùng kho dữ liệu.
 
 ## Giao diện và chuyển động
 
-Ảnh chụp là thẻ vuông có viền nhẹ, điểm/giá ở góc và tên/đường bên dưới. Điện thoại có lưới hai cột hoặc ba cột; máy tính có bốn/năm cột và rail. Chi tiết mở khi chạm ảnh, phân trang 24 quán. Nền sáng/mực, xanh acid và tím nhạt giữ vai trò điều khiển. Bỏ lời giới thiệu, hướng dẫn thường trực và phiên bản khỏi UI. Giữ dữ liệu, nhãn thao tác và phản hồi lỗi cần thiết.
+Ảnh chụp là thẻ vuông có viền nhẹ, điểm/giá ở góc và tên/đường bên dưới. Điện thoại có lưới hai cột hoặc ba cột và dock năm ô; máy tính có bốn/năm cột và rail. Chi tiết mở khi chạm ảnh, phân trang 24 quán. Nền sáng/mực, xanh acid và tím nhạt giữ vai trò điều khiển. Bỏ lời giới thiệu, hướng dẫn thường trực và phiên bản khỏi UI. Giữ dữ liệu, nhãn thao tác và phản hồi lỗi cần thiết.
 
 [React Bits](https://github.com/DavidHDev/react-bits) cung cấp ClickSpark; [Motion Primitives](https://github.com/ibelick/motion-primitives) cung cấp AnimatedNumber và TransitionPanel đã điều chỉnh cho điểm thập phân và khả năng truy cập. [Animate UI](https://github.com/imskyleen/animate-ui) tiếp tục xử lý Dialog, Slider, ToggleGroup và BottomNavigation; các trường nhập/nút dựa trên [shadcn/ui](https://github.com/shadcn-ui/ui). Ảnh có hiệu ứng hiện hình, lưới đổi mật độ/ấn thẻ, mở ảnh chi tiết, chuyển màn, điểm, thanh tiêu chí và dock có chuyển động. GPS có hiệu ứng chờ trong thời gian định vị; không có vòng vẽ nền thường trực. Giảm chuyển động theo hệ thống/ứng dụng vẫn được tôn trọng và cập nhật ngay khi đổi tùy chọn. Xem [DESIGN.md](DESIGN.md) về nguồn, thời gian và cấu trúc.
 
@@ -27,18 +29,20 @@ Giấy phép: shadcn/ui và Motion Primitives MIT; Animate UI và React Bits **M
 
 ## Công thức đã chốt
 
-| Loại               | Trọng số                                                    |
-| ------------------ | ----------------------------------------------------------- |
-| Nước mang đi       | Vị 50%, giá 25%, lượng 20%, vỏ ly 5%                        |
-| Nước ngồi lại      | Vị 35%, không gian 20%, giá 20%, lượng 20%, vỏ ly 5%        |
-| Ăn bình dân/vỉa hè | Ngon 40%, chất lượng 25%, sạch 15%, giá 15%, không gian 5%  |
-| Ăn quán/nhà hàng   | Ngon 35%, chất lượng 25%, sạch 15%, không gian 15%, giá 10% |
+| Loại          | Trọng số                                                                   |
+| ------------- | -------------------------------------------------------------------------- |
+| Nước mang đi  | Vị 50%, giá 25%, lượng 20%, vỏ ly 5%                                       |
+| Nước ngồi lại | Vị 35%, không gian 20%, giá 20%, lượng 20%, vỏ ly 5%                       |
+| Ăn mang về    | Ngon 35%, chất lượng 20%, sạch 10%, giá 15%, khẩu phần 20%                 |
+| Ăn tại quán   | Ngon 30%, chất lượng 20%, sạch 10%, không gian 10%, giá 10%, khẩu phần 20% |
 
 Nốt mang đi: 31k, vị 7, lượng ít (4), ly 9 → **6,50/10**. Điểm giá là bậc quy đổi trong `src/lib/scoring.ts`; khoảng giá liên tục kể cả giá có phần thập phân. Sao bằng điểm chia 2, không phải điểm cộng đồng.
 
+Khẩu phần áp dụng mọi quán ăn cũ/mới: Rất ít 2, Ít 4, Vừa 7, Nhiều 9, Đầy ắp 10. Chủ ứng dụng đã chọn mặc định **Vừa** (`medium`) cho các quán ăn cũ thiếu khẩu phần và tính lại tổng; các tiêu chí, giá, ngày, lượt ghé, ảnh được giữ. Bậc giá ăn vẫn theo `foodType` (bình dân/nhà hàng), còn trọng số theo mang về/tại quán. Lạp xưởng: ngon 10, chất lượng 9, sạch 8, giá 10k (điểm giá 10), Vừa 7 → `10×0,35 + 9×0,20 + 8×0,10 + 10×0,15 + 7×0,20 = 9,0`; không gán cứng tổng. Nhánh công thức ăn cũ chỉ để đọc bản thô/backup trước chuẩn hóa, không miễn chuyển đổi cho đánh giá đã hoàn tất.
+
 Tần suất theo từng quán: ≤40k hai lượt/tuần; quán ăn >40–80k một lượt/tuần, >80k một lượt/tháng; quán nước >40–80k hai lượt/tháng (gợi ý cách khoảng hai tuần), >80k hai lượt/năm. Đây là gợi ý; vẫn ghi được số lượt thực tế vượt gợi ý. Tuần từ thứ Hai, tháng từ ngày 5, năm từ ngày 5/1, theo `Asia/Ho_Chi_Minh` bất kể múi giờ thiết bị. Vòng quay không mở rộng bộ lọc khi còn 0 hoặc 1 quán.
 
-## Dữ liệu và chuyển đổi v12 → v14
+## Dữ liệu và chuyển đổi
 
 IndexedDB `not-food-drink-personal` lưu văn bản, ảnh và 20 bản dự phòng trước thay đổi. Mỗi lần ghi là một giao dịch; chỉ báo thành công khi giao dịch hoàn tất. Các cửa sổ đọc lại bản hiện tại trong giao dịch, đồng bộ qua BroadcastChannel; sửa đánh giá cũ có kiểm tra xung đột.
 
@@ -46,7 +50,7 @@ Lần mở đầu đọc khóa localStorage mới nhất có tồn tại, kể c
 
 Nhập JSON có kiểm tra toàn bộ cấu trúc, giá, ngày, điểm đầu vào, mã trùng, tọa độ và ảnh trước khi viết. Mặc định gộp và giữ quán đang có khi trùng mã. Thay toàn bộ cần xác nhận riêng, kể cả danh sách rỗng. Ảnh nhập được cấp mã mới để không phá ảnh trong dự phòng. Ảnh không còn tham chiếu trong dữ liệu hiện tại hoặc 20 dự phòng được thu hồi; ảnh khi phục hồi dữ liệu hỏng được giữ nguyên.
 
-Chưa có tài khoản hay đồng bộ đám mây. Dữ liệu máy tính và điện thoại độc lập. Cài ứng dụng không thay cho sao lưu ngoài thiết bị.
+Schema vẫn là 13; phiên bản tính điểm hiện tại là `2026-11-v2`. Mở dữ liệu hoặc nhập bản sao cũ chuẩn hóa khẩu phần cho mọi quán ăn cá nhân thiếu trường này; migration lặp lại không đổi dữ liệu đã chuẩn hóa. Android giữ bản sao trước migration, gồm snapshot bản nháp riêng khi có. Chưa có tài khoản hay đồng bộ đám mây. Dữ liệu web và APK độc lập. Cài ứng dụng không thay cho sao lưu ngoài thiết bị. Ảnh người dùng ở ngoài Git; ảnh QA/emulator không được đưa vào gói phát hành.
 
 ## Nguồn địa điểm và bản đồ
 
@@ -76,3 +80,5 @@ APK chứa tài nguyên web/font/danh mục để khởi động ngoại tuyến
 Chuyển từ Chrome: xuất JSON trong Tùy chọn/Thống kê, lưu file, mở APK rồi nhập file đó bằng luồng gộp/khôi phục hiện có. Kiểm tra số quán, ảnh và lượt ghé trước khi ngừng dùng bản cũ; không cần xóa hay gỡ PWA. Hai bản không tự đồng bộ. Xuất trong APK mở hộp chia sẻ hệ thống để chọn nơi lưu; nhập dùng bộ chọn file Android.
 
 Android chọn mode cùng độ phân giải có tần số cao tối đa 120 Hz nếu được thiết bị cung cấp và gửi yêu cầu frame rate cho WebView từ API 35. Android vẫn quyết định theo màn hình, cấu hình, pin và nhiệt. Cần đo trên A56 thật để xác nhận; emulator không chứng minh 120 Hz.
+
+SystemBars đặt kiểu icon rồi NotDisplay đặt màu nền inset/WebView theo theme ở khởi động, đổi theme và resume. Back/xóa/chụp lại trong form Android có vùng chạm tối thiểu 48×48 dp theo ánh xạ WebView. Đây là hành vi trong mã; kết luận độ tương phản, tương tác và hiệu năng của APK cụ thể cần bằng chứng kiểm thử tương ứng.

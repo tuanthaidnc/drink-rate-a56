@@ -39,6 +39,12 @@ colors:
   focus-ring: '#849e19'
   photo-overlay: '#0b100de6'
   photo-overlay-text: '#fff'
+  photo-control: '#171c17'
+  camera-ground: '#0e110d'
+  camera-empty: '#1e211d'
+  reel-scrim: 'rgb(0 0 0 / 85%)'
+  calendar-scrim: '#0008'
+  photo-text-shadow: '#000'
 typography:
   brand:
     fontFamily: 'Plus Jakarta Sans, system-ui, sans-serif'
@@ -120,6 +126,29 @@ typography:
     fontSize: '17px'
     fontWeight: 700
     lineHeight: 1.5
+  metadata:
+    fontFamily: 'Plus Jakarta Sans, system-ui, sans-serif'
+    fontSize: '12px'
+  status:
+    fontFamily: 'Plus Jakarta Sans, system-ui, sans-serif'
+    fontSize: '15px'
+    fontWeight: 500
+  section-title:
+    fontFamily: 'Plus Jakarta Sans, system-ui, sans-serif'
+    fontSize: '20px'
+  dialog-title:
+    fontFamily: 'Plus Jakarta Sans, system-ui, sans-serif'
+    fontSize: '22px'
+  experience-title:
+    fontFamily: 'Plus Jakarta Sans, system-ui, sans-serif'
+    fontSize: '21px'
+    lineHeight: 1.2
+  journal-title:
+    fontFamily: 'Plus Jakarta Sans, system-ui, sans-serif'
+    fontSize: '19px'
+  calendar-count:
+    fontFamily: 'Plus Jakarta Sans, system-ui, sans-serif'
+    fontSize: '10px'
 rounded:
   photo: '20px'
   photo-compact: '16px'
@@ -132,6 +161,8 @@ rounded:
   pill: '99px'
   circle: '50%'
   track: '4px'
+  compact-control: '12px'
+  journal-badge: '8px'
 spacing:
   micro: '4px'
   compact: '8px'
@@ -251,6 +282,36 @@ components:
     backgroundColor: '{colors.text-light}'
     rounded: '{rounded.circle}'
     size: '28px'
+  experience-option:
+    backgroundColor: '{colors.surface-light}'
+    textColor: '{colors.text-light}'
+    rounded: '{rounded.photo-compact}'
+    padding: '20px'
+    height: '172px'
+  reel-photo:
+    backgroundColor: '{colors.empty-photo-light}'
+    rounded: '{rounded.compact-control}'
+    width: 'clamp(112px, 36vw, 172px)'
+  journal-day:
+    backgroundColor: '{colors.elevated-light}'
+    textColor: '{colors.secondary-text-light}'
+    rounded: '{rounded.tabs}'
+    height: '48px'
+  journal-photo:
+    backgroundColor: '{colors.empty-photo-light}'
+    rounded: '{rounded.photo-compact}'
+    width: '100%'
+  photo-action:
+    backgroundColor: '{colors.photo-control}'
+    textColor: '{colors.photo-overlay-text}'
+    rounded: '{rounded.compact-control}'
+    size: '44px'
+  photo-action-android:
+    size: '48px'
+  square-viewfinder:
+    backgroundColor: '{colors.camera-empty}'
+    rounded: '{rounded.photo-compact}'
+    width: 'min(100%, calc(100dvh - 260px), 560px)'
 ---
 
 # Design System: NỐT · Photo journal
@@ -268,7 +329,7 @@ NỐT dùng ảnh thật làm điểm nhận diện quán: nhìn ảnh, đọc �
 - Ảnh vuông có một đường viền đều bốn cạnh; tên và địa chỉ nằm dưới ảnh.
 - Điểm ở góc trên phải, giá ở góc dưới trái; vị trí giữ nguyên qua sắp xếp và đổi mật độ.
 - Acid cho lựa chọn, lilac cho chụp; nền và chữ đổi theo sáng/tối.
-- Thao tác mới đi từ một ảnh thẳng tới giá, ba/bốn slider và Lưu; GPS chạy nền, ghim và tên là tùy chọn.
+- Năm nơi đến cùng một hệ điều khiển; dải chọn ảnh, nhật ký và camera giữ ảnh vuông làm điểm neo.
 - Hiệu ứng có giới hạn và tôn trọng giảm chuyển động của ứng dụng, trình duyệt và Android.
 
 ### Nguồn và giấy phép được giữ
@@ -280,7 +341,7 @@ NỐT dùng ảnh thật làm điểm nhận diện quán: nhìn ảnh, đọc �
 - [Impeccable](https://github.com/pbakaus/impeccable), commit `02523aec3e4c4580102d996d1b6a71fbe062e03f`: nguồn rà soát audit, polish, optimize và craft-floor của hệ cũ. Hồ sơ finish của album hiện tại ở `.impeccable/surfaces/src-app-tsx.md` và báo cáo bằng chứng của lần thay đổi này.
 - Font tự lưu trong `public/fonts`; giữ thông báo OFL của Plus Jakarta Sans và JetBrains Mono. Raster biểu tượng đang phát hành giữ provenance nhúng tham chiếu repository tại commit `5b5176b6`. Không thêm hình ảnh mới vào gói ứng dụng trong lần thay đổi album; ảnh concept và ảnh QA tổng hợp nằm ngoài kho mã, không phải ảnh đánh giá của người dùng.
 
-Nguồn triển khai quyết định token là thứ tự import `src/styles.css` → `src/kinetic.css` → `src/photo-journal.css` trong `src/main.tsx`. Tài liệu này ghi hệ album đang dùng, không biến các selector vé cũ còn nằm trong stylesheet thành mẫu cho màn hình mới.
+Nguồn triển khai quyết định token là thứ tự import `src/styles.css` → `src/kinetic.css` → `src/photo-journal.css` → `src/experience.css` trong `src/main.tsx`. Đây là phần mở rộng đã được chủ ứng dụng duyệt của hệ album hiện có; không biến selector vé cũ thành mẫu mới. Luồng và quy tắc dữ liệu chuẩn nằm trong `PRODUCT.md`.
 
 ## Colors
 
@@ -303,6 +364,8 @@ Màu lá acid và tím nhạt nằm trên một họ neutral hơi xanh; ảnh th
 - **Đường chia / hairline** (`divider-*`, `hairline-*`): nhóm form, điều khiển và một viền đều quanh ảnh. Viền ảnh được chọn dùng `--accent-bright`.
 - **Ảnh còn thiếu** (`empty-photo-*`): ô chữ cái đầu và icon camera. Ô quán ăn trộn `food-soft-*` với nền ảnh còn thiếu; không lấp bằng ảnh giả.
 - **Nền nhãn ảnh** (`photo-overlay`, `photo-overlay-text`): nhãn điểm, giá và số ảnh dùng cùng nền mực gần đục và chữ trắng ở cả hai theme.
+- **Tương phản trên ảnh** (`photo-control`, `reel-scrim`, `calendar-scrim`, `photo-text-shadow`): nền nút ảnh/nhãn nhật ký, scrim dưới tên trong reel, scrim ngày có ảnh và bóng chữ ngày. Đây là hỗ trợ đọc trên ảnh, không phải màu nhấn mới hoặc gradient chữ.
+- **Camera** (`camera-ground`, `camera-empty`): nền tối cố định quanh viewfinder và nền chờ của camera vuông; giữ chữ/icon trắng trong cả hai theme ứng dụng.
 - **Slider** (`slider-track-*`, `chart-fill-light`): rãnh trung tính theo theme và phần giá trị olive trên nền sáng; nền tối dùng acid cho phần giá trị. Thumb dùng màu chữ chính.
 - **Trạng thái** (`destructive-*`, `focus-ring`, `selection-soft-*`): lỗi/xóa, vòng focus và nền chỉ báo điều hướng đang chọn.
 
@@ -326,6 +389,9 @@ Màu lá acid và tím nhạt nằm trên một họ neutral hơi xanh; ảnh th
 - **Body / Input:** vai trò `body` cho nội dung và `input` cho trường nhập. Nhãn form dùng (12px), dòng (1.5), trọng lượng (500).
 - **Label:** vai trò `label` cho địa chỉ album một dòng có ellipsis; từ (650px) tăng thành (12px). Dock dùng nhãn (12px), dòng (1.4), giảm thành (11px) ở tối đa (360px) và cho xuống dòng khi cỡ chữ tăng.
 - **Numbers:** `photo-score` và `photo-price` dùng tabular numerals; mật độ nhỏ giảm điểm thành (14px), giá thành (12px). Điểm đang nhập dùng `quick-total`, giảm thành (27px) ở tối đa (360px), với `/10` (12px); giá dùng `quick-price`. Nhãn và giá trị slider dùng `slider-label` / `slider-value`. Vòng điểm trong dialog chi tiết dùng (30px).
+- **Extension roles:** `metadata` dùng cho reel, tuần lịch, giờ/điểm nhật ký và số đánh giá; `status` cho trạng thái reel. `section-title` dùng tên kết quả và tháng; `dialog-title` dùng tiêu đề sheet reel/camera; `experience-title` dùng hai lựa chọn bắt đầu; `journal-title` dùng ngày đang xem. `calendar-count` chỉ dành cho badge số lượng bổ sung trên ngày có nhiều đánh giá, không dùng cho tên, giá, điểm hoặc thao tác chính.
+
+Toolbar camera Android dùng chữ nền tảng cho nhãn ngắn; ngoại lệ giới hạn ở native chrome, không thay họ display của ứng dụng.
 
 **The One Family Rule.** Giữ Plus Jakarta Sans cho toàn bộ nhận diện, tiêu đề, nhãn album và điểm; không chuyển số điểm sang mono theo selector cũ.
 
@@ -333,11 +399,13 @@ Màu lá acid và tím nhạt nằm trên một họ neutral hơi xanh; ảnh th
 
 Album có grid tự co bằng `minmax(0, 1fr)`. Dưới (650px) có hai cột mặc định hoặc ba cột mật độ nhỏ, khoảng cách hàng/cột lần lượt (18px / 12px) và (14px / 9px). Từ (650px), grid thành ba hoặc bốn cột với khoảng cách (24px / 18px) và (20px / 14px). Từ (1100px), grid thành bốn hoặc năm cột với khoảng cách (28px / 20px) và (24px / 16px). Ở tối đa (360px), lề ngang giảm còn (12px); không đổi ảnh vuông thành thẻ ngang.
 
-Điện thoại có header gọn (62px) cộng safe area trên Android; vùng nội dung thường có lề ngang (16px). Form ẩn header để dành diện tích cho ảnh, giá và các slider; map chỉ mở trong dialog tùy chọn. Dock bốn ô ở dưới dùng chiều cao nội dung thực qua `ResizeObserver`, để phần cuối trang không bị che; inset hệ thống được cộng vào khoảng trống dưới. Từ desktop, rail rộng (100px), app main có padding (26px 32px), vùng nội dung tối đa (1320px); quick form tối đa (560px) và đặt giữa.
+Điện thoại có header gọn (62px) cộng safe area trên Android; vùng nội dung thường có lề ngang (16px). Form ẩn header để dành diện tích cho ảnh, giá và các slider; mang về có màn ghim quán trước chụp, còn chỉnh ghim trong form là dialog. Dock năm ô ở dưới dùng chiều cao nội dung thực qua `ResizeObserver`, để phần cuối trang không bị che; inset hệ thống được cộng vào khoảng trống dưới. Từ desktop, rail rộng (100px), app main có padding (26px 32px), vùng nội dung tối đa (1320px); quick form tối đa (560px) và đặt giữa.
 
 Search thu gọn thành nút ở điện thoại; khi mở, trường tìm kiếm chiếm cả hàng dưới category. Từ (650px), trường tìm kiếm luôn hiện cạnh category. Mỗi trang album tối đa (24) đánh giá, dùng nút trang thay vì dựng toàn bộ ảnh cùng lúc.
 
 Quick toolbar sticky chứa Back, tổng điểm và Lưu, tối thiểu (52px), cách nhau (10px); nút Back và Lưu cao (48px). Ảnh và giá nằm cạnh nhau: cột ảnh (112px), gap (18px), xuống (96px / 12px) ở tối đa (360px), lên (144px / 24px) trên desktop. Form có gap (12px), giảm thành (10px) trên điện thoại hẹp; nhóm slider có gap (8px), tăng thành (12px) trên desktop. Bàn phím dùng vùng nhìn thực, khoảng cuộn theo safe area và ẩn dock khi đang nhập, giữ hình học ảnh/giá ổn định.
+
+Hai lựa chọn bắt đầu chia hai cột, gap (12px); mỗi vùng tối thiểu theo `experience-option`. Reel nằm trong sheet tối đa (520px), rộng viewport trừ (24px), các ảnh vuông cách (10px), marker nằm cố định ở giữa. Nhật ký tối đa (680px), lịch bảy cột và ảnh ngày hai cột; từ (1100px) thành hai vùng (320px / phần còn lại), cách (40px), tối đa (1000px).
 
 **The Square Anchor Rule.** Giữ cover tỉ lệ (1:1), điểm trên phải và giá dưới trái ở mọi mật độ. Đổi số cột không đổi thứ tự đọc của từng đánh giá.
 
@@ -356,6 +424,8 @@ Album phẳng ở trạng thái nghỉ: không shadow quanh từng ảnh, quick 
 
 Dialog dùng backdrop (`#0009`); web giữ blur (6px), Android tắt blur. Layer overlay gốc là (80), dialog cao hơn một lớp. Focus mặc định là outline (2px) lệch ngoài (3px); album tile dùng outline (3px) lệch ngoài (4px).
 
+Ảnh trong reel chỉ có scrim dưới caption; ngày có ảnh trong lịch dùng scrim và bóng chữ (`0 1px 4px` với `photo-text-shadow`) để giữ số ngày rõ. Marker và viền kết quả dùng olive/acid theo theme, không tạo độ nổi giả.
+
 **The Photo Flatness Rule.** Cover ảnh và nhãn góc đứng trên một mặt phẳng; không thêm bóng cho từng tile để mô phỏng chồng ảnh.
 
 ## Shapes
@@ -364,14 +434,16 @@ Cover và map dùng góc cong vừa, không tạo rãnh vé hoặc giấy. Cover
 
 Badge điểm và giá dùng `badge`. Trường thường và search dùng `field`, khung category album dùng `tabs`, lựa chọn bên trong dùng `tab-option`. Nút thường dùng `pill`; Lưu trên quick toolbar bo (14px). Icon đơn và slider thumb dùng `circle`, dialog dùng `dialog`. Border một pixel bao đủ bốn cạnh ảnh, không tăng dày riêng một cạnh.
 
+Reel và nút ảnh dùng `compact-control`; nhãn giờ/điểm nhật ký dùng `journal-badge`. Ảnh nhật ký và viewfinder dùng `photo-compact`. Ô ngày dùng `tabs`, với viền nền (3px), giảm còn (2px) trên điện thoại hẹp; outline chọn nằm trong ảnh, không đẩy hình học lịch.
+
 ## Components
 
 ### Buttons
 
 Hành động rõ, nhãn ngắn và mục tiêu chạm có khoảng trống.
 
-- **Primary:** acid với chữ mực theo theme, pill, padding theo `button-primary`. Height trong frontmatter là chiều cao tối thiểu; nút được cao thêm khi chữ lớn. Chụp và xác nhận trong trình chỉnh ghim tùy chọn có mức tối thiểu (48px). Nút Lưu trong quick toolbar dùng `button-save`: bo theo `tabs`, cao (48px), luôn khả dụng khi GPS còn chạy nếu ảnh/giá hợp lệ.
-- **Secondary:** nền surface, chữ phụ và hairline; hover chuyển sang elevated. Icon button nền trong suốt, hình tròn, kích thước cơ sở (44px); Android tăng những nhóm điều khiển đã khai báo lên (48px).
+- **Primary:** acid với chữ mực theo theme, pill, padding theo `button-primary`. Height trong frontmatter là chiều cao tối thiểu; nút được cao thêm khi chữ lớn. Xác nhận ghim mang về và nút quay có mức tối thiểu (52px); Lưu dùng `button-save`, bo theo `tabs`, cao (48px), không bị GPS đang chạy khóa khi ảnh/giá hợp lệ.
+- **Secondary:** nền surface, chữ phụ và hairline; hover chuyển sang elevated. Icon button cơ sở (44px). Back/xóa/chụp lại trong form Android có cả width, height, min-width, min-height (48px); nút xóa/chụp lại dùng `photo-action` trên web và `photo-action-android` trên Android, chữ trắng trên nền tối.
 - **Hover / Focus:** nút thường giảm brightness còn (0.97), chuyển nền/viền/opacity (160ms); outline focus lấy `--ring`. Nút disabled giảm opacity còn (0.5); nhãn chọn ảnh bị khóa dùng (0.45). Không dùng hiệu ứng để thay cho nhãn đang xử lý.
 
 ### Chips
@@ -392,21 +464,29 @@ Trường nhập nền surface, viền hairline, cỡ chữ `input`; trường t
 
 ### Navigation
 
-Bốn vị trí là Quán xá, Bản đồ, Chấm điểm và Thống kê. Dock điện thoại là pill, khung tối thiểu `bottom-dock`, tối đa rộng (470px); mỗi ô có hàng icon (34px) và nhãn (12px) cùng căn, nhãn giảm thành (11px) ở tối đa (360px). Camera ở vị trí thứ ba luôn có vòng lilac; chỉ glyph xoay, vòng không méo. Active indicator dùng nền mềm trong dock, acid trong desktop rail. Các icon là SVG Lucide, không dùng ký tự text làm icon.
+Năm vị trí là Quán xá, Bản đồ, Chấm điểm, Nhật ký và Thống kê. Dock điện thoại là pill, khung tối thiểu `bottom-dock`, tối đa rộng (500px); mỗi ô có hàng icon (34px) và nhãn (11px), không xuống dòng theo override hiện tại. Camera ở vị trí thứ ba luôn có vòng lilac; chỉ glyph xoay, vòng không méo. Desktop rail giữ cùng thứ tự. Active indicator dùng nền mềm trong dock, acid trong rail. Các icon là SVG Lucide, không dùng ký tự text làm icon.
 
 Indicator chung dùng spring (stiffness 360, damping 25); glyph dùng damping (20). Đổi tab thoát (120ms), vào (240ms), dịch ngang từ (18px); màn đang thoát inert và chỉ một màn hoạt động. Giảm chuyển động đưa trực tiếp tới trạng thái cuối. Đổi tab khi đang nhập giữ bản nháp để tiếp tục, tự lưu snapshot và không hiện modal hỏi bỏ thay đổi; “Bỏ bản nháp” là thao tác riêng trong phần mở rộng. Thời gian là thông số triển khai, không phải bằng chứng FPS máy thật.
 
-### Quick Scoring
+### Capture and Quick Scoring
 
-Tạo đánh giá mới mở camera hệ thống tự động một lần và cần đúng một ảnh trước khi tiếp tục. Ảnh thành công đi thẳng tới giá, ba slider của nước mang đi hoặc bốn slider của nước ngồi lại/quán ăn, rồi Lưu. Ảnh mới phát triển trong (480ms); hàng ảnh/giá vào trong (280ms), dịch từ (8px). Không còn màn vị trí bắt buộc, dấu tiến trình ba bước, tên quán bắt buộc, ngày đánh giá, giờ mở cửa hay bộ đếm ảnh trong form.
+Hai vùng Mang về/Tại quán mở luồng phù hợp: mang về xác nhận ghim trước và giữ dòng nháp gọn trên album; tại quán mở camera trực tiếp. Camera vuông trong ứng dụng trả thẳng về form khi bấm chụp: CameraX dùng ViewPort 1:1 chung preview/capture, web dùng getUserMedia và crop vuông ở tâm. Không thêm màn xác nhận hệ thống. Viewfinder trên nền tối cố định, nút đóng/đổi camera tối thiểu (48px), shutter web tròn (88px) có viền sáng (6px). Ảnh thành công phát triển trong (480ms); hàng ảnh/giá vào trong (280ms), dịch từ (8px).
 
-Slider đặt nhãn và giá trị trên cùng hàng, có vùng tương tác cao (44px), rãnh cao (5px), thumb tròn (28px), giữ cuộn dọc bằng `touch-action: pan-y`. Các điểm thường từ (1–10), bước (0.5); Lượng là năm lựa chọn gốc, từ (0–4), bước (1), hiển thị tên và điểm của lựa chọn. Giá vẫn được tính từ trường giá, không có slider chấm giá độc lập. Tên, món, ghi chú, địa chỉ và các thao tác phụ nằm trong “Thông tin thêm”, đóng mặc định.
+Form giữ ảnh và giá cạnh nhau, tổng điểm/Lưu ở toolbar; ba slider cho nước mang đi, bốn cho nước ngồi lại hoặc ăn. Slider có vùng tương tác cơ sở (44px), rãnh (5px), thumb tròn (28px), `touch-action: pan-y`; Android áp dụng các mục tiêu chạm đã khai báo tối thiểu (48px). Điểm thường (1–10), bước (0.5); lượng/khẩu phần có năm nấc (0–4), bước (1), hiển thị tên và điểm. Không gian ăn tại quán nằm trong Thông tin thêm; giá có trường riêng, không có slider chấm giá.
 
-GPS tự thử một lần ở nền sau ảnh mới; spinner nhỏ chỉ báo công việc đang chạy và không khóa Lưu. Người dùng có thể mở Vị trí để chỉnh ghim bằng một ngón tay, đặt tọa độ hoặc lấy GPS lại; xác nhận trong dialog chỉ áp dụng khi người dùng chọn sửa vị trí. Attribution map gọn và đóng khi mới mở. Hủy camera giữ ảnh trước đó; chụp lại thay một ảnh thay vì cộng ảnh. Không gọi GPS trước khi có ảnh và không reverse geocode ngầm.
+Giữ một ảnh cho đánh giá mới, nút xóa/chụp lại rõ và không làm mất giá/tiêu chí/ghim đã khóa. Hủy giữ ảnh cũ; bản cũ chưa có ảnh vẫn sửa được. GPS nền sau ảnh chỉ dành cho tại quán; không lấy GPS ở nhà để thay ghim mang về. Có nhiều nháp bền vững, dòng pending chỉ hiện khi có; Lưu/bỏ chỉ xóa nháp khớp. Không thêm ngày, giờ mở cửa hay bộ đếm ảnh vào quick form. Điều kiện lưu và migration khẩu phần của mọi quán ăn nằm trong `PRODUCT.md`.
 
-Lưu ghi đánh giá ngay với vị trí đã có và thời gian hiện tại; GPS đang chờ được chuyển sang tác vụ bổ sung sau lưu. Kết quả muộn chỉ bổ sung tọa độ qua cập nhật nguyên tử nếu cùng ID và `updatedAt` của bản vừa lưu, cả hai tọa độ vẫn trống và chưa có ghim tay; bỏ qua đánh giá đã xóa hoặc sửa sau đó. GPS lỗi không chặn lưu và không sửa các trường điểm. Tên để trống dùng “Quán ăn” hoặc “Quán nước” cùng giờ/phút và ngày/tháng theo múi giờ Việt Nam; không suy đoán tên địa điểm.
+### Photo Reel
 
-Sửa đánh giá cũ đi thẳng vào chấm điểm, không tự mở camera hay đổi tọa độ và vẫn cho lưu bản cũ chưa có ảnh. Các mảng ảnh và giờ mở cửa lịch sử còn trong dữ liệu; không đưa lại bộ điều khiển thêm nhiều ảnh/ngày/giờ vào quick form. Ảnh có preview và dialog xem đầy đủ. Snapshot bản nháp được giữ trước khi mở camera Android, tự lưu khi nhập và giữ khi đổi tab; chỉ Lưu mới ghi đánh giá, “Bỏ bản nháp” xóa bản đang nhập một cách chủ động. Giảm chuyển động bỏ develop, entry, spinner và spring, không thay đổi điều kiện ảnh hoặc hành vi Lưu.
+Dải ảnh ngang dùng ảnh đánh giá thật hoặc ô thiếu ảnh trung thực, một marker giữa rộng (2px) với hai đầu hình thoi (10px), viền kết quả (2px), caption trên scrim. Kết quả được chọn bằng trọng số trước khi dựng dải; hiệu ứng giảm tốc (4,6 giây), easing `cubic-bezier(.09,.68,.12,1)`, tối đa (37) ô dùng chung blob URL. Ưu tiên ảnh chỉ ở preview nghỉ, không thay xác suất. Kết quả có tên/điểm/giá, một nút chính và thao tác phụ nhẹ. Reduced motion hoặc một ứng viên cho kết quả tức thì; không tự ghi lượt ghé/chi tiêu.
+
+### Review Journal
+
+Lịch tháng bảy cột dùng ảnh đầu tiên của đánh giá trong ngày hoặc dấu nhỏ nếu chưa có ảnh; ngày chọn có outline olive/acid, hôm nay gạch chân. Entries vuông có giờ trên trái, điểm trên phải, tên/giá bên dưới. Ngày/giờ tính theo Việt Nam, chỉ từ các đánh giá đang có; không phát sinh kho ảnh từng lượt ghé. Đổi tháng dịch (14px) và hiện trong (300ms), bỏ chuyển động khi quiet/reduced motion; nhấn ảnh co còn (0.97).
+
+### Android Chrome
+
+SystemBars đặt kiểu glyph trước, sau đó NotDisplay đặt nền decor/WebView bằng token canvas của theme. Đồng bộ ở startup, đổi theme và resume để vùng status/navigation inset cùng màu với nội dung. Giữ chữ hệ thống có tương phản; ảnh chụp trước bản sửa không chứng minh trạng thái APK sau sửa. Yêu cầu tần số quét cao không phải bảo đảm 120 fps.
 
 Phần chưa chuẩn hóa thành hệ: map còn marker quán dùng emoji/ký tự sao và màu riêng từ lớp cũ. Đây là drift hiện có ngoài phạm vi album/capture, không phải mẫu icon hoặc palette để màn hình mới kế thừa; lần ghi tài liệu này không sửa mã ứng dụng.
 
@@ -418,7 +498,8 @@ Phần chưa chuẩn hóa thành hệ: map còn marker quán dùng emoji/ký t�
 - Do giữ ảnh vuông, hairline đều và góc điểm/giá cố định ở mọi số cột.
 - Do dùng token sáng/tối tương ứng và Plus Jakarta Sans tự lưu cho chữ tiếng Việt.
 - Do giữ focus thấy rõ, nhãn truy cập, mục tiêu chạm phù hợp và dock tăng cao theo chữ.
-- Do cho lưu ngay khi ảnh/giá hợp lệ, giữ GPS ở nền và chỉnh ghim tùy chọn; giữ nguyên ngữ cảnh khi sửa đánh giá.
+- Do xác nhận ghim mang về trước khi chụp ở nhà, giữ ghim đã khóa; tại quán lấy GPS nền sau ảnh và cho Lưu khi ảnh/giá hợp lệ.
+- Do giữ giờ/điểm/tên/giá của đánh giá trong nhật ký; dùng ảnh thật trong reel và kết quả trọng số có sẵn.
 - Do tôn trọng giảm chuyển động, giới hạn một trang album ở 24 đánh giá và dừng hiệu ứng trạng thái khi xong.
 
 ### Don't:
@@ -427,6 +508,7 @@ Phần chưa chuẩn hóa thành hệ: map còn marker quán dùng emoji/ký t�
 - Don't dùng các rãnh vé, vòng điểm lớn và inspector thường trực của danh sách cũ làm mẫu cho album mới.
 - Don't biến mỗi tile thành một thẻ có bóng hoặc thêm mô tả thường trực, phiên bản hay lời chào vào chrome.
 - Don't dùng chữ acid nhạt trên nền sáng hoặc thay họ neutral mực bằng slate cũ.
-- Don't bỏ ảnh bắt buộc của đánh giá mới, chặn Lưu vì GPS, ép nhập tên/xác nhận ghim, tự mở camera khi sửa hay tự thay tọa độ cũ.
+- Don't bỏ ảnh bắt buộc của đánh giá mới, chặn Lưu tại quán vì GPS, ép nhập tên, tự mở camera khi sửa hay thay ghim mang về bằng GPS tại nhà.
+- Don't biến nhật ký thành kho ảnh lượt ghé, tăng xác suất vì có ảnh hoặc tự ghi lượt ghé/chi tiêu từ kết quả reel.
 - Don't thêm ngày/giờ mở cửa/bộ đếm ảnh vào quick form hoặc hỏi bỏ bản nháp chỉ vì đổi tab.
 - Don't coi build, ảnh chụp trình duyệt hoặc thông số animation là bằng chứng 120 fps hay kiểm thử camera/GPS trên thiết bị thật.
