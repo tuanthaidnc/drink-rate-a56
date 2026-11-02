@@ -52,6 +52,7 @@ function ScoreSlider({
   step = 0.5,
   display,
   disabled = false,
+  onInteract,
 }: {
   label: string;
   value: number;
@@ -61,6 +62,7 @@ function ScoreSlider({
   step?: number;
   display?: string;
   disabled?: boolean;
+  onInteract?: () => void;
 }) {
   const id = useId();
   return (
@@ -76,6 +78,22 @@ function ScoreSlider({
         step={step}
         value={[value]}
         disabled={disabled}
+        onPointerDownCapture={onInteract}
+        onKeyDownCapture={(e) => {
+          if (
+            [
+              'ArrowLeft',
+              'ArrowRight',
+              'ArrowUp',
+              'ArrowDown',
+              'Home',
+              'End',
+              'Enter',
+              ' ',
+            ].includes(e.key)
+          )
+            onInteract?.();
+        }}
         onValueChange={(values) => onChange(values[0])}
         aria-label={label}
       >
@@ -773,6 +791,10 @@ export default function ReviewForm({
                 <ScoreSlider
                   disabled={locked}
                   label="Khẩu phần"
+                  onInteract={() => {
+                    if (!draftRef.current.portionKey)
+                      change('portionKey', VOLUME_OPTIONS[portion].key);
+                  }}
                   min={0}
                   max={4}
                   step={1}

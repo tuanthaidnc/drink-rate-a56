@@ -1185,6 +1185,25 @@ try {
       assert.deepEqual(errors, []);
     },
   );
+  await scenario(
+    'an unrated legacy portion can explicitly choose its current medium slider position',
+    async () => {
+      const food = validateReview({
+        ...createReview('food'),
+        name: 'Món cũ chưa chấm khẩu phần',
+        portionKey: undefined,
+      });
+      const { page: p, errors } = await setup({ legacy: JSON.stringify([food]) });
+      await editFirst(p);
+      assert.equal(await p.getByText('Chưa chấm', { exact: true }).count(), 1);
+      await p.getByRole('slider', { name: 'Khẩu phần', exact: true }).click();
+      await p.getByText('Vừa · 7', { exact: true }).waitFor();
+      await p.getByRole('button', { name: 'Cập nhật đánh giá', exact: true }).click();
+      await p.locator('.album-tile').waitFor();
+      assert.equal((await readDoc(p)).reviews[0].portionKey, 'medium');
+      assert.deepEqual(errors, []);
+    },
+  );
 } finally {
   for (const c of contexts) await c.close();
   await browser.close();
