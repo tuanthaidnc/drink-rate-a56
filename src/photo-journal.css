@@ -1093,9 +1093,6 @@ textarea {
   animation: none;
 }
 
-[data-platform='android'] .quick-toolbar {
-  top: env(safe-area-inset-top);
-}
 .quick-toolbar > .icon-button,
 .quick-toolbar .button {
   min-height: 48px;
@@ -1109,5 +1106,9 @@ textarea {
   scroll-margin-block: calc(76px + env(safe-area-inset-top)) 24px;
 }
 .not-app[data-form='true'] .app-main {
+  grid-row: 2;
   scroll-padding-block: calc(72px + env(safe-area-inset-top)) 24px;
+}
+.not-app[data-form='true'].is-typing {
+  grid-template-rows: 0 minmax(0, 1fr);
 }

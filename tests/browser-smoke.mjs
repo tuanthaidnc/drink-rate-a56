@@ -532,6 +532,39 @@ try {
     },
   );
   await scenario(
+    'keyboard resize keeps price and text inputs visible in the main grid row',
+    async () => {
+      const { page: p } = await setup({
+        viewport: { width: 390, height: 844 },
+        motion: 'no-preference',
+      });
+      await begin(p);
+      await p.locator('#review-price').fill('31,5');
+      await p.setViewportSize({ width: 390, height: 500 });
+      await p.locator('.not-app.is-typing').waitFor();
+      const visible = () => {
+        const main = document.querySelector('.app-main');
+        const input = document.activeElement;
+        const r = input.getBoundingClientRect();
+        const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+        return main.clientHeight > 200 && (hit === input || input.contains(hit));
+      };
+      await p.waitForFunction(visible);
+      await p.screenshot({ path: resolve(output, 'quick-keyboard-price.png') });
+      await p.locator('#review-price').press('Enter');
+      await p.setViewportSize({ width: 390, height: 844 });
+      await more(p);
+      await p.getByLabel('Tên quán', { exact: true }).fill('Tên quán kiểm thử bàn phím');
+      await p.setViewportSize({ width: 390, height: 500 });
+      await p.locator('.not-app.is-typing').waitFor();
+      await p.waitForFunction(visible);
+      await p.getByLabel('Tên quán', { exact: true }).press('Enter');
+      await p.setViewportSize({ width: 390, height: 844 });
+      assert.equal((await readDoc(p)).reviews.length, 0);
+      assert.equal(await p.locator('#review-price').inputValue(), '31,5');
+    },
+  );
+  await scenario(
     'camera failure allows one library image without a mandatory location step',
     async () => {
       const { page: p } = await setup({ camera: 'error' });

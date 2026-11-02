@@ -132,6 +132,8 @@ public class NativeFlowTest {
             until("!!document.querySelector('#shop-name-input')");
             enterText("#shop-name-input", "Native-QA");
             enterText("#review-price", "31,5");
+            until("document.querySelector('.not-app').classList.contains('is-typing')");
+            assertTrue("IME must not collapse the main grid row or hide the focused price", (Boolean)js("(()=>{const m=document.querySelector('.app-main'),e=document.querySelector('#review-price'),r=e.getBoundingClientRect();return m.clientHeight>180&&document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)===e})()"));
             screenshot("native-keyboard");
             device.pressBack();
             until("!!document.querySelector('.quick-toolbar')");
