@@ -1,0 +1,2 @@
+const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/web-BiFZCFWy.js","assets/index-DG4nad1_.js","assets/index-DhHX2rfx.css"])))=>i.map(i=>d[i]);
+import{aj as e,_ as t}from"./index-DG4nad1_.js";import{f as i}from"./synapse-akrKn89j.js";const a=e("Geolocation",{web:()=>t(()=>import("./web-BiFZCFWy.js"),__vite__mapDeps([0,1,2])).then(o=>new o.GeolocationWeb)});i();export{a as Geolocation};
