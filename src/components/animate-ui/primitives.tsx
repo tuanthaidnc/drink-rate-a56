@@ -10,7 +10,8 @@ import {
 } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { Capacitor, SystemBars, SystemBarsStyle } from '@capacitor/core';
+import { Capacitor } from '@capacitor/core';
+import { syncNativeBars } from '../../lib/platform.ts';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -22,13 +23,11 @@ export type AppTheme = 'dark' | 'light';
  * 1. ANIMATE-UI: ThemeToggler with Circular View Transition API & Status Bar Sync
  * ========================================================================== */
 export function syncStatusBarThemeColor(nextTheme: AppTheme) {
-  const statusColor = nextTheme === 'light' ? '#ffffff' : '#0b0d0c';
+  const statusColor = nextTheme === 'light' ? '#f7f8f5' : '#0b0d0c';
   document.documentElement.setAttribute('data-theme', nextTheme);
   document.documentElement.style.colorScheme = nextTheme;
   if (Capacitor.isNativePlatform()) {
-    void SystemBars.setStyle({
-      style: nextTheme === 'light' ? SystemBarsStyle.Light : SystemBarsStyle.Dark,
-    }).catch(() => {});
+    void syncNativeBars(nextTheme).catch(() => {});
   }
 
   const metas = document.querySelectorAll('meta[name="theme-color"]');

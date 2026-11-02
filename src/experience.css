@@ -307,6 +307,14 @@
   height: 44px;
   border-radius: 12px;
 }
+[data-platform='android'] .quick-toolbar > .icon-button,
+[data-platform='android'] .quick-photo > .remove-photo,
+[data-platform='android'] .quick-photo > .retake-photo {
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  min-height: 48px;
+}
 .pending-experience {
   display: flex;
   align-items: center;

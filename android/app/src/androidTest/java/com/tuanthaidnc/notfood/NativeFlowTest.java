@@ -4,7 +4,10 @@ import static org.junit.Assert.*;
 import android.webkit.WebView;
 import android.app.Activity;
 import android.graphics.Bitmap;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.view.KeyEvent;
+import androidx.core.view.WindowCompat;
 import androidx.camera.view.PreviewView;
 import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry;
 import androidx.test.runner.lifecycle.Stage;
@@ -71,6 +74,26 @@ public class NativeFlowTest {
     private void screenshot(String name) throws Exception {
         Thread.sleep(550);
         assertTrue(device.takeScreenshot(new File(proof, name + ".png")));
+    }
+
+    private void assertSystemBarTheme(boolean dark) throws Exception {
+        AtomicBoolean matched = new AtomicBoolean(false);
+        long deadline = System.currentTimeMillis() + 10000;
+        do {
+            InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
+                for (Activity activity : ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(Stage.RESUMED)) {
+                    if (!(activity instanceof MainActivity)) continue;
+                    android.view.Window window = activity.getWindow();
+                    android.graphics.drawable.Drawable backing = window.getDecorView().getBackground();
+                    boolean lightIcons = !WindowCompat.getInsetsController(window, window.getDecorView()).isAppearanceLightStatusBars();
+                    int expected = dark ? Color.rgb(11, 13, 12) : Color.rgb(247, 248, 245);
+                    matched.set(backing instanceof ColorDrawable && ((ColorDrawable)backing).getColor() == expected && lightIcons == dark);
+                }
+            });
+            if (matched.get()) return;
+            Thread.sleep(60);
+        } while (System.currentTimeMillis() < deadline);
+        fail("System-bar glyphs and inset backing must match the app theme");
     }
 
     private void waitForLiveCameraFrame() throws Exception {
@@ -161,6 +184,8 @@ public class NativeFlowTest {
             until("document.querySelector('.review-form')?.dataset.stage==='score'");
             until("document.querySelector('.quick-photo img')?.naturalWidth>0");
             assertTrue("Square output and direct return without confirmation", (Boolean)js("(()=>{const p=document.querySelector('.quick-photo img');return p.naturalWidth===p.naturalHeight})()"));
+            assertSystemBarTheme(true);
+            assertTrue("Back, remove and retake have 48 by 48 native targets", (Boolean)js("[...document.querySelectorAll('.quick-toolbar > .icon-button,.quick-photo > .remove-photo,.quick-photo > .retake-photo')].every(e=>{const r=e.getBoundingClientRect();return r.width>=48&&r.height>=48})"));
             tap(".quick-location");
             until("!!document.querySelector('[role=dialog]')");
             tap(".manual-coordinates");
@@ -179,6 +204,7 @@ public class NativeFlowTest {
             enterText("#shop-name-input", "Native-QA");
             enterText("#review-price", "31,5");
             until("document.querySelector('.not-app').classList.contains('is-typing')");
+            assertSystemBarTheme(true);
             assertTrue("IME must not collapse the main grid row or hide the focused price", (Boolean)js("(()=>{const m=document.querySelector('.app-main'),e=document.querySelector('#review-price'),r=e.getBoundingClientRect();return m.clientHeight>180&&document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)===e})()"));
             screenshot("native-keyboard");
             device.pressBack();
@@ -197,9 +223,11 @@ public class NativeFlowTest {
             assertTrue((Boolean)js("(()=>{const e=document.querySelector('[data-stat=average]');return getComputedStyle(e).color!==getComputedStyle(e.parentElement).backgroundColor})()"));
             assertTrue((Boolean)js("document.documentElement.scrollWidth<=innerWidth"));
             screenshot("native-insights-dark");
+            assertSystemBarTheme(true);
             assertDockGeometry();
             tap(".theme-toggle");
             until("document.documentElement.dataset.theme==='light'");
+            assertSystemBarTheme(false);
             screenshot("native-insights-light");
             tap(".header-actions button[aria-label='Tùy chọn']");
             until("!!document.querySelector('[role=dialog]')");
@@ -232,6 +260,8 @@ public class NativeFlowTest {
             assertTrue((Boolean)js("document.documentElement.scrollWidth<=innerWidth"));
             JSONObject result = new JSONObject();
             result.put("pass", true);
+            result.put("nativeSystemBarContrast", true);
+            result.put("nativeFormTargets48", true);
             result.put("source", "Android API 35 emulator, native touch, IME, system Back, real WebView");
             result.put("score", "7.7");
             result.put("fontScale", "1.3");
