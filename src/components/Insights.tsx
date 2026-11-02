@@ -103,7 +103,11 @@ function Comparison({ items }: { items: ReviewItem[] }) {
         (r) =>
           r.id !== a.id &&
           r.category === a.category &&
-          (r.category === 'food' ? r.foodType === a.foodType : r.mode === a.mode),
+          (r.category === 'food'
+            ? r.foodType === a.foodType &&
+              !!r.portionKey === !!a.portionKey &&
+              (!a.portionKey || r.mode === a.mode)
+            : r.mode === a.mode),
       )
     : [];
   const b = choices.find((r) => r.id === second) ?? choices[0];
@@ -117,6 +121,7 @@ function Comparison({ items }: { items: ReviewItem[] }) {
           ...(a?.portionKey
             ? [VOLUME_OPTIONS.find((v) => v.key === r.portionKey)?.score ?? 0]
             : [r.space]),
+          ...(r.portionKey && r.mode === 'dinein' ? [r.space] : []),
           getFoodPriceScore(r.priceK, r.foodType).score,
         ]
       : [
@@ -128,7 +133,14 @@ function Comparison({ items }: { items: ReviewItem[] }) {
         ];
   const labels =
     a?.category === 'food'
-      ? ['Độ ngon', 'Chất lượng', 'Sạch sẽ', a.portionKey ? 'Khẩu phần' : 'Không gian', 'Điểm giá']
+      ? [
+          'Độ ngon',
+          'Chất lượng',
+          'Sạch sẽ',
+          a.portionKey ? 'Khẩu phần' : 'Không gian',
+          ...(a.portionKey && a.mode === 'dinein' ? ['Không gian'] : []),
+          'Điểm giá',
+        ]
       : [
           'Hương vị',
           'Lượng đồ uống',

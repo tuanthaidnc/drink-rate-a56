@@ -182,7 +182,7 @@ export function ScoreDial({
         />
       </svg>
       <span className="dial-value">
-        <AnimatedNumber value={value} decimals={decimals} from={quiet ? value : 0} />
+        <AnimatedNumber value={value} decimals={decimals} />
         <small>/10</small>
       </span>
     </span>

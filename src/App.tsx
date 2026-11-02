@@ -113,7 +113,6 @@ export default function App() {
     latestDraft.current = snapshot;
   }, []);
   const cameraLocked = photoBusy || recoveryBusy;
-  const [entryPhotos, setEntryPhotos] = useState<Promise<File[]>>();
   const [captureOnOpen, setCaptureOnOpen] = useState(false);
   const [pendingDrafts, setPendingDrafts] = useState<CaptureDraft[]>([]);
   const [detailId, setDetailId] = useState<string | null>(null);
@@ -156,7 +155,6 @@ export default function App() {
       return;
     }
     setDetailId(null);
-    setEntryPhotos(undefined);
     setCaptureOnOpen(false);
     setCaptureDraft(undefined);
     setDirty(!!p);
@@ -185,7 +183,6 @@ export default function App() {
     }
     setDetailId(null);
     setCaptureOnOpen(false);
-    setEntryPhotos(undefined);
     setCaptureDraft(undefined);
     setDirty(false);
     setDraft(structuredClone(r));
@@ -949,7 +946,6 @@ export default function App() {
                               initial={draft}
                               recovered={captureDraft}
                               recovering={recoveryBusy}
-                              entryPhotos={entryPhotos}
                               captureOnOpen={captureOnOpen}
                               isEdit={editing}
                               theme={theme}

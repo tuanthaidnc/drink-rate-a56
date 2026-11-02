@@ -1112,7 +1112,7 @@ try {
       const before = await readDoc(p);
       await p.getByRole('button', { name: 'Ăn gì?', exact: true }).click();
       await p.locator('.case-reel img').first().waitFor();
-      await p.getByRole('button', { name: 'Mở lựa chọn', exact: true }).click();
+      await p.getByRole('button', { name: 'Quay', exact: true }).click();
       await p.locator('.case-reel[aria-busy=true]').waitFor();
       await p.locator('.case-reel[aria-busy=false]').waitFor();
       const geometry = await p.evaluate(() => {
@@ -1153,6 +1153,36 @@ try {
       assert.deepEqual(errors, []);
       await p.keyboard.press('Escape');
       await p.screenshot({ path: resolve(output, 'journal.png') });
+    },
+  );
+  await scenario(
+    'starting another review and saving it retains the earlier unfinished photo and GPS draft',
+    async () => {
+      const { page: p, errors } = await setup();
+      await begin(p);
+      await more(p);
+      await p.getByLabel('Tên quán', { exact: true }).fill('Để chấm sau');
+      await p.locator('#review-price').fill('27,5');
+      await nav(p, 'Quán xá');
+      await p.locator('.pending-experience').waitFor();
+      const first = await store(p, 'capture-drafts', 'pending');
+      await p.getByRole('button', { name: 'Bắt đầu đánh giá mới', exact: true }).click();
+      await p.getByRole('button', { name: 'Tại quán Chụp ảnh', exact: true }).click();
+      await p.locator('.quick-review[data-stage=score]').waitFor();
+      await save(p, 'Món thứ hai');
+      await p.locator('.pending-experience').waitFor();
+      assert.equal((await readDoc(p)).reviews.length, 1);
+      await p.reload();
+      await p.locator('.pending-experience').waitFor();
+      await p.locator('.pending-experience').click();
+      await p.locator('.quick-review[data-stage=score]').waitFor();
+      assert.equal(await p.locator('#review-price').inputValue(), '27,5');
+      await more(p);
+      assert.equal(await p.getByLabel('Tên quán', { exact: true }).inputValue(), 'Để chấm sau');
+      const retained = await store(p, 'capture-drafts', `draft:${first.original.id}`);
+      assert.deepEqual(retained.draft.photoIds, first.draft.photoIds);
+      assert.equal(retained.draft.lat, first.draft.lat);
+      assert.deepEqual(errors, []);
     },
   );
 } finally {

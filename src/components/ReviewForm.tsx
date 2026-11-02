@@ -96,7 +96,6 @@ function ScoreSlider({
 export default function ReviewForm({
   initial,
   recovered,
-  entryPhotos,
   isEdit,
   theme,
   busy,
@@ -113,7 +112,6 @@ export default function ReviewForm({
 }: {
   initial: ReviewItem;
   recovered?: CaptureDraft;
-  entryPhotos?: Promise<File[]>;
   isEdit: boolean;
   theme: 'dark' | 'light';
   busy: boolean;
@@ -153,8 +151,7 @@ export default function ReviewForm({
     recovered?.venueLocked ?? (isEdit || (draft.lat !== null && draft.photoIds.length > 0)),
   );
   const reviewDate = recovered?.reviewDate ?? inputDate(initial.reviewedAt ?? initial.createdAt);
-  const captureInput = useRef<HTMLInputElement>(null),
-    photoOperation = useRef(false),
+  const photoOperation = useRef(false),
     autoOpened = useRef(false),
     alive = useRef(true),
     saving = useRef(false);
@@ -439,19 +436,6 @@ export default function ReviewForm({
         }
       }}
     >
-      <input
-        ref={captureInput}
-        type="file"
-        hidden
-        capture="environment"
-        accept="image/jpeg,image/png,image/webp"
-        aria-label="Chụp ảnh món ăn hoặc đồ uống"
-        onChange={(e) => {
-          const files = Array.from(e.target.files ?? []);
-          e.target.value = '';
-          void importPhoto(files);
-        }}
-      />
       <div className="quick-toolbar">
         <button
           type="button"
@@ -641,15 +625,17 @@ export default function ReviewForm({
                   <Camera size={32} />
                 </button>
               )}
-              <button
-                type="button"
-                className="icon-button retake-photo"
-                aria-label="Chụp lại ảnh"
-                disabled={locked}
-                onClick={() => void capture()}
-              >
-                <Camera size={18} />
-              </button>
+              {!!draft.photoIds.length && (
+                <button
+                  type="button"
+                  className="icon-button retake-photo"
+                  aria-label="Chụp lại ảnh"
+                  disabled={locked}
+                  onClick={() => void capture()}
+                >
+                  <Camera size={18} />
+                </button>
+              )}
               {!!draft.photoIds.length && (
                 <button
                   type="button"

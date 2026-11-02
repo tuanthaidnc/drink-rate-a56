@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Navigation, Shuffle, Check, Coffee, Utensils, ImageOff } from 'lucide-react';
+import { Navigation, Shuffle, Check, Utensils, ImageOff } from 'lucide-react';
 import { Dialog } from './Dialog.tsx';
 import { Photo } from './Photo.tsx';
 import { useQuietMotion } from './motion/kinetic.tsx';
@@ -118,7 +118,9 @@ export default function SpinPicker({
     );
     setRun({ cards, chosen, index });
   };
-  const cards = run?.cards ?? pool.slice(0, 7);
+  const cards =
+    run?.cards ??
+    [...pool].sort((a, b) => Number(!!b.photoIds[0]) - Number(!!a.photoIds[0])).slice(0, 7);
   const weighted = weightedCandidates(pool, now);
   const sum = weighted.reduce((s, x) => s + x.weight, 0);
   return (
@@ -128,11 +130,11 @@ export default function SpinPicker({
           <div className="segmented" role="group" aria-label="Loại gợi ý">
             {(
               [
-                ['ALL', 'Tất cả', null],
-                ['food', 'Ăn', Utensils],
-                ['drink', 'Nước', Coffee],
+                ['ALL', 'Tất cả'],
+                ['food', 'Ăn'],
+                ['drink', 'Nước'],
               ] as const
-            ).map(([key, label, Icon]) => (
+            ).map(([key, label]) => (
               <button
                 key={key}
                 className="button secondary"
@@ -140,7 +142,6 @@ export default function SpinPicker({
                 disabled={spinning}
                 onClick={() => setCategory(key)}
               >
-                {Icon && <Icon size={16} />}
                 {label}
               </button>
             ))}
@@ -186,7 +187,6 @@ export default function SpinPicker({
                     ) : (
                       <div className="case-no-photo">
                         <ImageOff />
-                        <span>{r.name}</span>
                       </div>
                     )}
                     <div className="case-photo-caption">
@@ -199,29 +199,31 @@ export default function SpinPicker({
                 ))}
               </div>
             </div>
-            <div className="case-result" role="status" aria-live="polite">
-              {winner ? (
-                <>
-                  <h3>{winner.name}</h3>
-                  <p>
-                    {winner.totalScore.toFixed(1)}
-                    <small>/10</small>
-                    <span>· {winner.priceK}k</span>
-                  </p>
-                </>
-              ) : (
-                <p className="case-ready">{spinning ? 'Đang chọn…' : 'Hôm nay thử quán nào?'}</p>
-              )}
-            </div>
+            {(winner || spinning) && (
+              <div className="case-result" role="status" aria-live="polite">
+                {winner ? (
+                  <>
+                    <h3>{winner.name}</h3>
+                    <p>
+                      {winner.totalScore.toFixed(1)}
+                      <small>/10</small>
+                      <span>· {winner.priceK}k</span>
+                    </p>
+                  </>
+                ) : (
+                  <p className="case-ready">Đang chọn…</p>
+                )}
+              </div>
+            )}
             <button className="button case-open" disabled={spinning} onClick={spin}>
               <Shuffle size={20} />
               {spinning
                 ? 'Đang chọn…'
                 : winner
-                  ? 'Quay lại'
+                  ? 'Quay tiếp'
                   : pool.length === 1
                     ? 'Chọn quán'
-                    : 'Mở lựa chọn'}
+                    : 'Quay'}
             </button>
             {winner && (
               <div className="case-actions">
