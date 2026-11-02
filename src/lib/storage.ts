@@ -468,7 +468,7 @@ export async function downloadBlob(blob: Blob, fileName: string): Promise<boolea
     const file = await Filesystem.writeFile({
       path: fileName,
       data: await blob.text(),
-      directory: Directory.Cache,
+      directory: Directory.ExternalCache,
       encoding: Encoding.UTF8,
     });
     try {
