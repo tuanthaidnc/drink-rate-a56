@@ -60,7 +60,7 @@ import {
 } from './lib/models.ts';
 import { createReview, validateReview, validateReviews, validateVisit } from './lib/validation.ts';
 import { reviewDraftIsDirty } from './lib/reviewDraft.ts';
-import { saveCaptureDraft } from './lib/storage.ts';
+import { saveCaptureDraft, listCaptureDrafts } from './lib/storage.ts';
 import { DEFAULT_FILTERS, describeFilters, filterReviews, type Filters } from './lib/selection.ts';
 import { directionsUrl, distanceKm, getCurrentPosition, type Position } from './lib/geo.ts';
 import { INITIAL_REVIEWS as DEMO_REVIEWS } from './data/demo.ts';
@@ -115,6 +115,7 @@ export default function App() {
   const cameraLocked = photoBusy || recoveryBusy;
   const [entryPhotos, setEntryPhotos] = useState<Promise<File[]>>();
   const [captureOnOpen, setCaptureOnOpen] = useState(false);
+  const [pendingDrafts, setPendingDrafts] = useState<CaptureDraft[]>([]);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [density, setDensity] = useState<'medium' | 'small'>(() => {
     try {
@@ -149,8 +150,8 @@ export default function App() {
     if (push) history.pushState({ notTab: target }, '', location.href);
     main.current?.scrollTo({ top: 0 });
   }, []);
-  const add = (p?: Position) => {
-    if (draft && dirty && !editing) {
+  const add = (p?: Position, fresh = false) => {
+    if (!fresh && draft && dirty && !editing) {
       navigate('review');
       return;
     }
@@ -173,10 +174,14 @@ export default function App() {
     setEditing(false);
     navigate('review');
   };
-  const edit = (r: ReviewItem) => {
+  const edit = async (r: ReviewItem) => {
     if (draft && dirty && !editing) {
-      setMessage('Còn bản đang trải nghiệm. Mở Chấm điểm để hoàn tất hoặc bỏ bản nháp.');
-      return;
+      try {
+        if (latestDraft.current) await saveCaptureDraft(latestDraft.current);
+      } catch {
+        setMessage('Chưa giữ được bản nháp. Hãy thử lại.');
+        return;
+      }
     }
     setDetailId(null);
     setCaptureOnOpen(false);
@@ -210,7 +215,7 @@ export default function App() {
         setDraft(null);
         setDirty(false);
         setCaptureDraft(undefined);
-        void forgetCaptureRecovery().catch(() => {});
+        void forgetCaptureRecovery(draft?.id).catch(() => {});
       }
       navigate(target);
     }
@@ -271,6 +276,47 @@ export default function App() {
       }),
     [navigate],
   );
+  useEffect(() => {
+    let active = true;
+    void listCaptureDrafts()
+      .then((drafts) => {
+        if (active)
+          setPendingDrafts(
+            drafts.filter((s) =>
+              reviewDraftIsDirty(
+                s.original,
+                s.draft,
+                s.price,
+                s.reviewDate,
+                s.isEdit,
+                s.firstVisit,
+              ),
+            ),
+          );
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [captureDraft, draft, doc?.revision, tab]);
+  const resumeDraft = (snapshot: CaptureDraft) => {
+    setDraft(snapshot.original);
+    setEditing(snapshot.isEdit);
+    setCaptureDraft({ ...snapshot, recoveryId: newId('resume') });
+    latestDraft.current = snapshot;
+    setDirty(true);
+    setCaptureOnOpen(!snapshot.draft.photoIds.length && snapshot.venueLocked === true);
+    navigate('review');
+  };
+  const startFresh = async () => {
+    try {
+      if (latestDraft.current && dirty) await saveCaptureDraft(latestDraft.current);
+      latestDraft.current = undefined;
+      add(undefined, true);
+    } catch {
+      setMessage('Chưa giữ được bản nháp. Hãy thử lại.');
+    }
+  };
   useEffect(() => {
     const prevent = (e: BeforeUnloadEvent) => {
       e.preventDefault();
@@ -442,7 +488,7 @@ export default function App() {
           )
           .catch(() => {});
       }
-      await forgetCaptureRecovery().catch(() => {});
+      await forgetCaptureRecovery(item.id).catch(() => {});
       setCaptureDraft(undefined);
       setDraft(null);
       latestDraft.current = undefined;
@@ -708,39 +754,45 @@ export default function App() {
                             <div className="workspace-view">
                               <div className="places-column stack">
                                 {heading}
-                                {captureDraft && !captureDraft.isEdit && dirty && (
-                                  <button
-                                    className="pending-experience"
-                                    onClick={() => {
-                                      setCaptureOnOpen(
-                                        !captureDraft.draft.photoIds.length &&
-                                          captureDraft.venueLocked === true,
-                                      );
-                                      navigate('review');
-                                    }}
-                                  >
-                                    <span className="pending-dot" />
-                                    <span>
-                                      <strong>
-                                        {captureDraft.draft.name || 'Đang trải nghiệm'}
-                                      </strong>
-                                      <small>
-                                        {captureDraft.draft.photoIds.length
-                                          ? 'Bản đang chấm'
-                                          : captureDraft.venueLocked
-                                            ? 'Đã giữ vị trí quán'
-                                            : 'Bản nháp'}
-                                      </small>
-                                    </span>
-                                    <span>
-                                      {captureDraft.draft.photoIds.length
-                                        ? 'Tiếp tục'
-                                        : captureDraft.venueLocked
-                                          ? 'Chụp ảnh'
-                                          : 'Mở'}
-                                      <ChevronRight size={18} />
-                                    </span>
-                                  </button>
+                                {!!pendingDrafts.length && (
+                                  <div className="pending-drafts">
+                                    <button
+                                      className="icon-button new-experience"
+                                      aria-label="Bắt đầu đánh giá mới"
+                                      onClick={() => void startFresh()}
+                                    >
+                                      <Plus />
+                                    </button>
+                                    {pendingDrafts.map((pending) => (
+                                      <button
+                                        key={pending.original.id}
+                                        className="pending-experience"
+                                        onClick={() => resumeDraft(pending)}
+                                      >
+                                        <span className="pending-dot" />
+                                        <span>
+                                          <strong>
+                                            {pending.draft.name || 'Đang trải nghiệm'}
+                                          </strong>
+                                          <small>
+                                            {pending.draft.photoIds.length
+                                              ? 'Bản đang chấm'
+                                              : pending.venueLocked
+                                                ? 'Đã giữ vị trí quán'
+                                                : 'Bản nháp'}
+                                          </small>
+                                        </span>
+                                        <span>
+                                          {pending.draft.photoIds.length
+                                            ? 'Tiếp tục'
+                                            : pending.venueLocked
+                                              ? 'Chụp ảnh'
+                                              : 'Mở'}
+                                          <ChevronRight size={18} />
+                                        </span>
+                                      </button>
+                                    ))}
+                                  </div>
                                 )}
                                 {controls}
                                 <div className="split list-heading">
@@ -914,7 +966,7 @@ export default function App() {
                                 setCaptureDraft(undefined);
                                 latestDraft.current = undefined;
                                 setDirty(false);
-                                void forgetCaptureRecovery().catch(() => {});
+                                void forgetCaptureRecovery(draft.id).catch(() => {});
                                 navigate('places');
                               }}
                             />

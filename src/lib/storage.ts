@@ -149,6 +149,24 @@ export async function loadDocument(): Promise<ReviewDocument> {
       recursive: true,
       data: JSON.stringify(await makeBackup(existing)),
     });
+    const drafts = await listCaptureDrafts();
+    if (drafts.length)
+      await Filesystem.writeFile({
+        path: 'backups/before-v18-drafts.json',
+        directory: Directory.External,
+        encoding: Encoding.UTF8,
+        recursive: true,
+        data: JSON.stringify(
+          await Promise.all(
+            drafts.map(async (draft) => ({
+              ...draft,
+              photos: await Promise.all(
+                draft.photos.map(async (p) => ({ id: p.id, dataUrl: await dataUrl(p.blob) })),
+              ),
+            })),
+          ),
+        ),
+      });
   }
   if (existing)
     return needsPlaceCorrections(existing) || needsFoodPortionMigration(existing)
@@ -342,17 +360,34 @@ export async function saveCaptureDraft(draft: CaptureDraft): Promise<void> {
     t = d.transaction('capture-drafts', 'readwrite');
   const done = complete(t);
   t.objectStore('capture-drafts').put(draft, 'pending');
+  t.objectStore('capture-drafts').put(draft, `draft:${draft.original.id}`);
   await done;
 }
 export async function getCaptureDraft(): Promise<CaptureDraft | undefined> {
   const d = await db();
   return request(d.transaction('capture-drafts').objectStore('capture-drafts').get('pending'));
 }
-export async function clearCaptureDraft(): Promise<void> {
+export async function listCaptureDrafts(): Promise<CaptureDraft[]> {
+  const d = await db();
+  const t = d.transaction('capture-drafts');
+  const all = (await request(t.objectStore('capture-drafts').getAll())) as CaptureDraft[];
+  const grouped = new Map<string, CaptureDraft>();
+  for (const draft of all)
+    if (draft?.original?.id && draft.draft) grouped.set(draft.original.id, draft);
+  return [...grouped.values()];
+}
+export async function clearCaptureDraft(id?: string): Promise<void> {
   const d = await db(),
     t = d.transaction('capture-drafts', 'readwrite');
   const done = complete(t);
-  t.objectStore('capture-drafts').delete('pending');
+  const store = t.objectStore('capture-drafts');
+  const current = store.get('pending');
+  current.onsuccess = () => {
+    const pending = current.result as CaptureDraft | undefined;
+    const target = id ?? pending?.original.id;
+    if (target) store.delete(`draft:${target}`);
+    if (!id || pending?.original.id === id) store.delete('pending');
+  };
   await done;
 }
 function dataUrl(blob: Blob): Promise<string> {

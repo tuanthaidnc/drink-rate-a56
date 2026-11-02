@@ -348,6 +348,22 @@
   height: 8px;
   flex: 0 0 8px;
 }
+.pending-drafts {
+  position: relative;
+  display: grid;
+  gap: 8px;
+  padding-right: 56px;
+}
+.pending-drafts .new-experience {
+  position: absolute;
+  top: 10px;
+  right: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: var(--lilac);
+  color: #241a42;
+}
 .square-camera {
   position: fixed;
   inset: 0;

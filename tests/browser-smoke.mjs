@@ -274,7 +274,7 @@ async function save(p, name) {
   }
   await p.locator('#review-price').fill('31');
   await p.getByRole('button', { name: 'Lưu quán', exact: true }).click();
-  await p.locator('.album-tile').waitFor();
+  await p.locator('.album-tile').first().waitFor();
 }
 async function manual(p, lat = '16.066', lng = '108.209') {
   await p.getByRole('button', { name: 'Nhập tọa độ', exact: true }).click();

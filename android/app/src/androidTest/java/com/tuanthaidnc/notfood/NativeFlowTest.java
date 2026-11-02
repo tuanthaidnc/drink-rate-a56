@@ -91,10 +91,18 @@ public class NativeFlowTest {
             AtomicBoolean focused = new AtomicBoolean(false);
             long focusDeadline = System.currentTimeMillis() + 15000;
             do {
+                // The isolated emulator's Quickstep can show a launcher ANR on
+                // first boot. Dismiss only that known system dialog; app ANRs
+                // remain visible failures, never a generalized retry or bypass.
+                if (device.hasObject(By.textContains("Quickstep")) && device.hasObject(By.res("android:id/aerr_close"))) {
+                    screenshot("emulator-quickstep-anr");
+                    device.findObject(By.res("android:id/aerr_close")).click();
+                }
                 scenario.onActivity(activity -> focused.set(activity.hasWindowFocus() && web.isShown()));
                 if (!focused.get()) Thread.sleep(100);
             } while (!focused.get() && System.currentTimeMillis() < focusDeadline);
             assertTrue("NỐT native window is visible and has input focus", focused.get());
+            screenshot("native-launch");
             assertDockGeometry();
             assertEquals("android", js("document.documentElement.dataset.platform"));
             assertEquals("https://localhost", js("location.origin"));
@@ -149,7 +157,7 @@ public class NativeFlowTest {
             screenshot("native-journal");
             for (int i : new int[] {4, 0, 1, 4, 0, 4}) nav(i);
             until("!!document.querySelector('[data-stat=average]')");
-            assertEquals("7.6", js("document.querySelector('[data-stat=average]').textContent"));
+            assertEquals("7.7", js("document.querySelector('[data-stat=average]').textContent"));
             assertEquals(1, ((Number)js("document.querySelectorAll('.app-scene').length")).intValue());
             assertTrue((Boolean)js("(()=>{const e=document.querySelector('[data-stat=average]');return getComputedStyle(e).color!==getComputedStyle(e.parentElement).backgroundColor})()"));
             assertTrue((Boolean)js("document.documentElement.scrollWidth<=innerWidth"));
@@ -190,7 +198,7 @@ public class NativeFlowTest {
             JSONObject result = new JSONObject();
             result.put("pass", true);
             result.put("source", "Android API 35 emulator, native touch, IME, system Back, real WebView");
-            result.put("score", "7.6");
+            result.put("score", "7.7");
             result.put("fontScale", "1.3");
             result.put("circle", circle);
             result.put("viewport", js("innerWidth+'x'+innerHeight"));

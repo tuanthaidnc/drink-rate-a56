@@ -83,7 +83,7 @@ export async function takeReviewPhoto(snapshot: CaptureDraft): Promise<CaptureDr
       )
     )
       await saveCaptureDraft(snapshot);
-    else await clearCaptureDraft();
+    else await clearCaptureDraft(snapshot.original.id);
     if (isCameraCancellation(error)) return null;
     throw new Error(cameraError(error));
   }
@@ -122,9 +122,9 @@ export async function initializeCaptureRecovery(): Promise<void> {
     });
   });
 }
-export async function forgetCaptureRecovery() {
-  recovered = undefined;
-  await clearCaptureDraft();
+export async function forgetCaptureRecovery(id?: string) {
+  if (!id || recovered?.snapshot.original.id === id) recovered = undefined;
+  await clearCaptureDraft(id);
 }
 
 // Browser capture requires a user gesture; call before the lazy form mounts.
