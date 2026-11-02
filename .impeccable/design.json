@@ -1,0 +1,901 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-02T01:59:35.510Z",
+  "title": "Design System: NỐT · Photo journal",
+  "extensions": {
+    "colorMeta": {
+      "acid": {
+        "role": "primary",
+        "displayName": "Acid selection",
+        "canonical": "#d7ff3f",
+        "tonalRamp": [
+          "oklch(15% 0.20765 121.13)",
+          "oklch(27% 0.20765 121.13)",
+          "oklch(38% 0.20765 121.13)",
+          "oklch(50% 0.20765 121.13)",
+          "oklch(62% 0.20765 121.13)",
+          "oklch(74% 0.20765 121.13)",
+          "oklch(85% 0.20765 121.13)",
+          "oklch(95% 0.20765 121.13)"
+        ]
+      },
+      "lilac": {
+        "role": "secondary",
+        "displayName": "Lilac camera",
+        "canonical": "#b8a4ff",
+        "tonalRamp": [
+          "oklch(15% 0.12906 293.22)",
+          "oklch(27% 0.12906 293.22)",
+          "oklch(38% 0.12906 293.22)",
+          "oklch(50% 0.12906 293.22)",
+          "oklch(62% 0.12906 293.22)",
+          "oklch(74% 0.12906 293.22)",
+          "oklch(85% 0.12906 293.22)",
+          "oklch(95% 0.12906 293.22)"
+        ]
+      },
+      "acid-ink-light": {
+        "role": "primary",
+        "displayName": "Acid ink · light",
+        "canonical": "#162000",
+        "tonalRamp": [
+          "oklch(15% 0.05648 124.73)",
+          "oklch(27% 0.05648 124.73)",
+          "oklch(38% 0.05648 124.73)",
+          "oklch(50% 0.05648 124.73)",
+          "oklch(62% 0.05648 124.73)",
+          "oklch(74% 0.05648 124.73)",
+          "oklch(85% 0.05648 124.73)",
+          "oklch(95% 0.05648 124.73)"
+        ]
+      },
+      "acid-ink-dark": {
+        "role": "primary",
+        "displayName": "Acid ink · dark",
+        "canonical": "#182100",
+        "tonalRamp": [
+          "oklch(15% 0.05669 123.20)",
+          "oklch(27% 0.05669 123.20)",
+          "oklch(38% 0.05669 123.20)",
+          "oklch(50% 0.05669 123.20)",
+          "oklch(62% 0.05669 123.20)",
+          "oklch(74% 0.05669 123.20)",
+          "oklch(85% 0.05669 123.20)",
+          "oklch(95% 0.05669 123.20)"
+        ]
+      },
+      "lilac-ink": {
+        "role": "secondary",
+        "displayName": "Lilac ink",
+        "canonical": "#241a42",
+        "tonalRamp": [
+          "oklch(15% 0.07276 291.91)",
+          "oklch(27% 0.07276 291.91)",
+          "oklch(38% 0.07276 291.91)",
+          "oklch(50% 0.07276 291.91)",
+          "oklch(62% 0.07276 291.91)",
+          "oklch(74% 0.07276 291.91)",
+          "oklch(85% 0.07276 291.91)",
+          "oklch(95% 0.07276 291.91)"
+        ]
+      },
+      "active-ink-light": {
+        "role": "primary",
+        "displayName": "Olive active ink",
+        "canonical": "#425a00",
+        "tonalRamp": [
+          "oklch(15% 0.10922 125.49)",
+          "oklch(27% 0.10922 125.49)",
+          "oklch(38% 0.10922 125.49)",
+          "oklch(50% 0.10922 125.49)",
+          "oklch(62% 0.10922 125.49)",
+          "oklch(74% 0.10922 125.49)",
+          "oklch(85% 0.10922 125.49)",
+          "oklch(95% 0.10922 125.49)"
+        ]
+      },
+      "secondary-accent-light": {
+        "role": "secondary",
+        "displayName": "Lilac active ink · light",
+        "canonical": "#6e51b6",
+        "tonalRamp": [
+          "oklch(15% 0.15356 293.53)",
+          "oklch(27% 0.15356 293.53)",
+          "oklch(38% 0.15356 293.53)",
+          "oklch(50% 0.15356 293.53)",
+          "oklch(62% 0.15356 293.53)",
+          "oklch(74% 0.15356 293.53)",
+          "oklch(85% 0.15356 293.53)",
+          "oklch(95% 0.15356 293.53)"
+        ]
+      },
+      "canvas-light": {
+        "role": "neutral",
+        "displayName": "Daylight canvas",
+        "canonical": "#f7f8f5",
+        "tonalRamp": [
+          "oklch(15% 0.00409 121.56)",
+          "oklch(27% 0.00409 121.56)",
+          "oklch(38% 0.00409 121.56)",
+          "oklch(50% 0.00409 121.56)",
+          "oklch(62% 0.00409 121.56)",
+          "oklch(74% 0.00409 121.56)",
+          "oklch(85% 0.00409 121.56)",
+          "oklch(95% 0.00409 121.56)"
+        ]
+      },
+      "canvas-dark": {
+        "role": "neutral",
+        "displayName": "Ink canvas",
+        "canonical": "#0b0d0c",
+        "tonalRamp": [
+          "oklch(15% 0.00391 164.47)",
+          "oklch(27% 0.00391 164.47)",
+          "oklch(38% 0.00391 164.47)",
+          "oklch(50% 0.00391 164.47)",
+          "oklch(62% 0.00391 164.47)",
+          "oklch(74% 0.00391 164.47)",
+          "oklch(85% 0.00391 164.47)",
+          "oklch(95% 0.00391 164.47)"
+        ]
+      },
+      "surface-light": {
+        "role": "neutral",
+        "displayName": "Surface Light",
+        "canonical": "#f6f7f3",
+        "tonalRamp": [
+          "oklch(15% 0.00538 117.92)",
+          "oklch(27% 0.00538 117.92)",
+          "oklch(38% 0.00538 117.92)",
+          "oklch(50% 0.00538 117.92)",
+          "oklch(62% 0.00538 117.92)",
+          "oklch(74% 0.00538 117.92)",
+          "oklch(85% 0.00538 117.92)",
+          "oklch(95% 0.00538 117.92)"
+        ]
+      },
+      "surface-dark": {
+        "role": "neutral",
+        "displayName": "Surface Dark",
+        "canonical": "#151816",
+        "tonalRamp": [
+          "oklch(15% 0.00605 156.65)",
+          "oklch(27% 0.00605 156.65)",
+          "oklch(38% 0.00605 156.65)",
+          "oklch(50% 0.00605 156.65)",
+          "oklch(62% 0.00605 156.65)",
+          "oklch(74% 0.00605 156.65)",
+          "oklch(85% 0.00605 156.65)",
+          "oklch(95% 0.00605 156.65)"
+        ]
+      },
+      "elevated-light": {
+        "role": "neutral",
+        "displayName": "Elevated Light",
+        "canonical": "#edf0e7",
+        "tonalRamp": [
+          "oklch(15% 0.01234 121.70)",
+          "oklch(27% 0.01234 121.70)",
+          "oklch(38% 0.01234 121.70)",
+          "oklch(50% 0.01234 121.70)",
+          "oklch(62% 0.01234 121.70)",
+          "oklch(74% 0.01234 121.70)",
+          "oklch(85% 0.01234 121.70)",
+          "oklch(95% 0.01234 121.70)"
+        ]
+      },
+      "elevated-dark": {
+        "role": "neutral",
+        "displayName": "Elevated Dark",
+        "canonical": "#1c201c",
+        "tonalRamp": [
+          "oklch(15% 0.00957 145.27)",
+          "oklch(27% 0.00957 145.27)",
+          "oklch(38% 0.00957 145.27)",
+          "oklch(50% 0.00957 145.27)",
+          "oklch(62% 0.00957 145.27)",
+          "oklch(74% 0.00957 145.27)",
+          "oklch(85% 0.00957 145.27)",
+          "oklch(95% 0.00957 145.27)"
+        ]
+      },
+      "text-light": {
+        "role": "neutral",
+        "displayName": "Text Light",
+        "canonical": "#12170e",
+        "tonalRamp": [
+          "oklch(15% 0.01907 131.61)",
+          "oklch(27% 0.01907 131.61)",
+          "oklch(38% 0.01907 131.61)",
+          "oklch(50% 0.01907 131.61)",
+          "oklch(62% 0.01907 131.61)",
+          "oklch(74% 0.01907 131.61)",
+          "oklch(85% 0.01907 131.61)",
+          "oklch(95% 0.01907 131.61)"
+        ]
+      },
+      "text-dark": {
+        "role": "neutral",
+        "displayName": "Text Dark",
+        "canonical": "#f4f6ee",
+        "tonalRamp": [
+          "oklch(15% 0.01076 118.02)",
+          "oklch(27% 0.01076 118.02)",
+          "oklch(38% 0.01076 118.02)",
+          "oklch(50% 0.01076 118.02)",
+          "oklch(62% 0.01076 118.02)",
+          "oklch(74% 0.01076 118.02)",
+          "oklch(85% 0.01076 118.02)",
+          "oklch(95% 0.01076 118.02)"
+        ]
+      },
+      "secondary-text-light": {
+        "role": "neutral",
+        "displayName": "Secondary Text Light",
+        "canonical": "#4b5346",
+        "tonalRamp": [
+          "oklch(15% 0.02330 133.32)",
+          "oklch(27% 0.02330 133.32)",
+          "oklch(38% 0.02330 133.32)",
+          "oklch(50% 0.02330 133.32)",
+          "oklch(62% 0.02330 133.32)",
+          "oklch(74% 0.02330 133.32)",
+          "oklch(85% 0.02330 133.32)",
+          "oklch(95% 0.02330 133.32)"
+        ]
+      },
+      "secondary-text-dark": {
+        "role": "neutral",
+        "displayName": "Secondary Text Dark",
+        "canonical": "#b9beb2",
+        "tonalRamp": [
+          "oklch(15% 0.01751 125.35)",
+          "oklch(27% 0.01751 125.35)",
+          "oklch(38% 0.01751 125.35)",
+          "oklch(50% 0.01751 125.35)",
+          "oklch(62% 0.01751 125.35)",
+          "oklch(74% 0.01751 125.35)",
+          "oklch(85% 0.01751 125.35)",
+          "oklch(95% 0.01751 125.35)"
+        ]
+      },
+      "muted-text-light": {
+        "role": "neutral",
+        "displayName": "Muted Text Light",
+        "canonical": "#6c7467",
+        "tonalRamp": [
+          "oklch(15% 0.02198 133.22)",
+          "oklch(27% 0.02198 133.22)",
+          "oklch(38% 0.02198 133.22)",
+          "oklch(50% 0.02198 133.22)",
+          "oklch(62% 0.02198 133.22)",
+          "oklch(74% 0.02198 133.22)",
+          "oklch(85% 0.02198 133.22)",
+          "oklch(95% 0.02198 133.22)"
+        ]
+      },
+      "muted-text-dark": {
+        "role": "neutral",
+        "displayName": "Muted Text Dark",
+        "canonical": "#858b7e",
+        "tonalRamp": [
+          "oklch(15% 0.02032 127.31)",
+          "oklch(27% 0.02032 127.31)",
+          "oklch(38% 0.02032 127.31)",
+          "oklch(50% 0.02032 127.31)",
+          "oklch(62% 0.02032 127.31)",
+          "oklch(74% 0.02032 127.31)",
+          "oklch(85% 0.02032 127.31)",
+          "oklch(95% 0.02032 127.31)"
+        ]
+      },
+      "divider-light": {
+        "role": "neutral",
+        "displayName": "Divider Light",
+        "canonical": "#e0e4d9",
+        "tonalRamp": [
+          "oklch(15% 0.01533 123.06)",
+          "oklch(27% 0.01533 123.06)",
+          "oklch(38% 0.01533 123.06)",
+          "oklch(50% 0.01533 123.06)",
+          "oklch(62% 0.01533 123.06)",
+          "oklch(74% 0.01533 123.06)",
+          "oklch(85% 0.01533 123.06)",
+          "oklch(95% 0.01533 123.06)"
+        ]
+      },
+      "divider-dark": {
+        "role": "neutral",
+        "displayName": "Divider Dark",
+        "canonical": "#2b3029",
+        "tonalRamp": [
+          "oklch(15% 0.01419 136.68)",
+          "oklch(27% 0.01419 136.68)",
+          "oklch(38% 0.01419 136.68)",
+          "oklch(50% 0.01419 136.68)",
+          "oklch(62% 0.01419 136.68)",
+          "oklch(74% 0.01419 136.68)",
+          "oklch(85% 0.01419 136.68)",
+          "oklch(95% 0.01419 136.68)"
+        ]
+      },
+      "hairline-light": {
+        "role": "neutral",
+        "displayName": "Hairline Light",
+        "canonical": "#d3d8c9",
+        "tonalRamp": [
+          "oklch(15% 0.02097 121.88)",
+          "oklch(27% 0.02097 121.88)",
+          "oklch(38% 0.02097 121.88)",
+          "oklch(50% 0.02097 121.88)",
+          "oklch(62% 0.02097 121.88)",
+          "oklch(74% 0.02097 121.88)",
+          "oklch(85% 0.02097 121.88)",
+          "oklch(95% 0.02097 121.88)"
+        ]
+      },
+      "hairline-dark": {
+        "role": "neutral",
+        "displayName": "Hairline Dark",
+        "canonical": "#373d33",
+        "tonalRamp": [
+          "oklch(15% 0.01877 132.77)",
+          "oklch(27% 0.01877 132.77)",
+          "oklch(38% 0.01877 132.77)",
+          "oklch(50% 0.01877 132.77)",
+          "oklch(62% 0.01877 132.77)",
+          "oklch(74% 0.01877 132.77)",
+          "oklch(85% 0.01877 132.77)",
+          "oklch(95% 0.01877 132.77)"
+        ]
+      },
+      "selection-soft-light": {
+        "role": "neutral",
+        "displayName": "Selection Soft Light",
+        "canonical": "#eaf5bc",
+        "tonalRamp": [
+          "oklch(15% 0.07471 116.72)",
+          "oklch(27% 0.07471 116.72)",
+          "oklch(38% 0.07471 116.72)",
+          "oklch(50% 0.07471 116.72)",
+          "oklch(62% 0.07471 116.72)",
+          "oklch(74% 0.07471 116.72)",
+          "oklch(85% 0.07471 116.72)",
+          "oklch(95% 0.07471 116.72)"
+        ]
+      },
+      "selection-soft-dark": {
+        "role": "neutral",
+        "displayName": "Selection Soft Dark",
+        "canonical": "#29301b",
+        "tonalRamp": [
+          "oklch(15% 0.03701 123.64)",
+          "oklch(27% 0.03701 123.64)",
+          "oklch(38% 0.03701 123.64)",
+          "oklch(50% 0.03701 123.64)",
+          "oklch(62% 0.03701 123.64)",
+          "oklch(74% 0.03701 123.64)",
+          "oklch(85% 0.03701 123.64)",
+          "oklch(95% 0.03701 123.64)"
+        ]
+      },
+      "empty-photo-light": {
+        "role": "neutral",
+        "displayName": "Empty Photo Light",
+        "canonical": "#e9ede4",
+        "tonalRamp": [
+          "oklch(15% 0.01269 126.38)",
+          "oklch(27% 0.01269 126.38)",
+          "oklch(38% 0.01269 126.38)",
+          "oklch(50% 0.01269 126.38)",
+          "oklch(62% 0.01269 126.38)",
+          "oklch(74% 0.01269 126.38)",
+          "oklch(85% 0.01269 126.38)",
+          "oklch(95% 0.01269 126.38)"
+        ]
+      },
+      "empty-photo-dark": {
+        "role": "neutral",
+        "displayName": "Empty Photo Dark",
+        "canonical": "#1e2620",
+        "tonalRamp": [
+          "oklch(15% 0.01593 152.78)",
+          "oklch(27% 0.01593 152.78)",
+          "oklch(38% 0.01593 152.78)",
+          "oklch(50% 0.01593 152.78)",
+          "oklch(62% 0.01593 152.78)",
+          "oklch(74% 0.01593 152.78)",
+          "oklch(85% 0.01593 152.78)",
+          "oklch(95% 0.01593 152.78)"
+        ]
+      },
+      "food-soft-light": {
+        "role": "neutral",
+        "displayName": "Food Soft Light",
+        "canonical": "#ffedd9",
+        "tonalRamp": [
+          "oklch(15% 0.03289 70.35)",
+          "oklch(27% 0.03289 70.35)",
+          "oklch(38% 0.03289 70.35)",
+          "oklch(50% 0.03289 70.35)",
+          "oklch(62% 0.03289 70.35)",
+          "oklch(74% 0.03289 70.35)",
+          "oklch(85% 0.03289 70.35)",
+          "oklch(95% 0.03289 70.35)"
+        ]
+      },
+      "food-soft-dark": {
+        "role": "neutral",
+        "displayName": "Food Soft Dark",
+        "canonical": "#35261c",
+        "tonalRamp": [
+          "oklch(15% 0.02870 54.94)",
+          "oklch(27% 0.02870 54.94)",
+          "oklch(38% 0.02870 54.94)",
+          "oklch(50% 0.02870 54.94)",
+          "oklch(62% 0.02870 54.94)",
+          "oklch(74% 0.02870 54.94)",
+          "oklch(85% 0.02870 54.94)",
+          "oklch(95% 0.02870 54.94)"
+        ]
+      },
+      "destructive-light": {
+        "role": "neutral",
+        "displayName": "Destructive Light",
+        "canonical": "#b8283c",
+        "tonalRamp": [
+          "oklch(15% 0.17879 19.19)",
+          "oklch(27% 0.17879 19.19)",
+          "oklch(38% 0.17879 19.19)",
+          "oklch(50% 0.17879 19.19)",
+          "oklch(62% 0.17879 19.19)",
+          "oklch(74% 0.17879 19.19)",
+          "oklch(85% 0.17879 19.19)",
+          "oklch(95% 0.17879 19.19)"
+        ]
+      },
+      "destructive-dark": {
+        "role": "neutral",
+        "displayName": "Destructive Dark",
+        "canonical": "#ff8b99",
+        "tonalRamp": [
+          "oklch(15% 0.14062 13.29)",
+          "oklch(27% 0.14062 13.29)",
+          "oklch(38% 0.14062 13.29)",
+          "oklch(50% 0.14062 13.29)",
+          "oklch(62% 0.14062 13.29)",
+          "oklch(74% 0.14062 13.29)",
+          "oklch(85% 0.14062 13.29)",
+          "oklch(95% 0.14062 13.29)"
+        ]
+      },
+      "focus-ring": {
+        "role": "neutral",
+        "displayName": "Focus Ring",
+        "canonical": "#849e19",
+        "tonalRamp": [
+          "oklch(15% 0.15016 121.03)",
+          "oklch(27% 0.15016 121.03)",
+          "oklch(38% 0.15016 121.03)",
+          "oklch(50% 0.15016 121.03)",
+          "oklch(62% 0.15016 121.03)",
+          "oklch(74% 0.15016 121.03)",
+          "oklch(85% 0.15016 121.03)",
+          "oklch(95% 0.15016 121.03)"
+        ]
+      },
+      "photo-overlay": {
+        "role": "neutral",
+        "displayName": "Photograph corner scrim",
+        "canonical": "#0b100de6",
+        "tonalRamp": [
+          "oklch(15% 0.01008 158.76 / 90.20%)",
+          "oklch(27% 0.01008 158.76 / 90.20%)",
+          "oklch(38% 0.01008 158.76 / 90.20%)",
+          "oklch(50% 0.01008 158.76 / 90.20%)",
+          "oklch(62% 0.01008 158.76 / 90.20%)",
+          "oklch(74% 0.01008 158.76 / 90.20%)",
+          "oklch(85% 0.01008 158.76 / 90.20%)",
+          "oklch(95% 0.01008 158.76 / 90.20%)"
+        ]
+      },
+      "photo-overlay-text": {
+        "role": "neutral",
+        "displayName": "Photograph corner text",
+        "canonical": "#fff",
+        "tonalRamp": [
+          "oklch(15% 0.00000 0.00)",
+          "oklch(27% 0.00000 0.00)",
+          "oklch(38% 0.00000 0.00)",
+          "oklch(50% 0.00000 0.00)",
+          "oklch(62% 0.00000 0.00)",
+          "oklch(74% 0.00000 0.00)",
+          "oklch(85% 0.00000 0.00)",
+          "oklch(95% 0.00000 0.00)"
+        ]
+      },
+      "slider-track-light": {
+        "role": "neutral",
+        "displayName": "Slider Track Light",
+        "canonical": "#dce2d4",
+        "tonalRamp": [
+          "oklch(15% 0.01984 125.84)",
+          "oklch(27% 0.01984 125.84)",
+          "oklch(38% 0.01984 125.84)",
+          "oklch(50% 0.01984 125.84)",
+          "oklch(62% 0.01984 125.84)",
+          "oklch(74% 0.01984 125.84)",
+          "oklch(85% 0.01984 125.84)",
+          "oklch(95% 0.01984 125.84)"
+        ]
+      },
+      "slider-track-dark": {
+        "role": "neutral",
+        "displayName": "Slider Track Dark",
+        "canonical": "#2d322b",
+        "tonalRamp": [
+          "oklch(15% 0.01410 136.67)",
+          "oklch(27% 0.01410 136.67)",
+          "oklch(38% 0.01410 136.67)",
+          "oklch(50% 0.01410 136.67)",
+          "oklch(62% 0.01410 136.67)",
+          "oklch(74% 0.01410 136.67)",
+          "oklch(85% 0.01410 136.67)",
+          "oklch(95% 0.01410 136.67)"
+        ]
+      },
+      "chart-fill-light": {
+        "role": "primary",
+        "displayName": "Chart Fill Light",
+        "canonical": "#6b8100",
+        "tonalRamp": [
+          "oklch(15% 0.13543 120.85)",
+          "oklch(27% 0.13543 120.85)",
+          "oklch(38% 0.13543 120.85)",
+          "oklch(50% 0.13543 120.85)",
+          "oklch(62% 0.13543 120.85)",
+          "oklch(74% 0.13543 120.85)",
+          "oklch(85% 0.13543 120.85)",
+          "oklch(95% 0.13543 120.85)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "brand": {
+        "displayName": "Brand",
+        "purpose": "Compact NỐT wordmark; desktop rail uses 26px."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Album page heading on phone."
+      },
+      "headline-desktop": {
+        "displayName": "Headline Desktop",
+        "purpose": "Album heading from 1100px."
+      },
+      "form-title": {
+        "displayName": "Form Title",
+        "purpose": "24px capture title; the quick scoring title is visually hidden while score and Save occupy the toolbar."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Two-line album name, outside the photograph."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "General content and system text."
+      },
+      "input": {
+        "displayName": "Input",
+        "purpose": "Review field content with Vietnamese glyph coverage."
+      },
+      "action": {
+        "displayName": "Action",
+        "purpose": "Primary and secondary button labels."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Single-line album address and restrained metadata."
+      },
+      "photo-score": {
+        "displayName": "Photo Score",
+        "purpose": "Fixed upper-right score badge with tabular numerals."
+      },
+      "photo-price": {
+        "displayName": "Photo Price",
+        "purpose": "Fixed lower-left price badge with tabular numerals."
+      },
+      "quick-total": {
+        "displayName": "Quick Total",
+        "purpose": "Unsaved score beside immediate Save; 27px on narrow phones."
+      },
+      "quick-price": {
+        "displayName": "Quick Price",
+        "purpose": "Decimal price beside the square photo."
+      },
+      "slider-label": {
+        "displayName": "Slider Label",
+        "purpose": "Repeated quick-score criterion labels."
+      },
+      "slider-value": {
+        "displayName": "Slider Value",
+        "purpose": "Tabular quick-score value or the named volume choice."
+      }
+    },
+    "shadows": [
+      {
+        "name": "dock",
+        "value": "0 8px 24px #00000014",
+        "purpose": "Opaque phone dock above scrolling content."
+      },
+      {
+        "name": "soft-light",
+        "value": "0 12px 30px #18210005",
+        "purpose": "Map-control group in light theme."
+      },
+      {
+        "name": "soft-dark",
+        "value": "0 12px 35px #0000000d",
+        "purpose": "Map-control group in dark theme."
+      },
+      {
+        "name": "overlay-light",
+        "value": "0 24px 70px #0f172a30",
+        "purpose": "Modal surface in light theme."
+      },
+      {
+        "name": "overlay-dark",
+        "value": "0 24px 80px #0009",
+        "purpose": "Modal surface in dark theme."
+      },
+      {
+        "name": "pin",
+        "value": "0 3px 8px #0004",
+        "purpose": "The correctable acid location pin."
+      },
+      {
+        "name": "toast",
+        "value": "0 10px 35px #0002",
+        "purpose": "Transient notification surface."
+      },
+      {
+        "name": "slider-thumb",
+        "value": "0 2px 6px #0003",
+        "purpose": "Circular 28px slider thumb."
+      },
+      {
+        "name": "slider-thumb-hover",
+        "value": "0 0 0 6px color-mix(in srgb, var(--accent) 14%, transparent)",
+        "purpose": "Hover halo around the quick-score thumb."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0.22, 1, 0.36, 1)",
+        "purpose": "Album photo hover, tile entry, scene, dial, detail and photo-development easing."
+      },
+      {
+        "name": "tile-entry",
+        "value": "280ms; delay min(index, 4) × 35ms",
+        "purpose": "Bounded album-entry appearance."
+      },
+      {
+        "name": "tile-press",
+        "value": "scale(0.96)",
+        "purpose": "Pressed album tile; removed with reduced motion."
+      },
+      {
+        "name": "photo-hover",
+        "value": "320ms; scale(1.035)",
+        "purpose": "Pointer hover within an existing square cover."
+      },
+      {
+        "name": "album-selection",
+        "value": "600ms",
+        "purpose": "One glint across a selected cover; removed with reduced motion."
+      },
+      {
+        "name": "photo-develop",
+        "value": "480ms",
+        "purpose": "Successful capture develops from a lighter, partially clipped image."
+      },
+      {
+        "name": "scene-exit-enter",
+        "value": "120ms exit / 240ms enter; x 18px → 0",
+        "purpose": "Single active scene, with the outgoing scene inert."
+      },
+      {
+        "name": "detail-entry",
+        "value": "400ms; x 20px → 0",
+        "purpose": "Detail content entering its dialog."
+      },
+      {
+        "name": "detail-photo",
+        "value": "380ms; scale 0.96 → 1",
+        "purpose": "The same photograph retained into detail."
+      },
+      {
+        "name": "navigation-spring",
+        "value": "stiffness 360; damping 25",
+        "purpose": "Shared navigation selection indicator; glyph damping is 20."
+      },
+      {
+        "name": "number-spring",
+        "value": "stiffness 120; damping 22; mass 0.8",
+        "purpose": "Accessible animated score with a separate final-value label, including the quick toolbar."
+      },
+      {
+        "name": "score-dial",
+        "value": "950ms",
+        "purpose": "Score ring in detail and scoring."
+      },
+      {
+        "name": "criterion-bar",
+        "value": "750ms",
+        "purpose": "Criterion value expands from the left."
+      },
+      {
+        "name": "processing-spinner",
+        "value": "800ms linear infinite",
+        "purpose": "Only while photo/GPS processing is active; reduced motion removes rotation."
+      },
+      {
+        "name": "dialog",
+        "value": "250ms overlay / 280ms content / 300ms close handoff",
+        "purpose": "Animated Radix dialog with focus return."
+      },
+      {
+        "name": "quick-score-entry",
+        "value": "280ms; y 8px → 0",
+        "purpose": "Successful photo enters directly into the photo/price row. No mandatory location stage."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "narrow-phone-max",
+        "value": "360px"
+      },
+      {
+        "name": "album-tablet-min",
+        "value": "650px"
+      },
+      {
+        "name": "desktop-rail-min",
+        "value": "1100px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Acid primary action; capture and location confirmation raise its minimum height to 48px.",
+      "html": "<button class=\"ds-primary\" type=\"button\">Lưu quán</button>",
+      "css": ".ds-primary{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;border:1px solid transparent;border-radius:99px;padding:10px 16px;background:var(--accent,#d7ff3f);color:var(--accent-fg,#162000);font-family:var(--font-app,'Plus Jakarta Sans',system-ui,sans-serif);font-size:13px;font-weight:700;line-height:1.45;cursor:pointer;transition:background .16s,border-color .16s,box-shadow .16s,opacity .16s}.ds-primary:hover{filter:brightness(.97)}.ds-primary:focus-visible{outline:2px solid var(--ring,#849e19);outline-offset:3px;}.ds-primary:disabled{opacity:.5;cursor:default}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Surface button for supporting actions, bounded by an even hairline.",
+      "html": "<button class=\"ds-secondary\" type=\"button\">Thư viện</button>",
+      "css": ".ds-secondary{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;border:1px solid var(--border-elevated,#d3d8c9);border-radius:99px;padding:10px 16px;background:var(--bg-card,#f6f7f3);color:var(--text-secondary,#4b5346);font-family:var(--font-app,'Plus Jakarta Sans',system-ui,sans-serif);font-size:13px;font-weight:700;line-height:1.45;cursor:pointer;transition:background .16s,border-color .16s,opacity .16s}.ds-secondary:hover{background:var(--bg-elevated,#edf0e7);filter:brightness(.97)}.ds-secondary:focus-visible{outline:2px solid var(--ring,#849e19);outline-offset:3px;}.ds-secondary:disabled{opacity:.5;cursor:default}"
+    },
+    {
+      "name": "Review Input",
+      "kind": "input",
+      "refersTo": "input-field-quick",
+      "description": "Optional venue name inside the collapsed details, with the actual 48px quick-form minimum height.",
+      "html": "<details class=\"ds-more\"><summary>Thông tin thêm</summary><label class=\"ds-field\"><span>Tên quán</span><input type=\"text\" placeholder=\"Tên quán\" /></label></details>",
+      "css": ".ds-field{display:flex;flex-direction:column;gap:7px;color:var(--text-primary,#12170e);font-family:var(--font-app,'Plus Jakarta Sans',system-ui,sans-serif);font-size:12px;font-weight:500;line-height:1.5}.ds-field input{width:100%;min-width:0;min-height:48px;border:1px solid var(--border-elevated,#d3d8c9);border-radius:13px;padding:10px 12px;background:var(--bg-card,#f6f7f3);color:var(--text-primary,#12170e);font-family:var(--font-app,'Plus Jakarta Sans',system-ui,sans-serif);font-size:16px;font-weight:400;line-height:1.45;caret-color:var(--accent-bright,#425a00);box-shadow:none}.ds-field input::placeholder{color:var(--text-muted,#6c7467);font-size:13px}.ds-field input:focus-visible{outline:2px solid var(--ring,#849e19);outline-offset:3px;}.ds-field input:disabled{opacity:.5}.ds-more{border-top:1px solid var(--border-card,#e0e4d9);padding-top:10px;font-family:var(--font-app,'Plus Jakarta Sans',system-ui,sans-serif);font-size:12px}.ds-more summary{min-height:44px;align-content:center;color:var(--text-secondary,#4b5346);cursor:pointer}.ds-more summary:focus-visible{outline:2px solid var(--ring,#849e19);outline-offset:3px;}.ds-more .ds-field{padding-top:10px}"
+    },
+    {
+      "name": "Search Field",
+      "kind": "input",
+      "refersTo": "search-field",
+      "description": "An expanded album search field. Narrow layouts reveal it with a separate search control.",
+      "html": "<!-- Inline Lucide paths in this sidecar are covered by the notices below.\nISC License\n\nCopyright (c) 2026 Lucide Icons and Contributors\n\nPermission to use, copy, modify, and/or distribute this software for any\npurpose with or without fee is hereby granted, provided that the above\ncopyright notice and this permission notice appear in all copies.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\" AND THE AUTHOR DISCLAIMS ALL WARRANTIES\nWITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF\nMERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR\nANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES\nWHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN\nACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF\nOR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.\n\n---\n\nThe following Lucide icons are derived from the Feather project:\n\nairplay, alert-circle, alert-octagon, alert-triangle, aperture, arrow-down-circle, arrow-down-left, arrow-down-right, arrow-down, arrow-left-circle, arrow-left, arrow-right-circle, arrow-right, arrow-up-circle, arrow-up-left, arrow-up-right, arrow-up, at-sign, calendar, cast, check, chevron-down, chevron-left, chevron-right, chevron-up, chevrons-down, chevrons-left, chevrons-right, chevrons-up, circle, clipboard, clock, code, columns, command, compass, corner-down-left, corner-down-right, corner-left-down, corner-left-up, corner-right-down, corner-right-up, corner-up-left, corner-up-right, crosshair, database, divide-circle, divide-square, dollar-sign, download, external-link, feather, frown, hash, headphones, help-circle, info, italic, key, layout, life-buoy, link-2, link, loader, lock, log-in, log-out, maximize, meh, minimize, minimize-2, minus-circle, minus-square, minus, monitor, moon, more-horizontal, more-vertical, move, music, navigation-2, navigation, octagon, pause-circle, percent, plus-circle, plus-square, plus, power, radio, rss, search, server, share, shopping-bag, sidebar, smartphone, smile, square, table-2, tablet, target, terminal, trash-2, trash, triangle, tv, type, upload, x-circle, x-octagon, x-square, x, zoom-in, zoom-out\n\nThe MIT License (MIT) (for the icons listed above)\n\nCopyright (c) 2013-present Cole Bemis\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE.\n--><label class=\"ds-search\"><svg viewBox=\"0 0 24 24\" width=\"17\" height=\"17\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m21 21-4.34-4.34\"/><circle cx=\"11\" cy=\"11\" r=\"8\"/></svg><input aria-label=\"Tìm quán, món, đường hoặc ghi chú\" type=\"search\" placeholder=\"Tìm quán…\" /></label>",
+      "css": ".ds-search{display:flex;align-items:center;gap:9px;min-height:44px;height:44px;border:1px solid var(--border-card,#e0e4d9);border-radius:13px;padding:0 12px;background:var(--bg-card,#f6f7f3);color:var(--text-muted,#6c7467)}.ds-search svg{flex:none}.ds-search input{flex:1;width:100%;min-width:0;min-height:44px;border:0;outline:0;padding:0;background:transparent;color:var(--text-primary,#12170e);font-family:var(--font-app,'Plus Jakarta Sans',system-ui,sans-serif);font-size:13px;caret-color:var(--accent-bright,#425a00)}.ds-search input::placeholder{color:var(--text-muted,#6c7467)}.ds-search:focus-within{border-color:var(--accent,#d7ff3f)}.ds-search input:focus-visible{outline:2px solid var(--ring,#849e19);outline-offset:3px;}"
+    },
+    {
+      "name": "Category Chips",
+      "kind": "chip",
+      "refersTo": "category-option-selected",
+      "description": "The three actual album categories; acid marks the active option.",
+      "html": "<div class=\"ds-categories\" role=\"group\" aria-label=\"Lọc loại quán\"><button type=\"button\" aria-pressed=\"true\">Tất cả</button><button type=\"button\" aria-pressed=\"false\">Nước</button><button type=\"button\" aria-pressed=\"false\">Ăn</button></div>",
+      "css": ".ds-categories{display:flex;gap:2px;width:100%;max-width:420px;min-height:44px;border:1px solid var(--border-card,#e0e4d9);border-radius:14px;padding:3px;background:var(--bg-card,#f6f7f3)}.ds-categories button{flex:1;min-height:38px;border:1px solid transparent;border-radius:11px;padding:7px 12px;background:transparent;color:var(--text-secondary,#4b5346);font-family:var(--font-app,'Plus Jakarta Sans',system-ui,sans-serif);font-size:13px;font-weight:650;line-height:1.45;cursor:pointer;transition:background .16s,opacity .16s}.ds-categories button[aria-pressed=true]{background:var(--accent,#d7ff3f);color:var(--accent-fg,#162000)}.ds-categories button:hover{filter:brightness(.97)}.ds-categories button:focus-visible{outline:2px solid var(--ring,#849e19);outline-offset:3px;}"
+    },
+    {
+      "name": "Album Tile",
+      "kind": "card",
+      "refersTo": "album-cover",
+      "description": "Honest missing-photo component example; labels are illustrative, and no review photograph is fabricated.",
+      "html": "<button class=\"ds-album\" type=\"button\" aria-label=\"Mẫu thành phần album, chưa có ảnh\" aria-haspopup=\"dialog\"><span class=\"ds-cover\"><span class=\"ds-missing\" role=\"img\" aria-label=\"Chưa có ảnh\"><span class=\"ds-initial\" aria-hidden=\"true\">Q</span><svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M13.997 4a2 2 0 0 1 1.76 1.05l.486.9A2 2 0 0 0 18.003 7H20a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1.997a2 2 0 0 0 1.759-1.048l.489-.904A2 2 0 0 1 10.004 4z\"/><circle cx=\"12\" cy=\"13\" r=\"3\"/></svg></span><span class=\"ds-score\">7.0</span><span class=\"ds-price\">35<small>k</small></span></span><span class=\"ds-caption\"><strong>Tên quán</strong><span>Địa chỉ đã lưu</span></span></button>",
+      "css": ".ds-album{display:flex;flex-direction:column;width:100%;min-width:0;padding:0;border:0;border-radius:20px 20px 5px 5px;background:transparent;color:var(--text-primary,#12170e);text-align:left;font-family:var(--font-app,'Plus Jakarta Sans',system-ui,sans-serif);cursor:pointer}.ds-cover{display:block;position:relative;aspect-ratio:1;width:100%;overflow:hidden;isolation:isolate;border:1px solid var(--border-elevated,#d3d8c9);border-radius:20px;background:var(--album-empty,#e9ede4)}.ds-missing{display:grid;place-items:center;width:100%;height:100%;color:var(--text-secondary,#4b5346)}.ds-initial{font-size:clamp(40px,13vw,68px);font-weight:800;line-height:1;color:var(--text-muted,#6c7467);opacity:.6}.ds-missing svg{position:absolute;right:13px;bottom:13px;width:19px;height:19px;opacity:.7}.ds-score,.ds-price{position:absolute;z-index:1;display:flex;align-items:baseline;border-radius:9px;background:#0b100de6;color:#fff;font-variant-numeric:tabular-nums;line-height:1}.ds-score{top:8px;right:8px;padding:7px 8px;font-size:17px;font-weight:750;letter-spacing:-.025em}.ds-price{bottom:8px;left:8px;padding:6px 8px;font-size:13px;font-weight:650}.ds-price small{font-size:11px;margin-left:1px}.ds-caption{display:flex;flex-direction:column;gap:3px;padding:7px 1px 0;width:100%;min-width:0}.ds-caption strong{font-size:13px;font-weight:750;line-height:1.45;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere}.ds-caption>span{font-size:11px;line-height:1.5;color:var(--text-secondary,#4b5346);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ds-album:hover .ds-cover{border-color:var(--accent-bright,#425a00)}.ds-album:focus-visible{outline:3px solid var(--ring,#849e19);outline-offset:4px}.ds-album:active{transform:scale(.96)}@media(prefers-reduced-motion:reduce){.ds-album:active{transform:none}}"
+    },
+    {
+      "name": "Four-slot Dock",
+      "kind": "nav",
+      "refersTo": "bottom-dock",
+      "description": "Static preview of the real four-slot mobile navigation; the camera circle stays lilac.",
+      "html": "<nav class=\"ds-dock\" aria-label=\"Điều hướng chính\"><button class=\"ds-nav-item\" type=\"button\" aria-current=\"page\"><span class=\"ds-nav-icon\"><svg viewBox=\"0 0 24 24\" width=\"23\" height=\"23\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M15 21v-5a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v5\"/><path d=\"M17.774 10.31a1.12 1.12 0 0 0-1.549 0 2.5 2.5 0 0 1-3.451 0 1.12 1.12 0 0 0-1.548 0 2.5 2.5 0 0 1-3.452 0 1.12 1.12 0 0 0-1.549 0 2.5 2.5 0 0 1-3.77-3.248l2.889-4.184A2 2 0 0 1 7 2h10a2 2 0 0 1 1.653.873l2.895 4.192a2.5 2.5 0 0 1-3.774 3.244\"/><path d=\"M4 10.95V19a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8.05\"/></svg></span><span>Quán xá</span></button><button class=\"ds-nav-item\" type=\"button\"><span class=\"ds-nav-icon\"><svg viewBox=\"0 0 24 24\" width=\"23\" height=\"23\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z\"/><path d=\"M15 5.764v15\"/><path d=\"M9 3.236v15\"/></svg></span><span>Bản đồ</span></button><button class=\"ds-nav-item ds-nav-camera\" type=\"button\"><span class=\"ds-nav-icon\"><svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M13.997 4a2 2 0 0 1 1.76 1.05l.486.9A2 2 0 0 0 18.003 7H20a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1.997a2 2 0 0 0 1.759-1.048l.489-.904A2 2 0 0 1 10.004 4z\"/><circle cx=\"12\" cy=\"13\" r=\"3\"/></svg></span><span>Chấm điểm</span></button><button class=\"ds-nav-item\" type=\"button\"><span class=\"ds-nav-icon\"><svg viewBox=\"0 0 24 24\" width=\"23\" height=\"23\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 3v16a2 2 0 0 0 2 2h16\"/><path d=\"M18 17V9\"/><path d=\"M13 17V5\"/><path d=\"M8 17v-3\"/></svg></span><span>Thống kê</span></button></nav>",
+      "css": ".ds-dock{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px;width:100%;max-width:470px;min-height:82px;border:1px solid var(--border-elevated,#d3d8c9);border-radius:99px;padding:7px;background:var(--bg-card,#f6f7f3);box-shadow:0 8px 24px #00000014}.ds-nav-item{display:grid;grid-template-rows:34px auto;align-content:start;align-items:center;justify-items:center;gap:4px;min-height:66px;min-width:0;padding:4px 2px;border:0;border-radius:99px;background:transparent;color:var(--text-secondary,#4b5346);font-family:var(--font-app,'Plus Jakarta Sans',system-ui,sans-serif);font-size:12px;font-weight:500;line-height:1.4;cursor:pointer}.ds-nav-item[aria-current=page]{background:var(--accent-soft,#eaf5bc);color:var(--accent-bright,#425a00)}.ds-nav-item>span:last-child{max-width:100%;overflow-wrap:anywhere;text-align:center}.ds-nav-icon{display:flex;align-items:center;justify-content:center;flex:none;width:34px;height:34px;min-width:34px;min-height:34px;aspect-ratio:1}.ds-nav-camera .ds-nav-icon{border-radius:50%;background:var(--lilac,#b8a4ff);color:#241a42}.ds-nav-camera .ds-nav-icon svg{width:24px;height:24px}.ds-nav-item:focus-visible{outline:2px solid var(--ring,#849e19);outline-offset:3px;}.ds-nav-item:hover{filter:brightness(.97)}@media(max-width:360px){.ds-nav-item>span:last-child{font-size:11px}}"
+    },
+    {
+      "name": "Capture Cover",
+      "kind": "custom",
+      "refersTo": "capture-cover",
+      "description": "The empty camera stage before a mandatory new-review photo; no step indicator or synthetic photograph.",
+      "html": "<section class=\"ds-capture\"><span class=\"ds-capture-cover\"><svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M13.997 4a2 2 0 0 1 1.76 1.05l.486.9A2 2 0 0 0 18.003 7H20a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1.997a2 2 0 0 0 1.759-1.048l.489-.904A2 2 0 0 1 10.004 4z\"/><circle cx=\"12\" cy=\"13\" r=\"3\"/></svg></span><button type=\"button\" class=\"ds-shutter\"><svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M13.997 4a2 2 0 0 1 1.76 1.05l.486.9A2 2 0 0 0 18.003 7H20a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1.997a2 2 0 0 0 1.759-1.048l.489-.904A2 2 0 0 1 10.004 4z\"/><circle cx=\"12\" cy=\"13\" r=\"3\"/></svg>Chụp ảnh</button></section>",
+      "css": ".ds-capture{display:flex;flex-direction:column;gap:14px;font-family:var(--font-app,'Plus Jakarta Sans',system-ui,sans-serif);}.ds-capture-cover{display:grid;place-items:center;position:relative;aspect-ratio:1;width:100%;max-width:300px;align-self:center;overflow:hidden;border:1px solid var(--border-elevated,#d3d8c9);border-radius:24px;background:var(--album-empty,#e9ede4);color:var(--text-secondary,#4b5346)}.ds-capture-cover svg{width:48px;height:48px}.ds-shutter{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;border:1px solid transparent;border-radius:99px;padding:10px 16px;background:var(--accent,#d7ff3f);color:var(--accent-fg,#162000);font-family:var(--font-app,'Plus Jakarta Sans',system-ui,sans-serif);font-size:13px;font-weight:700;line-height:1.45;cursor:pointer;transition:background .16s,opacity .16s}.ds-shutter:hover{filter:brightness(.97)}.ds-shutter:focus-visible{outline:2px solid var(--ring,#849e19);outline-offset:3px;}"
+    },
+    {
+      "name": "Quick Price and Save",
+      "kind": "custom",
+      "refersTo": "quick-price",
+      "description": "Immediate Save beside the current score, one square photo shell and price; GPS and details remain optional. Specimen values are illustrative, with no fabricated photograph.",
+      "html": "<section class=\"ds-quick\"><header class=\"ds-quick-toolbar\"><button class=\"ds-quick-back\" type=\"button\" aria-label=\"Về quán xá\"><svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m12 19-7-7 7-7\"/><path d=\"M19 12H5\"/></svg></button><output class=\"ds-quick-total\" aria-label=\"Điểm đánh giá\">7.50<small>/10</small></output><button class=\"ds-quick-save\" type=\"button\"><svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M20 6 9 17l-5-5\"/></svg>Lưu</button></header><div class=\"ds-quick-row\"><span class=\"ds-quick-photo\" role=\"img\" aria-label=\"Mẫu ô ảnh, chưa có ảnh\"><svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M13.997 4a2 2 0 0 1 1.76 1.05l.486.9A2 2 0 0 0 18.003 7H20a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1.997a2 2 0 0 0 1.759-1.048l.489-.904A2 2 0 0 1 10.004 4z\"/><circle cx=\"12\" cy=\"13\" r=\"3\"/></svg></span><div class=\"ds-quick-price-location\"><label class=\"ds-quick-price\"><span>Giá <small>(k)</small></span><input type=\"text\" inputmode=\"decimal\" enterkeyhint=\"done\" aria-label=\"Giá (k)\" value=\"31,5\" /></label><button class=\"ds-quick-location\" type=\"button\" aria-label=\"Chỉnh vị trí quán\"><svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0\"/><circle cx=\"12\" cy=\"10\" r=\"3\"/></svg>Vị trí</button></div></div></section>",
+      "css": ".ds-quick{display:flex;flex-direction:column;gap:12px;width:100%;max-width:560px;font-family:var(--font-app,'Plus Jakarta Sans',system-ui,sans-serif);color:var(--text-primary,#12170e)}.ds-quick-toolbar{display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:12;min-height:52px;padding-block:4px;background:var(--bg-canvas,#f7f8f5)}.ds-quick-back{display:inline-flex;align-items:center;justify-content:center;flex:none;width:48px;min-width:48px;height:48px;min-height:48px;padding:10px;border:1px solid transparent;border-radius:50%;background:transparent;color:var(--text-secondary,#4b5346);cursor:pointer}.ds-quick-total{display:flex;align-items:baseline;gap:4px;color:var(--accent-bright,#425a00);font-size:30px;font-weight:800;line-height:1.25;font-variant-numeric:tabular-nums}.ds-quick-total small{font-size:12px;font-weight:500;color:var(--text-secondary,#4b5346)}.ds-quick-save{display:inline-flex;align-items:center;justify-content:center;gap:8px;margin-left:auto;min-height:48px;height:48px;padding:10px 16px;border:1px solid transparent;border-radius:14px;background:var(--accent,#d7ff3f);color:var(--accent-fg,#162000);font-family:var(--font-app,'Plus Jakarta Sans',system-ui,sans-serif);font-size:13px;font-weight:700;line-height:1.45;cursor:pointer;transition:background .16s,opacity .16s}.ds-quick-save:hover{filter:brightness(.97)}.ds-quick-save:disabled{opacity:.5;cursor:default}.ds-quick-back:focus-visible,.ds-quick-save:focus-visible,.ds-quick-location:focus-visible{outline:2px solid var(--ring,#849e19);outline-offset:3px;}.ds-quick-row{display:grid;grid-template-columns:112px minmax(0,1fr);gap:18px;align-items:center;padding-top:4px}.ds-quick-photo{display:grid;place-items:center;aspect-ratio:1;width:112px;height:112px;border:1px solid var(--border-elevated,#d3d8c9);border-radius:20px;background:var(--album-empty,#e9ede4);color:var(--text-secondary,#4b5346);overflow:hidden}.ds-quick-price-location{display:flex;flex-direction:column;gap:6px;min-width:0}.ds-quick-price{display:flex;flex-direction:column;gap:5px;font-size:13px;line-height:1.5}.ds-quick-price small{color:var(--text-secondary,#4b5346)}.ds-quick-price input{width:100%;min-width:0;min-height:56px;height:56px;padding:8px 12px;border:1px solid var(--border-elevated,#d3d8c9);border-radius:14px;background:var(--bg-card,#f6f7f3);color:var(--text-primary,#12170e);font-family:var(--font-app,'Plus Jakarta Sans',system-ui,sans-serif);font-size:27px;font-weight:650;line-height:1.25;caret-color:var(--accent-bright,#425a00)}.ds-quick-price input:focus-visible{outline:2px solid var(--ring,#849e19);outline-offset:3px;}.ds-quick-location{display:inline-flex;align-items:center;align-self:flex-start;gap:5px;min-height:38px;padding:3px 0;border:0;background:transparent;color:var(--text-secondary,#4b5346);font-family:var(--font-app,'Plus Jakarta Sans',system-ui,sans-serif);font-size:12px;text-align:left;cursor:pointer}@media(max-width:360px){.ds-quick{gap:10px}.ds-quick-row{grid-template-columns:96px minmax(0,1fr);gap:12px}.ds-quick-photo{width:96px;height:96px;border-radius:18px}.ds-quick-total{font-size:27px}}@media(min-width:1100px){.ds-quick-row{grid-template-columns:144px minmax(0,1fr);gap:24px}.ds-quick-photo{width:144px;height:144px}}"
+    },
+    {
+      "name": "Quick Score Slider",
+      "kind": "custom",
+      "refersTo": "slider-thumb",
+      "description": "Static criterion specimen showing the actual label, value, 44px hit area, 5px track and circular 28px thumb. The app uses Animate UI for interaction.",
+      "html": "<div class=\"ds-criterion\"><div class=\"ds-criterion-heading\"><span id=\"ds-criterion-name\">Vị</span><output>7.0</output></div><div class=\"ds-slider\"><span class=\"ds-slider-track\"><span class=\"ds-slider-range\"></span></span><button type=\"button\" class=\"ds-slider-thumb\" role=\"slider\" aria-labelledby=\"ds-criterion-name\" aria-valuemin=\"1\" aria-valuemax=\"10\" aria-valuenow=\"7\" aria-valuetext=\"7 trên 10\"></button></div></div>",
+      "css": ".ds-criterion{min-width:0;padding-top:6px;font-family:var(--font-app,'Plus Jakarta Sans',system-ui,sans-serif);color:var(--text-primary,#12170e)}.ds-criterion-heading{display:flex;align-items:baseline;justify-content:space-between;gap:12px;min-height:26px;font-size:14px;font-weight:650;line-height:1.5}.ds-criterion-heading output{color:var(--accent-bright,#425a00);font-size:17px;font-weight:700;font-variant-numeric:tabular-nums}.ds-slider{display:flex;align-items:center;position:relative;height:44px;width:100%;margin:0;touch-action:pan-y}.ds-slider-track{display:block;position:relative;height:5px;width:100%;border-radius:4px;overflow:hidden;background:var(--slider-track,#dce2d4)}.ds-slider-range{display:block;position:absolute;height:100%;width:66.667%;border-radius:4px;background:var(--chart-fill,#6b8100)}.ds-slider-thumb{display:block;position:absolute;left:calc(66.667% - 14px);top:50%;transform:translateY(-50%);width:28px;height:28px;min-width:28px;min-height:28px;max-width:28px;max-height:28px;padding:0;border:0;border-radius:50%;aspect-ratio:1;background:var(--text-primary,#12170e);box-shadow:0 2px 6px #0003;cursor:pointer}.ds-slider-thumb:hover{box-shadow:0 0 0 6px color-mix(in srgb,var(--accent,#d7ff3f) 14%,transparent)}.ds-slider-thumb:focus-visible{outline:3px solid color-mix(in srgb,var(--accent,#d7ff3f) 25%,transparent);outline-offset:3px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Album ảnh cá nhân",
+    "overview": "NỐT dùng ảnh thật làm điểm nhận diện quán: nhìn ảnh, đọc điểm và giá ở hai góc cố định, rồi mở đánh giá cần xem. Nền sáng dịu hoặc nền mực lùi lại; xanh acid đánh dấu lựa chọn, tím nhạt nhận diện thao tác chụp. Plus Jakarta Sans được giữ để nối liền nhận diện cũ và đọc tiếng Việt rõ trong bố cục gọn.\n\nĐây là giao diện React dùng chung cho web/PWA và APK Capacitor WebView. Album thay thế danh sách vé lớn; phần chấm điểm, bản đồ và thống kê tiếp tục dùng hệ điều khiển cùng màu và chữ. Nhãn tiếng Việt ngắn, dữ liệu và lỗi/xác nhận cần thiết là nội dung chính. Chuyển động giải thích sự thay đổi trạng thái, không thay cho trạng thái đã xác nhận.",
+    "keyCharacteristics": [
+      "Ảnh vuông có một đường viền đều bốn cạnh; tên và địa chỉ nằm dưới ảnh.",
+      "Điểm ở góc trên phải, giá ở góc dưới trái; vị trí giữ nguyên qua sắp xếp và đổi mật độ.",
+      "Acid cho lựa chọn, lilac cho chụp; nền và chữ đổi theo sáng/tối.",
+      "Thao tác mới đi từ một ảnh thẳng tới giá, ba/bốn slider và Lưu; GPS chạy nền, ghim và tên là tùy chọn.",
+      "Hiệu ứng có giới hạn và tôn trọng giảm chuyển động của ứng dụng, trình duyệt và Android."
+    ],
+    "rules": [
+      {
+        "name": "The Accent Roles Rule",
+        "body": "Giữ acid cho lựa chọn và hành động chính; giữ lilac làm dấu nhận diện chụp. Dùng màu chữ theo theme thay vì viết chữ acid nhạt trên nền sáng.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Family Rule",
+        "body": "Giữ Plus Jakarta Sans cho toàn bộ nhận diện, tiêu đề, nhãn album và điểm; không chuyển số điểm sang mono theo selector cũ.",
+        "section": "typography"
+      },
+      {
+        "name": "The Square Anchor Rule",
+        "body": "Giữ cover tỉ lệ (1:1), điểm trên phải và giá dưới trái ở mọi mật độ. Đổi số cột không đổi thứ tự đọc của từng đánh giá.",
+        "section": "layout"
+      },
+      {
+        "name": "The Photo Flatness Rule",
+        "body": "Cover ảnh và nhãn góc đứng trên một mặt phẳng; không thêm bóng cho từng tile để mô phỏng chồng ảnh.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do dùng ảnh người dùng thật; biểu diễn thiếu ảnh bằng chữ đầu và camera có nhãn.",
+      "Do giữ ảnh vuông, hairline đều và góc điểm/giá cố định ở mọi số cột.",
+      "Do dùng token sáng/tối tương ứng và Plus Jakarta Sans tự lưu cho chữ tiếng Việt.",
+      "Do giữ focus thấy rõ, nhãn truy cập, mục tiêu chạm phù hợp và dock tăng cao theo chữ.",
+      "Do cho lưu ngay khi ảnh/giá hợp lệ, giữ GPS ở nền và chỉnh ghim tùy chọn; giữ nguyên ngữ cảnh khi sửa đánh giá.",
+      "Do tôn trọng giảm chuyển động, giới hạn một trang album ở 24 đánh giá và dừng hiệu ứng trạng thái khi xong."
+    ],
+    "donts": [
+      "Don't đưa ảnh concept, ảnh QA tổng hợp, avatar hoặc ảnh quán bịa vào đánh giá người dùng.",
+      "Don't dùng các rãnh vé, vòng điểm lớn và inspector thường trực của danh sách cũ làm mẫu cho album mới.",
+      "Don't biến mỗi tile thành một thẻ có bóng hoặc thêm mô tả thường trực, phiên bản hay lời chào vào chrome.",
+      "Don't dùng chữ acid nhạt trên nền sáng hoặc thay họ neutral mực bằng slate cũ.",
+      "Don't bỏ ảnh bắt buộc của đánh giá mới, chặn Lưu vì GPS, ép nhập tên/xác nhận ghim, tự mở camera khi sửa hay tự thay tọa độ cũ.",
+      "Don't thêm ngày/giờ mở cửa/bộ đếm ảnh vào quick form hoặc hỏi bỏ bản nháp chỉ vì đổi tab.",
+      "Don't coi build, ảnh chụp trình duyệt hoặc thông số animation là bằng chứng 120 fps hay kiểm thử camera/GPS trên thiết bị thật."
+    ]
+  }
+}
