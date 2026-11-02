@@ -279,8 +279,8 @@ public class NativeFlowTest {
             assertEquals(1, ((Number)js("document.querySelectorAll('.app-scene').length")).intValue());
             assertTrue((Boolean)js("(()=>{const e=document.querySelector('[data-stat=average]');return getComputedStyle(e).color!==getComputedStyle(e.parentElement).backgroundColor})()"));
             assertTrue((Boolean)js("document.documentElement.scrollWidth<=innerWidth"));
-            screenshot("native-insights-dark");
             assertSystemBarTheme(true);
+            screenshot("native-insights-dark");
             assertNavigationContrast(true);
             assertDockGeometry();
             tap(".theme-toggle");
@@ -314,6 +314,16 @@ public class NativeFlowTest {
             screenshot("native-font-130");
             assertDockGeometry();
             assertTrue((Boolean)js("document.documentElement.scrollWidth<=innerWidth"));
+            // Also retain dark/large-text evidence after SystemUI has rebuilt
+            // its font layout. Default-size dark assertions above still run.
+            tap(".theme-toggle");
+            until("document.documentElement.dataset.theme==='dark'");
+            assertSystemBarTheme(true);
+            screenshot("native-insights-dark-130");
+            assertNavigationContrast(true);
+            tap(".theme-toggle");
+            until("document.documentElement.dataset.theme==='light'");
+            assertSystemBarTheme(false);
             device.setOrientationLeft();
             until("innerWidth>innerHeight");
             assertSystemBarTheme(false);
