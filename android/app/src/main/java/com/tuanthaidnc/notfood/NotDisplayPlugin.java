@@ -2,6 +2,7 @@ package com.tuanthaidnc.notfood;
 
 import android.provider.Settings;
 import android.graphics.Color;
+import android.content.res.Configuration;
 import android.os.Build;
 import android.view.View;
 import android.view.ViewTreeObserver;
@@ -54,6 +55,10 @@ public class NotDisplayPlugin extends Plugin {
     }
 
     @Override protected void handleOnResume() {
+        getActivity().getWindow().getDecorView().post(this::applyAppearance);
+    }
+
+    @Override protected void handleOnConfigurationChanged(Configuration configuration) {
         getActivity().getWindow().getDecorView().post(this::applyAppearance);
     }
 

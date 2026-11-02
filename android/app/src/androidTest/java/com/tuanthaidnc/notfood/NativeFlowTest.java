@@ -284,11 +284,13 @@ public class NativeFlowTest {
             scenario.onActivity(activity -> web = activity.getBridge().getWebView());
             until("!!document.querySelector('.bottom-dock')");
             nav(4);
+            assertSystemBarTheme(false);
             screenshot("native-font-130");
             assertDockGeometry();
             assertTrue((Boolean)js("document.documentElement.scrollWidth<=innerWidth"));
             device.setOrientationLeft();
             until("innerWidth>innerHeight");
+            assertSystemBarTheme(false);
             screenshot("native-landscape");
             assertTrue((Boolean)js("document.documentElement.scrollWidth<=innerWidth"));
             JSONObject result = new JSONObject();
