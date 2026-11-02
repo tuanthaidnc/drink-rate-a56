@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-02T04:46:25.932099Z",
+  "generatedAt": "2026-11-02T06:22:57.249Z",
   "title": "Design System: NỐT · Photo journal",
   "extensions": {
     "colorMeta": {
@@ -653,7 +653,7 @@
     "typographyMeta": {
       "brand": {
         "displayName": "Brand",
-        "purpose": "Compact NỐT wordmark; desktop rail uses 26px."
+        "purpose": "Compact NỐT wordmark: 28px portrait, 26px desktop rail, 24px compact landscape. Native camera uses the same bundled Plus Jakarta Sans ExtraBold face at 20sp with native font scaling."
       },
       "headline": {
         "displayName": "Headline",
@@ -906,6 +906,10 @@
       {
         "name": "desktop-rail-min",
         "value": "1100px"
+      },
+      {
+        "name": "compact-landscape-navigation",
+        "value": "(min-width: 600px) and (max-width: 1099px) and (max-height: 500px) and (orientation: landscape)"
       }
     ]
   },
@@ -962,7 +966,7 @@
       "name": "Five-slot Dock",
       "kind": "nav",
       "refersTo": "bottom-dock",
-      "description": "Five destinations in source order; capture remains centered and lilac. Desktop uses the same order in a rail.",
+      "description": "Five destinations in source order; portrait capture remains centered and lilac. Non-form compact landscape reserves a left navigation column under the recorded media query. Desktop retains the same order in its rail.",
       "html": "<nav class=\"ds-dock\" aria-label=\"Điều hướng chính\"><button class=\"ds-nav-item\" type=\"button\" aria-current=\"page\"><span class=\"ds-nav-icon\"><svg viewBox=\"0 0 24 24\" width=\"23\" height=\"23\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M15 21v-5a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v5\"/><path d=\"M17.774 10.31a1.12 1.12 0 0 0-1.549 0 2.5 2.5 0 0 1-3.451 0 1.12 1.12 0 0 0-1.548 0 2.5 2.5 0 0 1-3.452 0 1.12 1.12 0 0 0-1.549 0 2.5 2.5 0 0 1-3.77-3.248l2.889-4.184A2 2 0 0 1 7 2h10a2 2 0 0 1 1.653.873l2.895 4.192a2.5 2.5 0 0 1-3.774 3.244\"/><path d=\"M4 10.95V19a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8.05\"/></svg></span><span>Quán xá</span></button><button class=\"ds-nav-item\" type=\"button\"><span class=\"ds-nav-icon\"><svg viewBox=\"0 0 24 24\" width=\"23\" height=\"23\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z\"/><path d=\"M15 5.764v15\"/><path d=\"M9 3.236v15\"/></svg></span><span>Bản đồ</span></button><button class=\"ds-nav-item ds-nav-camera\" type=\"button\"><span class=\"ds-nav-icon\"><svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M13.997 4a2 2 0 0 1 1.76 1.05l.486.9A2 2 0 0 0 18.003 7H20a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1.997a2 2 0 0 0 1.759-1.048l.489-.904A2 2 0 0 1 10.004 4z\"/><circle cx=\"12\" cy=\"13\" r=\"3\"/></svg></span><span>Chấm</span></button><button class=\"ds-nav-item\" type=\"button\"><span class=\"ds-nav-icon\"><svg viewBox=\"0 0 24 24\" width=\"23\" height=\"23\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M8 2v4m8-4v4M3 10h18\"/><rect x=\"3\" y=\"4\" width=\"18\" height=\"18\" rx=\"2\"/><path d=\"M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01\"/></svg></span><span>Nhật ký</span></button><button class=\"ds-nav-item\" type=\"button\"><span class=\"ds-nav-icon\"><svg viewBox=\"0 0 24 24\" width=\"23\" height=\"23\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 3v16a2 2 0 0 0 2 2h16\"/><path d=\"M18 17V9\"/><path d=\"M13 17V5\"/><path d=\"M8 17v-3\"/></svg></span><span>Thống kê</span></button></nav>",
       "css": ".ds-dock{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:3px;width:100%;max-width:500px;min-height:82px;border:1px solid var(--border-elevated,#d3d8c9);border-radius:99px;padding:7px;background:var(--bg-card,#f6f7f3);box-shadow:0 8px 24px #00000014}.ds-nav-item{display:grid;grid-template-rows:34px auto;align-content:start;align-items:center;justify-items:center;gap:4px;min-height:66px;min-width:0;padding:4px 2px;border:0;border-radius:99px;background:transparent;color:var(--text-secondary,#4b5346);font-family:var(--font-app,'Plus Jakarta Sans',system-ui,sans-serif);font-size:11px;font-weight:500;line-height:1.4;cursor:pointer}.ds-nav-item[aria-current=page]{background:var(--accent-soft,#eaf5bc);color:var(--accent-bright,#425a00)}.ds-nav-item>span:last-child{max-width:100%;white-space:nowrap;overflow-wrap:normal;text-align:center}.ds-nav-icon{display:flex;align-items:center;justify-content:center;flex:none;width:34px;height:34px;min-width:34px;min-height:34px;aspect-ratio:1}.ds-nav-camera .ds-nav-icon{border-radius:50%;background:var(--lilac,#b8a4ff);color:#241a42}.ds-nav-camera .ds-nav-icon svg{width:24px;height:24px}.ds-nav-item:focus-visible{outline:2px solid var(--ring,#849e19);outline-offset:3px;}.ds-nav-item:hover{filter:brightness(.97)}@media(max-width:360px){.ds-nav-item>span:last-child{font-size:11px}}"
     },

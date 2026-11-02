@@ -383,7 +383,7 @@ Màu lá acid và tím nhạt nằm trên một họ neutral hơi xanh; ảnh th
 
 ### Hierarchy
 
-- **Brand:** vai trò `brand`; ở desktop rail giảm còn (26px), điện thoại dùng giá trị frontmatter.
+- **Brand:** vai trò `brand`; ở desktop rail giảm còn (26px), landscape thấp dùng (24px), điện thoại dọc dùng giá trị frontmatter.
 - **Headline:** vai trò `headline`; từ breakpoint desktop dùng `headline-desktop`. Tiêu đề form dùng `form-title`; quick toolbar giữ cùng cỡ (24px) trên desktop. Khi chấm điểm, tiêu đề chỉ dành cho trình đọc màn hình để nhường chỗ cho tổng điểm và Lưu.
 - **Title:** vai trò `title` cho tên quán tối đa hai dòng; tên tăng thành (14px) từ (650px), mật độ nhỏ dùng (12px).
 - **Body / Input:** vai trò `body` cho nội dung và `input` cho trường nhập. Nhãn form dùng (12px), dòng (1.5), trọng lượng (500).
@@ -391,7 +391,7 @@ Màu lá acid và tím nhạt nằm trên một họ neutral hơi xanh; ảnh th
 - **Numbers:** `photo-score` và `photo-price` dùng tabular numerals; mật độ nhỏ giảm điểm thành (14px), giá thành (12px). Điểm đang nhập dùng `quick-total`, giảm thành (27px) ở tối đa (360px), với `/10` (12px); giá dùng `quick-price`. Nhãn và giá trị slider dùng `slider-label` / `slider-value`. Vòng điểm trong dialog chi tiết dùng (30px).
 - **Extension roles:** `metadata` dùng cho reel, tuần lịch, giờ/điểm nhật ký và số đánh giá; `status` cho trạng thái reel. `section-title` dùng tên kết quả và tháng; `dialog-title` dùng tiêu đề sheet reel/camera; `experience-title` dùng hai lựa chọn bắt đầu; `journal-title` dùng ngày đang xem. `calendar-count` chỉ dành cho badge số lượng bổ sung trên ngày có nhiều đánh giá, không dùng cho tên, giá, điểm hoặc thao tác chính.
 
-Toolbar camera Android dùng chữ nền tảng cho nhãn ngắn; ngoại lệ giới hạn ở native chrome, không thay họ display của ứng dụng.
+Wordmark NỐT trong camera Android dùng cùng Plus Jakarta Sans ExtraBold đã đóng gói (`public/fonts/font-8.woff2`, dữ liệu TrueType), cỡ (20sp) và letter spacing (-0.04em). Giữ scale chữ theo hệ thống và hình học toolbar/camera hiện có; không có ngoại lệ dùng platform face cho wordmark.
 
 **The One Family Rule.** Giữ Plus Jakarta Sans cho toàn bộ nhận diện, tiêu đề, nhãn album và điểm; không chuyển số điểm sang mono theo selector cũ.
 
@@ -400,6 +400,8 @@ Toolbar camera Android dùng chữ nền tảng cho nhãn ngắn; ngoại lệ g
 Album có grid tự co bằng `minmax(0, 1fr)`. Dưới (650px) có hai cột mặc định hoặc ba cột mật độ nhỏ, khoảng cách hàng/cột lần lượt (18px / 12px) và (14px / 9px). Từ (650px), grid thành ba hoặc bốn cột với khoảng cách (24px / 18px) và (20px / 14px). Từ (1100px), grid thành bốn hoặc năm cột với khoảng cách (28px / 20px) và (24px / 16px). Ở tối đa (360px), lề ngang giảm còn (12px); không đổi ảnh vuông thành thẻ ngang.
 
 Điện thoại có header gọn (62px) cộng safe area trên Android; vùng nội dung thường có lề ngang (16px). Form ẩn header để dành diện tích cho ảnh, giá và các slider; mang về có màn ghim quán trước chụp, còn chỉnh ghim trong form là dialog. Dock năm ô ở dưới dùng chiều cao nội dung thực qua `ResizeObserver`, để phần cuối trang không bị che; inset hệ thống được cộng vào khoảng trống dưới. Từ desktop, rail rộng (100px), app main có padding (26px 32px), vùng nội dung tối đa (1320px); quick form tối đa (560px) và đặt giữa.
+
+Riêng màn không phải form trong landscape rộng (600–1099px), cao tối đa (500px), navigation có cột trái dành sẵn (92px cộng safe area trái). Năm ô xếp dọc với mỗi hàng tối thiểu (48px); dock nằm trong grid, bo (20px) và không shadow. Header ở cột nội dung cao (56px cộng safe area trên), brand (24px); các giá trị thống kê nằm hoàn toàn trong cột nội dung ngay khi mở. Điều kiện này không áp dụng cho form; bố cục dọc và desktop giữ hệ đang có.
 
 Search thu gọn thành nút ở điện thoại; khi mở, trường tìm kiếm chiếm cả hàng dưới category. Từ (650px), trường tìm kiếm luôn hiện cạnh category. Mỗi trang album tối đa (24) đánh giá, dùng nút trang thay vì dựng toàn bộ ảnh cùng lúc.
 
@@ -465,6 +467,8 @@ Trường nhập nền surface, viền hairline, cỡ chữ `input`; trường t
 ### Navigation
 
 Năm vị trí là Quán xá, Bản đồ, Chấm điểm, Nhật ký và Thống kê. Dock điện thoại là pill, khung tối thiểu `bottom-dock`, tối đa rộng (500px); mỗi ô có hàng icon (34px) và nhãn (11px), không xuống dòng theo override hiện tại. Camera ở vị trí thứ ba luôn có vòng lilac; chỉ glyph xoay, vòng không méo. Desktop rail giữ cùng thứ tự. Active indicator dùng nền mềm trong dock, acid trong rail. Các icon là SVG Lucide, không dùng ký tự text làm icon.
+
+Ở landscape thấp theo điều kiện Layout, cùng năm nơi đến dùng cột navigation dành sẵn bên trái; icon container (28px), glyph (21px), bo ô/indicator (16px). Navigation không phủ lên giá trị đầu trang.
 
 Indicator chung dùng spring (stiffness 360, damping 25); glyph dùng damping (20). Đổi tab thoát (120ms), vào (240ms), dịch ngang từ (18px); màn đang thoát inert và chỉ một màn hoạt động. Giảm chuyển động đưa trực tiếp tới trạng thái cuối. Đổi tab khi đang nhập giữ bản nháp để tiếp tục, tự lưu snapshot và không hiện modal hỏi bỏ thay đổi; “Bỏ bản nháp” là thao tác riêng trong phần mở rộng. Thời gian là thông số triển khai, không phải bằng chứng FPS máy thật.
 
