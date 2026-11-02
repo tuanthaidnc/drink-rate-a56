@@ -181,7 +181,7 @@ export async function loadDocument(): Promise<ReviewDocument> {
   });
 }
 export async function commitDocument(
-  change: (current: ReviewDocument) => ReviewDocument,
+  change: (current: ReviewDocument) => ReviewDocument | null,
   reason: string,
   photos: PhotoData[] = [],
 ): Promise<ReviewDocument> {
@@ -190,6 +190,7 @@ export async function commitDocument(
     const t = d.transaction(['documents', 'snapshots', 'photos', 'archives'], 'readwrite');
     let result: ReviewDocument;
     let failure: Error | undefined;
+    let written = false;
     let preserveAllPhotos = false;
     const fail = (e: unknown) => {
       failure = e instanceof Error ? e : new Error('Không lưu được dữ liệu.');
@@ -220,6 +221,10 @@ export async function commitDocument(
           }
         }
         const changed = change(structuredClone(current));
+        if (changed === null) {
+          result = current;
+          return;
+        }
         const proposed = needsPlaceCorrections(changed) ? applyPlaceCorrections(changed) : changed;
         result = {
           ...proposed,
@@ -252,6 +257,7 @@ export async function commitDocument(
           };
         }
         t.objectStore('documents').put(result, 'current');
+        written = true;
         const archived = t.objectStore('archives').getAll();
         archived.onsuccess = () => {
           if (archived.result.some((a) => a.key === 'IndexedDB')) preserveAllPhotos = true;
@@ -284,7 +290,7 @@ export async function commitDocument(
       }
     };
     t.oncomplete = () => {
-      publishChange();
+      if (written) publishChange();
       resolve(result!);
     };
     t.onabort = () =>

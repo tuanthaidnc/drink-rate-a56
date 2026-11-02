@@ -121,6 +121,7 @@ export default function ReviewForm({
     photos: PhotoData[],
     firstVisit: boolean,
     expectedUpdatedAt: string,
+    pendingLocation?: Promise<Position | null>,
   ) => Promise<boolean>;
   onCancel: () => void;
   onDiscard: () => void;
@@ -150,7 +151,7 @@ export default function ReviewForm({
     recovered?.gpsAttempted ?? (draft.lat !== null && draft.lng !== null),
   );
   const manualPin = useRef(hasConfirmedLocation(draft));
-  const gpsPromise = useRef<Promise<void> | undefined>(undefined);
+  const gpsPromise = useRef<Promise<Position | null> | undefined>(undefined);
   const draftRef = useRef(draft);
   draftRef.current = draft;
   const updateDraft = (fn: (value: ReviewItem) => ReviewItem) => {
@@ -228,7 +229,7 @@ export default function ReviewForm({
     const pending = (async () => {
       try {
         const p = await getCurrentPosition();
-        if (!alive.current) return;
+        if (!alive.current) return p;
         if (!manualPin.current)
           updateDraft((r) => ({
             ...r,
@@ -240,8 +241,10 @@ export default function ReviewForm({
               p.accuracyM !== undefined && p.accuracyM <= 150 ? 'confirmed' : 'approximate',
             placeResolution: undefined,
           }));
+        return p;
       } catch (e) {
         if (alive.current) setGpsError((e as Error).message);
+        return null;
       } finally {
         if (alive.current) setGpsBusy(false);
       }
@@ -325,7 +328,6 @@ export default function ReviewForm({
     saving.current = true;
     setSubmitting(true);
     try {
-      await gpsPromise.current;
       const current = draftRef.current,
         now = new Date();
       const item = validateReview({
@@ -336,7 +338,9 @@ export default function ReviewForm({
         updatedAt: now.toISOString(),
         isDemo: false,
       });
-      const ok = await onSave(item, photos, firstVisit, initial.updatedAt);
+      const pendingLocation =
+        !isEdit && !manualPin.current && gpsBusy ? gpsPromise.current : undefined;
+      const ok = await onSave(item, photos, firstVisit, initial.updatedAt, pendingLocation);
       if (!ok) saving.current = false;
     } catch (e) {
       saving.current = false;

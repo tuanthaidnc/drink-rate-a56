@@ -1,4 +1,5 @@
-import { hasConfirmedLocation, type ReviewItem } from './models.ts';
+import { hasConfirmedLocation, type ReviewItem, type ReviewDocument } from './models.ts';
+import type { Position } from './geo.ts';
 import { localDayParts } from './frequency.ts';
 
 /** Compare content, not mount/focus events or automatically generated timestamps. */
@@ -64,6 +65,44 @@ export function automaticReviewName(category: ReviewItem['category'], at: Date):
     parts.find((item) => item.type === type)?.value ?? '';
   const time = `${part('hour')}:${part('minute')} ${part('day')}/${part('month')}`;
   return `${category === 'food' ? 'Quán ăn' : 'Quán nước'} · ${time}`;
+}
+
+/** A late GPS result can fill a new review, never undo a later edit or deletion. */
+export function completeReviewLocation(
+  current: ReviewDocument,
+  saved: ReviewItem,
+  position: Position,
+): ReviewDocument | null {
+  const item = current.reviews.find((r) => r.id === saved.id);
+  if (
+    !item ||
+    item.updatedAt !== saved.updatedAt ||
+    item.lat !== null ||
+    item.lng !== null ||
+    item.locationSource === 'manual' ||
+    !Number.isFinite(position.lat) ||
+    !Number.isFinite(position.lng) ||
+    Math.abs(position.lat) > 90 ||
+    Math.abs(position.lng) > 180
+  )
+    return null;
+  return {
+    ...current,
+    reviews: current.reviews.map((r) =>
+      r.id === item.id
+        ? {
+            ...r,
+            ...position,
+            locationSource: 'gps',
+            locationStatus:
+              position.accuracyM !== undefined && position.accuracyM <= 150
+                ? 'confirmed'
+                : 'approximate',
+            updatedAt: new Date().toISOString(),
+          }
+        : r,
+    ),
+  };
 }
 
 /** The native recovery callback and the form must derive exactly the same state. */

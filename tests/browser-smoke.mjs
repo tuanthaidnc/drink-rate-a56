@@ -501,6 +501,37 @@ try {
     },
   );
   await scenario(
+    'Save completes before pending GPS; late coordinates preserve the saved rating',
+    async () => {
+      const { page: p, errors } = await setup({ gps: 'deferred' });
+      await nav(p, 'Chấm điểm');
+      await p.locator('.quick-review[data-stage="score"]').waitFor();
+      await p.waitForFunction(() => typeof window.__gpsResolve === 'function');
+      await p.locator('#review-price').fill('31,5');
+      await p.getByRole('button', { name: 'Lưu quán', exact: true }).click();
+      // GPS has deliberately not resolved: waiting here would reproduce the defect.
+      await p.locator('.album-tile').waitFor({ timeout: 3000 });
+      const saved = (await readDoc(p)).reviews[0];
+      assert.equal(saved.lat, null);
+      await p.evaluate(() => window.__gpsResolve());
+      let located;
+      const deadline = Date.now() + 5000;
+      do {
+        located = (await readDoc(p)).reviews[0];
+        if (located.lat === 16.06528) break;
+        await new Promise((r) => setTimeout(r, 50));
+      } while (Date.now() < deadline);
+      assert.equal(located.lat, 16.06528);
+      assert.equal(located.locationSource, 'gps');
+      assert.equal(located.locationStatus, 'confirmed');
+      for (const key of ['id', 'name', 'priceK', 'taste', 'totalScore', 'reviewedAt'])
+        assert.equal(located[key], saved[key]);
+      assert.deepEqual(located.photoIds, saved.photoIds);
+      assert.equal(await p.locator('.quick-review').count(), 0);
+      assert.deepEqual(errors, []);
+    },
+  );
+  await scenario(
     'camera failure allows one library image without a mandatory location step',
     async () => {
       const { page: p } = await setup({ camera: 'error' });
@@ -508,13 +539,11 @@ try {
       await p.getByRole('alert').filter({ hasText: 'Camera chưa được cho phép' }).waitFor();
       assert.equal(await p.getByRole('button', { name: 'Lưu quán' }).count(), 0);
       const image = await p.evaluate(() => window.__cameraImage.split(',')[1]);
-      await p
-        .getByLabel('Chọn ảnh món ăn hoặc đồ uống')
-        .setInputFiles({
-          name: 'photo.jpg',
-          mimeType: 'image/jpeg',
-          buffer: Buffer.from(image, 'base64'),
-        });
+      await p.getByLabel('Chọn ảnh món ăn hoặc đồ uống').setInputFiles({
+        name: 'photo.jpg',
+        mimeType: 'image/jpeg',
+        buffer: Buffer.from(image, 'base64'),
+      });
       await p.locator('.quick-review[data-stage=score]').waitFor();
       await save(p);
     },
@@ -674,13 +703,11 @@ try {
       await more(p);
       assert.equal(await p.locator('input[type=date],input[type=time]').count(), 0);
       assert.equal(await p.getByText('Giờ mở cửa', { exact: true }).count(), 0);
-      await p
-        .getByLabel('Chọn ảnh món ăn hoặc đồ uống')
-        .setInputFiles({
-          name: 'broken.jpg',
-          mimeType: 'image/jpeg',
-          buffer: Buffer.from('broken'),
-        });
+      await p.getByLabel('Chọn ảnh món ăn hoặc đồ uống').setInputFiles({
+        name: 'broken.jpg',
+        mimeType: 'image/jpeg',
+        buffer: Buffer.from('broken'),
+      });
       await p.getByRole('alert').filter({ hasText: 'Ảnh bị lỗi' }).waitFor();
       assert.equal(await p.locator('.quick-photo img').count(), 1);
     },
@@ -965,7 +992,7 @@ try {
     await nav(p, 'Quán xá');
     await p.locator('.album-tile').waitFor();
     await editFirst(p);
-    await p.getByRole('button', { name: 'Đà Nẵng', exact:true }).click();
+    await p.getByRole('button', { name: 'Đà Nẵng', exact: true }).click();
     await p
       .getByRole('button', { name: /Phường Thanh Khê/ })
       .first()

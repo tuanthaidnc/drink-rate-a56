@@ -5,6 +5,7 @@ import {
   reviewDraftIsDirty,
   parseReviewPrice,
   automaticReviewName,
+  completeReviewLocation,
 } from '../../src/lib/reviewDraft.ts';
 import {
   createReview,
@@ -152,4 +153,48 @@ test('quick scoring accepts Vietnamese decimals and uses current Vietnam time fo
   assert.match(label, /^Quán ăn · /);
   assert.ok(label.includes('06:15'));
   assert.ok(label.includes('31/10'));
+});
+
+test('late GPS only fills the untouched saved review and cannot undo edits, pins or deletion', () => {
+  const saved = validateReview({ ...createReview('drink', now), name: 'GPS QA', priceK: 31 });
+  const d = { ...emptyDocument(), reviews: [saved] };
+  const p = { lat: 16.066, lng: 108.209, accuracyM: 12 };
+  const result = completeReviewLocation(d, saved, p)!;
+  const { lat, lng, accuracyM, locationSource, locationStatus, updatedAt, ...rest } =
+    result.reviews[0];
+  const {
+    lat: a,
+    lng: b,
+    accuracyM: c,
+    locationSource: s,
+    locationStatus: t,
+    updatedAt: u,
+    ...original
+  } = saved;
+  assert.deepEqual(rest, original);
+  assert.equal(lat, p.lat);
+  assert.equal(lng, p.lng);
+  assert.equal(locationStatus, 'confirmed');
+  assert.equal(completeReviewLocation({ ...d, reviews: [] }, saved, p), null);
+  assert.equal(
+    completeReviewLocation(
+      { ...d, reviews: [{ ...saved, updatedAt: now.toISOString() + '-edited' }] },
+      saved,
+      p,
+    ),
+    null,
+  );
+  assert.equal(
+    completeReviewLocation(
+      { ...d, reviews: [{ ...saved, lat: 16.1, lng: 108.1, locationSource: 'manual' }] },
+      saved,
+      p,
+    ),
+    null,
+  );
+  assert.equal(completeReviewLocation(d, saved, { lat: NaN, lng: 108 }), null);
+  assert.equal(
+    completeReviewLocation(d, saved, { ...p, accuracyM: 600 })!.reviews[0].locationStatus,
+    'approximate',
+  );
 });

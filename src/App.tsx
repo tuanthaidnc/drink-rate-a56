@@ -45,6 +45,8 @@ import ReviewInspector from './components/ReviewInspector.tsx';
 import PlaceReconciliation, { HistoricalPlaces } from './components/PlaceReconciliation.tsx';
 import { applyPlaceCorrections, THANH_HUONG_CANDIDATE } from './lib/placeCorrections.ts';
 import { useReviewStore } from './lib/useReviewStore.ts';
+import { commitDocument } from './lib/storage.ts';
+import { completeReviewLocation } from './lib/reviewDraft.ts';
 import { useNow } from './lib/useNow.ts';
 import { usePwa } from './lib/usePwa.ts';
 import { isNativeApp, minimizeNativeApp } from './lib/platform.ts';
@@ -361,7 +363,9 @@ export default function App() {
     photos: PhotoData[],
     firstVisit: boolean,
     expectedUpdatedAt: string,
+    pendingLocation?: Promise<Position | null>,
   ) => {
+    let saved: ReviewItem | undefined;
     const ok = await store.update(
       (current) => {
         const old = current.reviews.find((r) => r.id === item.id);
@@ -393,6 +397,7 @@ export default function App() {
             : (old?.ratingHistory ?? []),
           updatedAt: new Date().toISOString(),
         });
+        saved = next;
         return {
           ...current,
           reviews: old
@@ -404,6 +409,16 @@ export default function App() {
       photos,
     );
     if (ok) {
+      if (pendingLocation && saved) {
+        const baseline = saved;
+        void pendingLocation
+          .then((p) =>
+            p
+              ? commitDocument((d) => completeReviewLocation(d, baseline, p), 'Bổ sung vị trí GPS')
+              : undefined,
+          )
+          .catch(() => {});
+      }
       await forgetCaptureRecovery().catch(() => {});
       setCaptureDraft(undefined);
       setDraft(null);
