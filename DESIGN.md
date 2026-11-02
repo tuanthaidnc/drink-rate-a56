@@ -486,7 +486,9 @@ Lịch tháng bảy cột dùng ảnh đầu tiên của đánh giá trong ngày
 
 ### Android Chrome
 
-SystemBars đặt kiểu glyph trước, sau đó NotDisplay đặt nền decor/WebView bằng token canvas của theme. Đồng bộ ở startup, đổi theme và resume để vùng status/navigation inset cùng màu với nội dung. Giữ chữ hệ thống có tương phản; ảnh chụp trước bản sửa không chứng minh trạng thái APK sau sửa. Yêu cầu tần số quét cao không phải bảo đảm 120 fps.
+SystemBars gửi kiểu glyph trước; NotDisplay giữ theme hiện hành và áp dụng đồng bộ nền decor/WebView bằng token canvas cùng kiểu icon sáng/tối cho cả status bar và navigation bar. Từ API 29, tắt lớp tương phản navigation tự động của OS để ứng dụng kiểm soát nền và độ tương phản cùng nhau.
+
+Đồng bộ lúc startup/đổi theme, áp dụng lại sau resume, đổi cấu hình và cạnh thay đổi hiển thị IME. Observer global-layout theo dõi IME không thay listener inset/keyboard của Capacitor và được gỡ khi destroy. Kiểm tra cả appearance flags thực tế và glyph navigation hiển thị trên ảnh chụp OS, với tương phản tối thiểu (3:1); không suy khả năng đọc chỉ từ màu nền hoặc status bar. Yêu cầu tần số quét cao không phải bảo đảm 120 fps.
 
 Phần chưa chuẩn hóa thành hệ: map còn marker quán dùng emoji/ký tự sao và màu riêng từ lớp cũ. Đây là drift hiện có ngoài phạm vi album/capture, không phải mẫu icon hoặc palette để màn hình mới kế thừa; lần ghi tài liệu này không sửa mã ứng dụng.
 
