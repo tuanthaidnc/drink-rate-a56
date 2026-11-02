@@ -2,7 +2,12 @@ package com.tuanthaidnc.notfood;
 
 import static org.junit.Assert.*;
 import android.webkit.WebView;
+import android.app.Activity;
+import android.graphics.Bitmap;
 import android.view.KeyEvent;
+import androidx.camera.view.PreviewView;
+import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry;
+import androidx.test.runner.lifecycle.Stage;
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
@@ -68,6 +73,35 @@ public class NativeFlowTest {
         assertTrue(device.takeScreenshot(new File(proof, name + ".png")));
     }
 
+    private void waitForLiveCameraFrame() throws Exception {
+        AtomicBoolean visibleFrame = new AtomicBoolean(false);
+        long deadline = System.currentTimeMillis() + 20000;
+        do {
+            InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
+                for (Activity activity : ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(Stage.RESUMED)) {
+                    if (!(activity instanceof SquareCameraActivity)) continue;
+                    PreviewView preview = activity.findViewById(R.id.camera_preview);
+                    if (preview.getPreviewStreamState().getValue() != PreviewView.StreamState.STREAMING) continue;
+                    Bitmap bitmap = preview.getBitmap();
+                    if (bitmap == null) continue;
+                    try {
+                        for (int y = 1; y < 16 && !visibleFrame.get(); y++) {
+                            for (int x = 1; x < 16; x++) {
+                                int pixel = bitmap.getPixel(x * bitmap.getWidth() / 16, y * bitmap.getHeight() / 16);
+                                if (android.graphics.Color.red(pixel) + android.graphics.Color.green(pixel) + android.graphics.Color.blue(pixel) > 90) {
+                                    visibleFrame.set(true);
+                                    break;
+                                }
+                            }
+                        }
+                    } finally { bitmap.recycle(); }
+                }
+            });
+            if (!visibleFrame.get()) Thread.sleep(100);
+        } while (!visibleFrame.get() && System.currentTimeMillis() < deadline);
+        assertTrue("The emulated camera has produced a visible live preview frame", visibleFrame.get());
+    }
+
     private void assertDockGeometry() throws Exception {
         assertTrue("Circular action, aligned labels, and visible touch targets", (Boolean) js("(()=>{const buttons=[...document.querySelectorAll('.bottom-dock button')];const labels=buttons.map(b=>b.querySelector('.nav-label').getBoundingClientRect());return buttons.length===5&&buttons.every((b,i)=>{const r=b.getBoundingClientRect(),icon=b.querySelector('.nav-icon').getBoundingClientRect(),label=labels[i];return r.width>=48&&r.height>=48&&Math.abs(icon.width-icon.height)<0.5&&Math.abs(label.y-labels[0].y)<0.5&&label.bottom<=r.bottom+1})})()"));
     }
@@ -112,6 +146,7 @@ public class NativeFlowTest {
             assertTrue("In-app square camera opened", device.wait(Until.hasObject(By.res("com.tuanthaidnc.notfood:id/camera_preview")), 15000));
             android.graphics.Rect previewBounds = device.findObject(By.res("com.tuanthaidnc.notfood:id/camera_preview")).getVisibleBounds();
             assertEquals("Square camera preview", previewBounds.width(), previewBounds.height());
+            waitForLiveCameraFrame();
             screenshot("native-square-camera");
             device.pressBack();
             until("document.querySelector('.review-form')?.dataset.stage==='capture' && !document.querySelector('.capture-processing')");
