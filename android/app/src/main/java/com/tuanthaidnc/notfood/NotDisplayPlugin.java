@@ -43,10 +43,15 @@ public class NotDisplayPlugin extends Plugin {
         });
     }
 
+    @SuppressWarnings("deprecation")
     private void applyAppearance() {
         if (darkTheme == null) return;
         Window window = getActivity().getWindow();
         int color = darkTheme ? Color.rgb(11, 13, 12) : Color.rgb(247, 248, 245);
+        // Explicit transparent navigation opts out of Android 15's forced
+        // light-navigation fallback. The app draws its own themed backing;
+        // the public appearance flags below then own the glyph contrast.
+        window.setNavigationBarColor(Color.TRANSPARENT);
         // Android 15 derives forced navigation appearance from the Window
         // background identity. Mutating DecorView's existing color leaves
         // that light-navigation flag stale even when the public flags agree.

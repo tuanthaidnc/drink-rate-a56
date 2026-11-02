@@ -120,6 +120,12 @@ public class NativeFlowTest {
                 }
             double contrast = (Math.max(background, foreground) + 0.05) / (Math.min(background, foreground) + 0.05);
             minimumNavigationContrast = Math.min(minimumNavigationContrast, contrast);
+            if (contrast < 3) {
+                Files.writeString(new File(proof, "native-navigation-debug.txt").toPath(),
+                    "dark=" + dark + "; backgroundLuminance=" + background + "; foregroundLuminance=" + foreground + "\n"
+                    + device.executeShellCommand("dumpsys window windows") + "\n"
+                    + device.executeShellCommand("dumpsys statusbar"), StandardCharsets.UTF_8);
+            }
             assertTrue("Rendered navigation glyph contrast must be at least 3:1; got " + contrast, contrast >= 3);
         } finally {
             screen.recycle();
