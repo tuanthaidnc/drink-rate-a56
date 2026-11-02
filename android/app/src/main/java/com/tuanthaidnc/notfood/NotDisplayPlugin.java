@@ -2,6 +2,7 @@ package com.tuanthaidnc.notfood;
 
 import android.provider.Settings;
 import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.content.res.Configuration;
 import android.os.Build;
 import android.view.View;
@@ -46,7 +47,10 @@ public class NotDisplayPlugin extends Plugin {
         if (darkTheme == null) return;
         Window window = getActivity().getWindow();
         int color = darkTheme ? Color.rgb(11, 13, 12) : Color.rgb(247, 248, 245);
-        window.getDecorView().setBackgroundColor(color);
+        // Android 15 derives forced navigation appearance from the Window
+        // background identity. Mutating DecorView's existing color leaves
+        // that light-navigation flag stale even when the public flags agree.
+        window.setBackgroundDrawable(new ColorDrawable(color));
         getBridge().getWebView().setBackgroundColor(color);
         WindowInsetsControllerCompat bars = WindowCompat.getInsetsController(window, window.getDecorView());
         bars.setAppearanceLightStatusBars(!darkTheme);
