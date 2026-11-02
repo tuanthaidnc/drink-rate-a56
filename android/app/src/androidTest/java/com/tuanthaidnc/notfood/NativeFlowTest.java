@@ -91,8 +91,14 @@ public class NativeFlowTest {
                     android.graphics.drawable.Drawable backing = window.getDecorView().getBackground();
                     boolean lightIcons = !WindowCompat.getInsetsController(window, window.getDecorView()).isAppearanceLightStatusBars();
                     boolean lightNavigation = !WindowCompat.getInsetsController(window, window.getDecorView()).isAppearanceLightNavigationBars();
+                    WindowInsetsCompat insets = ViewCompat.getRootWindowInsets(window.getDecorView());
+                    androidx.core.graphics.Insets tappable = insets == null ? androidx.core.graphics.Insets.NONE : insets.getInsets(WindowInsetsCompat.Type.tappableElement());
+                    boolean buttons = tappable.bottom > 0 || tappable.left > 0 || tappable.right > 0;
+                    boolean expectedNavigationDark = buttons
+                        ? (activity.getResources().getConfiguration().uiMode & android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+                        : dark;
                     int expected = dark ? Color.rgb(11, 13, 12) : Color.rgb(247, 248, 245);
-                    matched.set(backing instanceof ColorDrawable && ((ColorDrawable)backing).getColor() == expected && lightIcons == dark && lightNavigation == dark);
+                    matched.set(backing instanceof ColorDrawable && ((ColorDrawable)backing).getColor() == expected && lightIcons == dark && lightNavigation == expectedNavigationDark);
                 }
             });
             if (matched.get()) return;
@@ -112,12 +118,14 @@ public class NativeFlowTest {
         assertNotNull("Native system navigation screenshot", screen);
         try {
             double background = ColorUtils.calculateLuminance(screen.getPixel(8, screen.getHeight() - 8));
-            double foreground = background;
+            double minimum = background, maximum = background;
             for (int y = screen.getHeight() - bottom.get() + 4; y < screen.getHeight() - 4; y += 2)
                 for (int x = screen.getWidth() / 10; x < screen.getWidth() * 9 / 10; x += 2) {
                     double luminance = ColorUtils.calculateLuminance(screen.getPixel(x, y));
-                    foreground = dark ? Math.max(foreground, luminance) : Math.min(foreground, luminance);
+                    minimum = Math.min(minimum, luminance);
+                    maximum = Math.max(maximum, luminance);
                 }
+            double foreground = (background + 0.05) / (minimum + 0.05) > (maximum + 0.05) / (background + 0.05) ? minimum : maximum;
             double contrast = (Math.max(background, foreground) + 0.05) / (Math.min(background, foreground) + 0.05);
             minimumNavigationContrast = Math.min(minimumNavigationContrast, contrast);
             if (contrast < 3) {
