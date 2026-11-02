@@ -2,6 +2,7 @@ package com.tuanthaidnc.notfood;
 
 import static org.junit.Assert.*;
 import android.webkit.WebView;
+import android.view.KeyEvent;
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
@@ -44,12 +45,19 @@ public class NativeFlowTest {
     private void tap(String selector) throws Exception {
         String quoted = JSONObject.quote(selector);
         until("!!document.querySelector(" + quoted + ")");
-        js("document.querySelector(" + quoted + ").scrollIntoView({block:'center',inline:'nearest'})");
+        js("document.querySelector(" + quoted + ").scrollIntoView({behavior:'instant',block:'center',inline:'nearest'})");
         JSONObject box = new JSONObject((String) js("JSON.stringify((()=>{const r=document.querySelector(" + quoted + ").getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2,viewport:innerWidth}})())"));
         int[] origin = new int[2];
         InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> web.getLocationOnScreen(origin));
         double ratio = web.getWidth() / box.getDouble("viewport");
         assertTrue(device.click(origin[0] + (int)(box.getDouble("x") * ratio), origin[1] + (int)(box.getDouble("y") * ratio)));
+    }
+    private void enterText(String selector, String value) throws Exception {
+        tap(selector);
+        until("document.activeElement===document.querySelector(" + JSONObject.quote(selector) + ")");
+        device.pressKeyCode(KeyEvent.KEYCODE_A, KeyEvent.META_CTRL_ON);
+        device.executeShellCommand("input text " + value);
+        until("document.querySelector(" + JSONObject.quote(selector) + ").value===" + JSONObject.quote(value));
     }
     private void nav(int index) throws Exception {
         tap(".bottom-dock button:nth-child(" + (index + 1) + ")");
@@ -110,24 +118,20 @@ public class NativeFlowTest {
             tap(".quick-location");
             until("!!document.querySelector('[role=dialog]')");
             tap(".manual-coordinates");
-            tap(".capture-location .two-columns label:nth-child(1) input");
-            device.executeShellCommand("input text 16.066");
-            tap(".capture-location .two-columns label:nth-child(2) input");
-            device.executeShellCommand("input text 108.209");
+            enterText(".capture-location .two-columns label:nth-child(1) input", "16.066");
+            enterText(".capture-location .two-columns label:nth-child(2) input", "108.209");
             device.pressBack();
             js("document.querySelector('.capture-location .two-columns').scrollIntoView({block:'center'})");
             // The only secondary action in this manual-entry group is Đặt ghim.
             tap(".capture-location > .stack > button");
+            until("!document.querySelector('.capture-location .two-columns')");
             js("document.querySelector('.confirm-location').scrollIntoView({block:'center'})");
             tap(".confirm-location");
             until("!document.querySelector('[role=dialog]')");
             tap(".quick-more > summary");
             until("!!document.querySelector('#shop-name-input')");
-            tap("#shop-name-input");
-            device.executeShellCommand("input text Native-QA");
-            until("document.querySelector('#shop-name-input').value==='Native-QA'");
-            tap("#review-price");
-            device.executeShellCommand("input text 31,5");
+            enterText("#shop-name-input", "Native-QA");
+            enterText("#review-price", "31,5");
             screenshot("native-keyboard");
             device.pressBack();
             until("!!document.querySelector('.quick-toolbar')");
