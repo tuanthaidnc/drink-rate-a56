@@ -71,7 +71,9 @@ public class SquareCameraActivity extends AppCompatActivity {
         title.setText(R.string.camera_title);
         title.setTextColor(Color.WHITE);
         title.setTextSize(20);
-        title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        // Share the self-hosted TrueType ExtraBold face already bundled for the WebView.
+        title.setTypeface(Typeface.createFromAsset(getAssets(), "public/fonts/font-8.woff2"));
+        title.setLetterSpacing(-0.04f);
         title.setGravity(Gravity.CENTER);
         toolbar.addView(title, new LinearLayout.LayoutParams(0, dp(64), 1));
         flash = button(R.id.camera_flash, R.string.camera_flash, R.drawable.camera_flash, v -> {

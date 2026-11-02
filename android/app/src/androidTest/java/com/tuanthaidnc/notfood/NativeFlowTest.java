@@ -338,6 +338,8 @@ public class NativeFlowTest {
             device.setOrientationLeft();
             until("innerWidth>innerHeight");
             assertSystemBarTheme(false);
+            assertTrue("Landscape primary values must be visible and separate from navigation",
+                (Boolean)js("(()=>{const m=document.querySelector('.app-main').getBoundingClientRect(),d=document.querySelector('.bottom-dock').getBoundingClientRect();return [...document.querySelectorAll('.stat-grid strong')].every(e=>{const r=e.getBoundingClientRect();return r.top>=m.top&&r.bottom<=m.bottom&&r.left>=m.left&&r.right<=m.right&&(r.right<=d.left||r.left>=d.right||r.bottom<=d.top||r.top>=d.bottom)})})()"));
             screenshot("native-landscape");
             assertTrue((Boolean)js("document.documentElement.scrollWidth<=innerWidth"));
             JSONObject result = new JSONObject();
