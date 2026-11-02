@@ -276,6 +276,7 @@ export default function App() {
     let fullHeight = window.innerHeight;
     let fullWidth = window.innerWidth;
     const viewport = window.visualViewport;
+    let revealFrame: number | undefined;
     const update = () => {
       const active = document.activeElement;
       const editable =
@@ -288,13 +289,22 @@ export default function App() {
         fullHeight = height;
       }
       if (!editable) fullHeight = Math.max(fullHeight, height);
-      setTyping((current) => height < fullHeight - 120 && (!!editable || current));
+      const keyboardOpen = height < fullHeight - 120;
+      setTyping((current) => keyboardOpen && (!!editable || current));
+      if (revealFrame !== undefined) cancelAnimationFrame(revealFrame);
+      if (keyboardOpen && editable && active instanceof HTMLElement) {
+        revealFrame = requestAnimationFrame(() => {
+          if (document.activeElement === active && active.isConnected)
+            active.scrollIntoView({ behavior: 'instant', block: 'center', inline: 'nearest' });
+        });
+      }
     };
     document.addEventListener('focusin', update);
     document.addEventListener('focusout', update);
     window.addEventListener('resize', update);
     viewport?.addEventListener('resize', update);
     return () => {
+      if (revealFrame !== undefined) cancelAnimationFrame(revealFrame);
       document.removeEventListener('focusin', update);
       document.removeEventListener('focusout', update);
       window.removeEventListener('resize', update);
