@@ -8,6 +8,9 @@ import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.view.KeyEvent;
 import androidx.core.view.WindowCompat;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.graphics.ColorUtils;
 import androidx.camera.view.PreviewView;
 import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry;
 import androidx.test.runner.lifecycle.Stage;
@@ -34,6 +37,7 @@ public class NativeFlowTest {
     private WebView web;
     private final UiDevice device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
     private File proof;
+    private double minimumNavigationContrast = Double.POSITIVE_INFINITY;
 
     private Object js(String expression) throws Exception {
         CountDownLatch latch = new CountDownLatch(1);
@@ -86,14 +90,40 @@ public class NativeFlowTest {
                     android.view.Window window = activity.getWindow();
                     android.graphics.drawable.Drawable backing = window.getDecorView().getBackground();
                     boolean lightIcons = !WindowCompat.getInsetsController(window, window.getDecorView()).isAppearanceLightStatusBars();
+                    boolean lightNavigation = !WindowCompat.getInsetsController(window, window.getDecorView()).isAppearanceLightNavigationBars();
                     int expected = dark ? Color.rgb(11, 13, 12) : Color.rgb(247, 248, 245);
-                    matched.set(backing instanceof ColorDrawable && ((ColorDrawable)backing).getColor() == expected && lightIcons == dark);
+                    matched.set(backing instanceof ColorDrawable && ((ColorDrawable)backing).getColor() == expected && lightIcons == dark && lightNavigation == dark);
                 }
             });
             if (matched.get()) return;
             Thread.sleep(60);
         } while (System.currentTimeMillis() < deadline);
         fail("System-bar glyphs and inset backing must match the app theme");
+    }
+
+    private void assertNavigationContrast(boolean dark) throws Exception {
+        AtomicReference<Integer> bottom = new AtomicReference<>(0);
+        InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
+            WindowInsetsCompat insets = ViewCompat.getRootWindowInsets(web);
+            if (insets != null) bottom.set(insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom);
+        });
+        assertTrue("The emulator must expose system navigation for this contrast check", bottom.get() > 0);
+        Bitmap screen = InstrumentationRegistry.getInstrumentation().getUiAutomation().takeScreenshot();
+        assertNotNull("Native system navigation screenshot", screen);
+        try {
+            double background = ColorUtils.calculateLuminance(screen.getPixel(8, screen.getHeight() - 8));
+            double foreground = background;
+            for (int y = screen.getHeight() - bottom.get() + 4; y < screen.getHeight() - 4; y += 2)
+                for (int x = screen.getWidth() / 10; x < screen.getWidth() * 9 / 10; x += 2) {
+                    double luminance = ColorUtils.calculateLuminance(screen.getPixel(x, y));
+                    foreground = dark ? Math.max(foreground, luminance) : Math.min(foreground, luminance);
+                }
+            double contrast = (Math.max(background, foreground) + 0.05) / (Math.min(background, foreground) + 0.05);
+            minimumNavigationContrast = Math.min(minimumNavigationContrast, contrast);
+            assertTrue("Rendered navigation glyph contrast must be at least 3:1; got " + contrast, contrast >= 3);
+        } finally {
+            screen.recycle();
+        }
     }
 
     private void waitForLiveCameraFrame() throws Exception {
@@ -207,6 +237,7 @@ public class NativeFlowTest {
             assertSystemBarTheme(true);
             assertTrue("IME must not collapse the main grid row or hide the focused price", (Boolean)js("(()=>{const m=document.querySelector('.app-main'),e=document.querySelector('#review-price'),r=e.getBoundingClientRect();return m.clientHeight>180&&document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)===e})()"));
             screenshot("native-keyboard");
+            assertNavigationContrast(true);
             device.pressBack();
             until("!!document.querySelector('.quick-toolbar')");
             js("document.querySelector('.review-form').scrollIntoView({block:'start'})");
@@ -224,11 +255,13 @@ public class NativeFlowTest {
             assertTrue((Boolean)js("document.documentElement.scrollWidth<=innerWidth"));
             screenshot("native-insights-dark");
             assertSystemBarTheme(true);
+            assertNavigationContrast(true);
             assertDockGeometry();
             tap(".theme-toggle");
             until("document.documentElement.dataset.theme==='light'");
             assertSystemBarTheme(false);
             screenshot("native-insights-light");
+            assertNavigationContrast(false);
             tap(".header-actions button[aria-label='Tùy chọn']");
             until("!!document.querySelector('[role=dialog]')");
             device.pressBack();
@@ -261,6 +294,7 @@ public class NativeFlowTest {
             JSONObject result = new JSONObject();
             result.put("pass", true);
             result.put("nativeSystemBarContrast", true);
+            result.put("nativeNavigationContrast", Math.round(minimumNavigationContrast * 100) / 100.0);
             result.put("nativeFormTargets48", true);
             result.put("source", "Android API 35 emulator, native touch, IME, system Back, real WebView");
             result.put("score", "7.7");
