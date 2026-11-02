@@ -279,6 +279,15 @@ public class NativeFlowTest {
             assertEquals(1, ((Number)js("document.querySelectorAll('.app-scene').length")).intValue());
             assertTrue((Boolean)js("(()=>{const e=document.querySelector('[data-stat=average]');return getComputedStyle(e).color!==getComputedStyle(e.parentElement).backgroundColor})()"));
             assertTrue((Boolean)js("document.documentElement.scrollWidth<=innerWidth"));
+            // The isolated emulator may retain an empty SystemUI status layer
+            // after the IME/theme sequence. Re-layout it at the same final
+            // font scale before collecting normal-size dark proof.
+            device.executeShellCommand("settings put system font_scale 1.3");
+            Thread.sleep(900);
+            device.executeShellCommand("settings put system font_scale 1.0");
+            Thread.sleep(900);
+            scenario.onActivity(activity -> web = activity.getBridge().getWebView());
+            until("!!document.querySelector('[data-stat=average]')");
             assertSystemBarTheme(true);
             screenshot("native-insights-dark");
             assertNavigationContrast(true);
