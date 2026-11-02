@@ -36,7 +36,6 @@ import ReviewCard from './components/ReviewCard.tsx';
 import {
   watchCaptureRecovery,
   forgetCaptureRecovery,
-  openWebCamera,
   type CaptureDraft,
 } from './lib/reviewCapture.ts';
 import DataTools from './components/DataTools.tsx';
@@ -70,11 +69,13 @@ const ReviewForm = lazy(() => import('./components/ReviewForm.tsx'));
 const Insights = lazy(() => import('./components/Insights.tsx'));
 const SpinPicker = lazy(() => import('./components/SpinPicker.tsx'));
 const VisitManager = lazy(() => import('./components/VisitManager.tsx'));
-type Tab = 'places' | 'map' | 'review' | 'insights';
+const ReviewJournal = lazy(() => import('./components/ReviewJournal.tsx'));
+type Tab = 'places' | 'map' | 'review' | 'journal' | 'insights';
 const tabs = [
   { id: 'places', label: 'Quán xá', icon: MapPin },
   { id: 'map', label: 'Bản đồ', icon: Map },
   { id: 'review', label: 'Chấm điểm', icon: Plus },
+  { id: 'journal', label: 'Nhật ký', icon: Map },
   { id: 'insights', label: 'Thống kê', icon: ChartColumn },
 ] as const;
 const ratingKeys = [
@@ -88,6 +89,7 @@ const ratingKeys = [
   'packaging',
   'cleanliness',
   'foodQuality',
+  'portionKey',
 ] as const;
 
 export default function App() {
@@ -112,6 +114,7 @@ export default function App() {
   }, []);
   const cameraLocked = photoBusy || recoveryBusy;
   const [entryPhotos, setEntryPhotos] = useState<Promise<File[]>>();
+  const [captureOnOpen, setCaptureOnOpen] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [density, setDensity] = useState<'medium' | 'small'>(() => {
     try {
@@ -147,8 +150,10 @@ export default function App() {
     main.current?.scrollTo({ top: 0 });
   }, []);
   const add = (p?: Position) => {
+    if (draft && dirty && !editing) { navigate('review'); return; }
     setDetailId(null);
-    setEntryPhotos(!isNativeApp ? openWebCamera() : undefined);
+    setEntryPhotos(undefined);
+    setCaptureOnOpen(false);
     setCaptureDraft(undefined);
     setDirty(!!p);
     setDraft({
@@ -166,7 +171,12 @@ export default function App() {
     navigate('review');
   };
   const edit = (r: ReviewItem) => {
+    if (draft && dirty && !editing) {
+      setMessage('Còn bản đang trải nghiệm. Mở Chấm điểm để hoàn tất hoặc bỏ bản nháp.');
+      return;
+    }
     setDetailId(null);
+    setCaptureOnOpen(false);
     setEntryPhotos(undefined);
     setCaptureDraft(undefined);
     setDirty(false);
@@ -695,6 +705,9 @@ export default function App() {
                             <div className="workspace-view">
                               <div className="places-column stack">
                                 {heading}
+                                {captureDraft && !captureDraft.isEdit && dirty && <button className="pending-experience" onClick={() => { setCaptureOnOpen(!captureDraft.draft.photoIds.length && captureDraft.venueLocked === true); navigate('review'); }}>
+                                  <span className="pending-dot" /><span><strong>{captureDraft.draft.name || 'Đang trải nghiệm'}</strong><small>{captureDraft.draft.photoIds.length ? 'Bản đang chấm' : captureDraft.venueLocked ? 'Đã giữ vị trí quán' : 'Bản nháp'}</small></span><span>{captureDraft.draft.photoIds.length ? 'Tiếp tục' : captureDraft.venueLocked ? 'Chụp ảnh' : 'Mở'}<ChevronRight size={18} /></span>
+                                </button>}
                                 {controls}
                                 <div className="split list-heading">
                                   <label className="sort-field">
@@ -851,6 +864,7 @@ export default function App() {
                               recovered={captureDraft}
                               recovering={recoveryBusy}
                               entryPhotos={entryPhotos}
+                              captureOnOpen={captureOnOpen}
                               isEdit={editing}
                               theme={theme}
                               busy={store.busy}
@@ -871,6 +885,7 @@ export default function App() {
                               }}
                             />
                           ) : null,
+                          tab === 'journal' ? <ReviewJournal items={personal} now={now} onSelect={r => setDetailId(r.id)} /> : null,
                           tab === 'insights' ? (
                             <div className="insights-page stack">
                               {heading}

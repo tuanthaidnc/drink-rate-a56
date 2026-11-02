@@ -69,7 +69,7 @@ public class NativeFlowTest {
     }
 
     private void assertDockGeometry() throws Exception {
-        assertTrue("Circular action, aligned labels, and visible touch targets", (Boolean) js("(()=>{const buttons=[...document.querySelectorAll('.bottom-dock button')];const labels=buttons.map(b=>b.querySelector('.nav-label').getBoundingClientRect());return buttons.length===4&&buttons.every((b,i)=>{const r=b.getBoundingClientRect(),icon=b.querySelector('.nav-icon').getBoundingClientRect(),label=labels[i];return r.width>=48&&r.height>=48&&Math.abs(icon.width-icon.height)<0.5&&Math.abs(label.y-labels[0].y)<0.5&&label.bottom<=r.bottom+1})})()"));
+        assertTrue("Circular action, aligned labels, and visible touch targets", (Boolean) js("(()=>{const buttons=[...document.querySelectorAll('.bottom-dock button')];const labels=buttons.map(b=>b.querySelector('.nav-label').getBoundingClientRect());return buttons.length===5&&buttons.every((b,i)=>{const r=b.getBoundingClientRect(),icon=b.querySelector('.nav-icon').getBoundingClientRect(),label=labels[i];return r.width>=48&&r.height>=48&&Math.abs(icon.width-icon.height)<0.5&&Math.abs(label.y-labels[0].y)<0.5&&label.bottom<=r.bottom+1})})()"));
     }
 
     @Test public void nativeWebViewFlowAndInsets() throws Exception {
@@ -79,6 +79,7 @@ public class NativeFlowTest {
         // Isolated CI emulator permissions; physical A56 permissions are user-controlled.
         InstrumentationRegistry.getInstrumentation().getUiAutomation().grantRuntimePermission("com.tuanthaidnc.notfood", android.Manifest.permission.ACCESS_COARSE_LOCATION);
         InstrumentationRegistry.getInstrumentation().getUiAutomation().grantRuntimePermission("com.tuanthaidnc.notfood", android.Manifest.permission.ACCESS_FINE_LOCATION);
+        InstrumentationRegistry.getInstrumentation().getUiAutomation().grantRuntimePermission("com.tuanthaidnc.notfood", android.Manifest.permission.CAMERA);
         try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
             scenario.onActivity(activity -> web = activity.getBridge().getWebView());
             until("!!document.querySelector('.bottom-dock')");
@@ -99,22 +100,24 @@ public class NativeFlowTest {
             assertEquals("https://localhost", js("location.origin"));
             assertFalse("No service worker is needed for bundled assets", (Boolean) js("!!navigator.serviceWorker.controller"));
             nav(2);
-            assertTrue("Automatic system camera opened", device.wait(Until.hasObject(By.pkg("com.android.camera2").depth(0)), 15000));
-            screenshot("native-system-camera");
+            tap(".experience-option:nth-child(2)");
+            assertTrue("In-app square camera opened", device.wait(Until.hasObject(By.res("com.tuanthaidnc.notfood:id/camera_preview")), 15000));
+            android.graphics.Rect previewBounds = device.findObject(By.res("com.tuanthaidnc.notfood:id/camera_preview")).getVisibleBounds();
+            assertEquals("Square camera preview", previewBounds.width(), previewBounds.height());
+            screenshot("native-square-camera");
             device.pressBack();
             until("document.querySelector('.review-form')?.dataset.stage==='capture' && !document.querySelector('.capture-processing')");
             assertFalse("No scoring before a photo", (Boolean)js("!!document.querySelector('#shop-name-input')"));
-            nav(3);
+            nav(4);
             assertFalse("Cancelled capture stays pristine", (Boolean)js("!!document.querySelector('[role=dialog]')"));
             nav(0);
             nav(2);
-            assertTrue(device.wait(Until.hasObject(By.pkg("com.android.camera2").depth(0)), 15000));
-            device.pressBack();
-            until("!document.querySelector('.capture-processing')");
-            // Isolated emulator: exercise the actual image-file pipeline with a
-            // synthetic canvas image. Physical capture is verified on the A56.
-            js("(()=>{const c=document.createElement('canvas');c.width=800;c.height=800;const x=c.getContext('2d');x.fillStyle='#c4b6a4';x.fillRect(0,0,800,800);c.toBlob(blob=>{const d=new DataTransfer();d.items.add(new File([blob],'emulator-qa.png',{type:'image/png'}));const i=document.querySelector('input[aria-label=\"Chọn ảnh món ăn hoặc đồ uống\"]');i.files=d.files;i.dispatchEvent(new Event('change',{bubbles:true}));});return true;})()");
+            tap(".shutter-button");
+            assertTrue(device.wait(Until.hasObject(By.res("com.tuanthaidnc.notfood:id/camera_shutter").enabled(true)), 15000));
+            device.findObject(By.res("com.tuanthaidnc.notfood:id/camera_shutter")).click();
             until("document.querySelector('.review-form')?.dataset.stage==='score'");
+            until("document.querySelector('.quick-photo img')?.naturalWidth>0");
+            assertTrue("Square output and direct return without confirmation", (Boolean)js("(()=>{const p=document.querySelector('.quick-photo img');return p.naturalWidth===p.naturalHeight})()"));
             tap(".quick-location");
             until("!!document.querySelector('[role=dialog]')");
             tap(".manual-coordinates");
@@ -141,9 +144,12 @@ public class NativeFlowTest {
             tap(".quick-toolbar button[type=submit]");
             until("!!document.querySelector('.album-entry')");
             screenshot("native-list-dark");
-            for (int i : new int[] {3, 0, 1, 3, 0, 3}) nav(i);
+            nav(3);
+            until("!!document.querySelector('.journal-calendar')");
+            screenshot("native-journal");
+            for (int i : new int[] {4, 0, 1, 4, 0, 4}) nav(i);
             until("!!document.querySelector('[data-stat=average]')");
-            assertEquals("7.3", js("document.querySelector('[data-stat=average]').textContent"));
+            assertEquals("7.6", js("document.querySelector('[data-stat=average]').textContent"));
             assertEquals(1, ((Number)js("document.querySelectorAll('.app-scene').length")).intValue());
             assertTrue((Boolean)js("(()=>{const e=document.querySelector('[data-stat=average]');return getComputedStyle(e).color!==getComputedStyle(e.parentElement).backgroundColor})()"));
             assertTrue((Boolean)js("document.documentElement.scrollWidth<=innerWidth"));
@@ -163,7 +169,7 @@ public class NativeFlowTest {
             until("!!document.querySelector('#shop-name-input')");
             screenshot("native-form");
             assertEquals(0,((Number)js("document.querySelectorAll('input[type=date],input[type=time]').length")).intValue());
-            assertEquals(3,((Number)js("document.querySelectorAll('.quick-sliders [role=slider]').length")).intValue());
+            assertEquals(4,((Number)js("document.querySelectorAll('.quick-sliders [role=slider]').length")).intValue());
             JSONObject circle = new JSONObject((String)js("JSON.stringify((()=>{const r=document.querySelector('.rating-slider-thumb').getBoundingClientRect();return {width:r.width,height:r.height}})())"));
             assertEquals(circle.getDouble("width"), circle.getDouble("height"), 1);
             device.pressBack();
@@ -173,7 +179,7 @@ public class NativeFlowTest {
             Thread.sleep(1000);
             scenario.onActivity(activity -> web = activity.getBridge().getWebView());
             until("!!document.querySelector('.bottom-dock')");
-            nav(3);
+            nav(4);
             screenshot("native-font-130");
             assertDockGeometry();
             assertTrue((Boolean)js("document.documentElement.scrollWidth<=innerWidth"));
@@ -184,13 +190,13 @@ public class NativeFlowTest {
             JSONObject result = new JSONObject();
             result.put("pass", true);
             result.put("source", "Android API 35 emulator, native touch, IME, system Back, real WebView");
-            result.put("score", "7.3");
+            result.put("score", "7.6");
             result.put("fontScale", "1.3");
             result.put("circle", circle);
             result.put("viewport", js("innerWidth+'x'+innerHeight"));
             result.put("physical120HzVerified", false);
             result.put("automaticCameraAndCleanCancel", true);
-            result.put("syntheticPhotoFileAndManualLocation", true);
+            result.put("actualSquareCameraAndManualLocation", true);
             Files.write(new File(proof, "native-results.json").toPath(), result.toString(2).getBytes(StandardCharsets.UTF_8));
         } finally {
             // The Gradle device provider uninstalls the app after the test,

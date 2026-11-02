@@ -101,6 +101,7 @@ async function setup({
       window.Capacitor = {
         PluginHeaders: [
           { name: 'Camera', methods: [{ name: 'getPhoto', rtype: 'promise' }] },
+          { name: 'NotCamera', methods: [{ name: 'capture', rtype: 'promise' }] },
           {
             name: 'Geolocation',
             methods: ['checkPermissions', 'requestPermissions', 'getCurrentPosition'].map(
@@ -137,7 +138,7 @@ async function setup({
         },
         nativePromise: async (plugin, method, options) => {
           if (plugin === 'NotDisplay') return { reducedMotion: false, refreshRate: 120 };
-          if (plugin === 'Camera') {
+          if (plugin === 'Camera' || plugin === 'NotCamera') {
             window.__calls.push('camera');
             window.__cameraOptions = options;
             const db = await new Promise((r) => {
@@ -190,6 +191,10 @@ async function nav(p, label) {
     })
     .getByRole('button', { name: label, exact: true })
     .click();
+  if (label === 'Chấm điểm') {
+    await p.locator('.review-form').waitFor();
+    if (await p.locator('.experience-choice').count()) await p.getByRole('button', { name: 'Tại quán Chụp ảnh', exact:true }).click();
+  }
 }
 const readDoc = (p) =>
   p.evaluate(
@@ -468,7 +473,7 @@ try {
       const { page: p, errors } = await setup();
       await begin(p);
       assert.deepEqual(await p.evaluate(() => window.__calls), ['camera', 'gps']);
-      assert.equal(await p.locator('.quick-sliders [role=slider]').count(), 3);
+      assert.equal(await p.locator('.quick-sliders [role=slider]').count(), 4);
       assert.equal(await p.locator('input[type=date]').count(), 0);
       assert.equal(await p.getByText('Giờ mở cửa', { exact: true }).count(), 0);
       assert.equal(await p.getByRole('button', { name: 'Dùng vị trí này' }).count(), 0);
@@ -913,13 +918,14 @@ try {
     },
   );
   await scenario(
-    'web user gesture opens capture before lazy form mounts; cancel stays clean',
+    'web camera is square and close returns directly to an unsaved form',
     async () => {
       const { page: p } = await setup({ native: false });
-      const chooser = p.waitForEvent('filechooser');
       await nav(p, 'Chấm điểm');
-      const c = await chooser;
-      await c.setFiles([]);
+      await p.getByRole('dialog', { name: 'Camera vuông' }).waitFor();
+      const square = await p.locator('.square-viewfinder').boundingBox();
+      assert.ok(Math.abs(square.width - square.height) < 1);
+      await p.getByRole('button', { name:'Đóng camera', exact:true }).click();
       await p.getByRole('heading', { name: 'Chụp ảnh', exact: true }).waitFor();
       await nav(p, 'Quán xá');
       await p.locator('.review-form').waitFor({ state: 'detached' });

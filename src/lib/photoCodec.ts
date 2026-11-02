@@ -15,9 +15,9 @@ export async function encodePhoto(file: Blob): Promise<Blob> {
   }
   try {
     for (const edge of [1400, 1050, 800]) {
-      const scale = Math.min(1, edge / Math.max(image.width, image.height));
-      const width = Math.max(1, Math.round(image.width * scale));
-      const height = Math.max(1, Math.round(image.height * scale));
+      const crop = Math.min(image.width, image.height);
+      const width = Math.max(1, Math.min(edge, crop));
+      const height = width;
       const canvas =
         typeof OffscreenCanvas !== 'undefined'
           ? new OffscreenCanvas(width, height)
@@ -26,6 +26,10 @@ export async function encodePhoto(file: Blob): Promise<Blob> {
       if (!ctx) throw new Error('Không xử lý được ảnh trên thiết bị này.');
       (ctx as CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D).drawImage(
         image,
+        (image.width - crop) / 2,
+        (image.height - crop) / 2,
+        crop,
+        crop,
         0,
         0,
         width,

@@ -1,4 +1,4 @@
-import { Store, Map, Camera, ChartColumn } from 'lucide-react';
+import { Store, Map, Camera, ChartColumn, CalendarDays } from 'lucide-react';
 import { useLayoutEffect, useRef } from 'react';
 import { motion } from 'motion/react';
 import { useQuietMotion } from './motion/kinetic.tsx';
@@ -7,11 +7,12 @@ import {
   BottomNavigationItem,
   BottomNavigationLabel,
 } from '@animate-ui/react/primitives/bottom-navigation';
-export type AppTab = 'places' | 'map' | 'review' | 'insights';
+export type AppTab = 'places' | 'map' | 'review' | 'journal' | 'insights';
 export const NAV_ITEMS = [
   { id: 'places', label: 'Quán xá', icon: Store },
   { id: 'map', label: 'Bản đồ', icon: Map },
   { id: 'review', label: 'Chấm điểm', icon: Camera },
+  { id: 'journal', label: 'Nhật ký', icon: CalendarDays },
   { id: 'insights', label: 'Thống kê', icon: ChartColumn },
 ] as const;
 export default function AppNavigation({
@@ -60,6 +61,7 @@ export default function AppNavigation({
             aria-current={value === id ? 'page' : undefined}
             data-active={value === id}
             data-nav-tab={id}
+            aria-label={label}
           >
             {value === id && (
               <motion.span
@@ -87,7 +89,7 @@ export default function AppNavigation({
                 <Icon />
               </motion.span>
             </span>
-            <BottomNavigationLabel className="nav-label">{label}</BottomNavigationLabel>
+            <BottomNavigationLabel className="nav-label">{id === 'review' ? 'Chấm' : label}</BottomNavigationLabel>
           </button>
         </BottomNavigationItem>
       ))}

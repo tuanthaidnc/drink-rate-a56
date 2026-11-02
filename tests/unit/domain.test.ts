@@ -66,6 +66,7 @@ test('original Nốt anchor and four weighted formulas stay intact', () => {
       cleanliness: 10,
       packaging: 10,
       volumeKey: 'overflow',
+      portionKey: 'overflow',
       priceK: 10,
     });
     assert.equal(scoreReview(top), 10);

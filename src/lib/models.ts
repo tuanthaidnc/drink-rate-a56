@@ -1,6 +1,7 @@
 export const SCHEMA_VERSION = 13 as const;
-export const SCORING_VERSION = '2026-10-v1' as const;
-export const APP_VERSION = '17.0.0';
+export const LEGACY_SCORING_VERSION = '2026-10-v1' as const;
+export const SCORING_VERSION = '2026-11-v2' as const;
+export const APP_VERSION = '18.0.0';
 export type PlaceCategory = 'drink' | 'food';
 export type DrinkMode = 'takeaway' | 'dinein';
 export type FoodVenueType = 'streetfood' | 'restaurant';
@@ -62,6 +63,7 @@ export interface ReviewItem {
   foodType: FoodVenueType;
   cleanliness: number;
   foodQuality: number;
+  portionKey?: VolumeKey;
   visits: string[]; // Compatibility projection of visitLog; never edited separately.
   visitLog: Visit[];
   ratingHistory: RatingSnapshot[];

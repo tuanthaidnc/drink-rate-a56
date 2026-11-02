@@ -17,6 +17,7 @@ import {
 } from './validation.ts';
 
 import { applyPlaceCorrections, needsPlaceCorrections } from './placeCorrections.ts';
+import { applyFoodPortionMigration, needsFoodPortionMigration } from './foodPortionMigration.ts';
 import type { CaptureDraft } from './reviewCapture.ts';
 import { isNativeApp } from './platform.ts';
 export const DB_NAME = 'not-food-drink-personal';
@@ -137,11 +138,18 @@ export function readLegacy(
 }
 export async function loadDocument(): Promise<ReviewDocument> {
   const existing = await readCurrent();
+  if (existing && needsFoodPortionMigration(existing) && isNativeApp) {
+    // A real file as well as the transaction snapshot protects the owner's
+    // photos and original criteria before the explicitly requested migration.
+    const { Filesystem, Directory, Encoding } = await import('@capacitor/filesystem');
+    await Filesystem.writeFile({ path: 'backups/before-v18.json', directory: Directory.External,
+      encoding: Encoding.UTF8, recursive: true, data: JSON.stringify(await makeBackup(existing)) });
+  }
   if (existing)
-    return needsPlaceCorrections(existing)
+    return needsPlaceCorrections(existing) || needsFoodPortionMigration(existing)
       ? commitDocument(
-          (current) => applyPlaceCorrections(current),
-          'Đối chiếu vị trí Nốt Tea và bỏ mẫu Bếp Trang',
+          (current) => applyFoodPortionMigration(applyPlaceCorrections(current)),
+          'Cập nhật dữ liệu: địa điểm và khẩu phần',
         )
       : existing;
   const legacy = readLegacy();
@@ -225,7 +233,8 @@ export async function commitDocument(
           result = current;
           return;
         }
-        const proposed = needsPlaceCorrections(changed) ? applyPlaceCorrections(changed) : changed;
+        const placed = needsPlaceCorrections(changed) ? applyPlaceCorrections(changed) : changed;
+        const proposed = applyFoodPortionMigration(placed);
         result = {
           ...proposed,
           schemaVersion: SCHEMA_VERSION,

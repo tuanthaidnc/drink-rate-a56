@@ -145,12 +145,24 @@ export function calculateFoodScore(params: {
   cleanliness: number;
   space: number;
   priceK: number;
+  mode?: DrinkMode;
+  portionKey?: VolumeKey;
 }) {
   const { score: priceScore, bracket: priceBracket } = getFoodPriceScore(
     params.priceK,
     params.foodType,
   );
 
+  if (params.portionKey) {
+    const portionScore = VOLUME_OPTIONS.find(v => v.key === params.portionKey)!.score;
+    const total = params.mode === 'dinein'
+      ? params.taste * .3 + params.foodQuality * .2 + params.cleanliness * .1 +
+        params.space * .1 + priceScore * .1 + portionScore * .2
+      : params.taste * .35 + params.foodQuality * .2 + params.cleanliness * .1 +
+        priceScore * .15 + portionScore * .2;
+    return { total: Math.round(total * 100) / 100, priceScore, priceBracket, portionScore };
+  }
+  // Completed legacy reviews retain their original formula until a portion is rated.
   if (params.foodType === 'streetfood') {
     // Quán ăn Vỉa hè: Độ ngon 40% + Chất lượng đồ ăn 25% + Sạch sẽ 15% + Giá 15% + Không gian 5% = 100%
     const total =
@@ -243,6 +255,7 @@ export function scoreReview(
     | 'foodType'
     | 'foodQuality'
     | 'cleanliness'
+    | 'portionKey'
   >,
 ): number {
   return item.category === 'food'

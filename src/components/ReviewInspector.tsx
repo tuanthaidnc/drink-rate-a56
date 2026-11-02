@@ -39,7 +39,8 @@ export default function ReviewInspector({
         ['Chất lượng', item.foodQuality],
         ['Sạch', item.cleanliness],
         ['Giá', getFoodPriceScore(item.priceK, item.foodType).score],
-        ['Không gian', item.space],
+        ...(item.portionKey ? [['Khẩu phần', VOLUME_OPTIONS.find(v => v.key === item.portionKey)!.score] as [string, number]] : []),
+        ...(!item.portionKey || item.mode === 'dinein' ? [['Không gian', item.space] as [string, number]] : []),
       ]
     : [
         ['Vị', item.taste],

@@ -1,0 +1,12 @@
+<resources>
+    <item name="camera_close" type="id"/><item name="camera_flash" type="id"/>
+    <item name="camera_square" type="id"/><item name="camera_preview" type="id"/>
+    <item name="camera_shutter" type="id"/><item name="camera_flip" type="id"/>
+    <string name="camera_title">NỐT</string>
+    <string name="camera_close">Đóng camera</string>
+    <string name="camera_flash">Bật hoặc tắt đèn</string>
+    <string name="camera_shutter">Chụp ảnh</string>
+    <string name="camera_flip">Đổi camera</string>
+    <string name="camera_viewfinder">Khung ảnh vuông</string>
+    <string name="camera_error">Chưa chụp được ảnh. Hãy thử lại hoặc đóng camera.</string>
+</resources>

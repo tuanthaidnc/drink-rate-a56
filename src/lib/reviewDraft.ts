@@ -31,6 +31,7 @@ export function reviewDraftSignature(
     foodType: review.foodType,
     cleanliness: review.cleanliness,
     foodQuality: review.foodQuality,
+    portionKey: review.portionKey,
     note: text(review.note),
     dish: text(review.dish),
     cuisine: text(review.cuisine),

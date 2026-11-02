@@ -18,7 +18,7 @@ export function directionsUrl(item: ReviewItem): string {
     return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${item.lat},${item.lng}`)}&travelmode=two-wheeler`;
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([item.name, item.address, item.street, item.ward, item.city, 'Việt Nam'].filter(Boolean).join(', '))}`;
 }
-export async function getCurrentPosition(): Promise<Position> {
+export async function getCurrentPosition(fresh = false): Promise<Position> {
   if (isNativeApp) {
     try {
       const { Geolocation } = await import('@capacitor/geolocation');
@@ -27,7 +27,7 @@ export async function getCurrentPosition(): Promise<Position> {
       const p = await Geolocation.getCurrentPosition({
         enableHighAccuracy: true,
         timeout: 10_000,
-        maximumAge: 30_000,
+        maximumAge: fresh ? 0 : 30_000,
       });
       return { lat: p.coords.latitude, lng: p.coords.longitude, accuracyM: p.coords.accuracy };
     } catch {
@@ -52,7 +52,7 @@ export async function getCurrentPosition(): Promise<Position> {
                 : 'Chưa lấy được vị trí. Hãy thử lại hoặc ghim thủ công.',
           ),
         ),
-      { enableHighAccuracy: true, timeout: 10_000, maximumAge: 30_000 },
+      { enableHighAccuracy: true, timeout: 10_000, maximumAge: fresh ? 0 : 30_000 },
     );
   });
 }

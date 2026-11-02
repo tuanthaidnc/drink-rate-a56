@@ -2,6 +2,7 @@ import { INITIAL_REVIEWS } from '../data/demo.ts';
 import {
   SCHEMA_VERSION,
   SCORING_VERSION,
+  LEGACY_SCORING_VERSION,
   newId,
   type ReviewItem,
   type Visit,
@@ -213,7 +214,9 @@ export function validateReview(
     dish: optionalText(x.dish, 'Món nên gọi', 300),
     cuisine: optionalText(x.cuisine, 'Loại món', 100),
     isDemo: x.isDemo === true || (legacy && isUntouchedDemo(x)),
-    scoringVersion: SCORING_VERSION,
+    portionKey: x.portionKey === undefined ? undefined : choice(x.portionKey, ['very_low', 'low', 'medium', 'high', 'overflow'] as const, 'Khẩu phần'),
+    scoringVersion: x.category === 'food' && x.portionKey !== undefined ? SCORING_VERSION :
+      typeof x.scoringVersion === 'string' ? text(x.scoringVersion, 'Phiên bản điểm', 80, true) : LEGACY_SCORING_VERSION,
     ratingHistory: ratingHistory.map((v) => {
       const r = object(v, 'Lịch sử đánh giá');
       return {
@@ -324,7 +327,7 @@ export function parseBackup(raw: string, now = new Date()): BackupFile {
   if (
     x.app !== 'not-food-drink' ||
     x.schemaVersion !== SCHEMA_VERSION ||
-    x.scoringVersion !== SCORING_VERSION
+    ![SCORING_VERSION, LEGACY_SCORING_VERSION].includes(x.scoringVersion as typeof SCORING_VERSION)
   )
     throw new DataError('Phiên bản file sao lưu không được hỗ trợ; chưa thay đổi dữ liệu.');
   const reviews = validateReviews(x.reviews, false, now);
@@ -371,6 +374,7 @@ export function createReview(category: 'food' | 'drink' = 'drink', now = new Dat
     packaging: 8,
     foodType: 'streetfood',
     foodQuality: 8,
+    portionKey: 'medium',
     cleanliness: 8,
     visits: [],
     visitLog: [],

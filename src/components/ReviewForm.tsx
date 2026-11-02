@@ -10,6 +10,8 @@ import {
   LoaderCircle,
   MapPin,
   CircleAlert,
+  ShoppingBag,
+  Trash2,
   Utensils,
 } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -18,9 +20,10 @@ import { Input } from './ui/input.tsx';
 import { Textarea } from './ui/textarea.tsx';
 import { Photo } from './Photo.tsx';
 import { LocationPicker } from './LocationPicker.tsx';
+import CaptureLocation from './CaptureLocation.tsx';
 import { getCurrentPosition, type Position } from '../lib/geo.ts';
 import { automaticReviewName, parseReviewPrice, reviewDraftIsDirty } from '../lib/reviewDraft.ts';
-import { takeReviewPhoto, type CaptureDraft } from '../lib/reviewCapture.ts';
+import { takeReviewPhoto, openWebCamera, type CaptureDraft } from '../lib/reviewCapture.ts';
 import { compressPhoto, saveCaptureDraft } from '../lib/storage.ts';
 import { isNativeApp } from '../lib/platform.ts';
 import {
@@ -106,6 +109,7 @@ export default function ReviewForm({
   onPhotoBusyChange,
   onDraftSnapshot,
   recovering = false,
+  captureOnOpen = false,
 }: {
   initial: ReviewItem;
   recovered?: CaptureDraft;
@@ -116,6 +120,7 @@ export default function ReviewForm({
   isTyping: boolean;
   existing: ReviewItem[];
   recovering?: boolean;
+  captureOnOpen?: boolean;
   onSave: (
     item: ReviewItem,
     photos: PhotoData[],
@@ -141,6 +146,8 @@ export default function ReviewForm({
     [pinPicker, setPinPicker] = useState(false),
     [location, setLocation] = useState(false);
   const [firstVisit, setFirstVisit] = useState(recovered?.firstVisit ?? false);
+  const [workflow, setWorkflow] = useState<CaptureDraft['workflow']>(recovered?.workflow ?? (isEdit || draft.photoIds.length ? draft.mode : undefined));
+  const [venueLocked, setVenueLocked] = useState(recovered?.venueLocked ?? (isEdit || draft.lat !== null && draft.photoIds.length > 0));
   const reviewDate = recovered?.reviewDate ?? inputDate(initial.reviewedAt ?? initial.createdAt);
   const captureInput = useRef<HTMLInputElement>(null),
     photoOperation = useRef(false),
@@ -161,7 +168,7 @@ export default function ReviewForm({
   };
   const quiet = useQuietMotion(),
     locked = busy || photoBusy || submitting || recovering;
-  const stage = isEdit || draft.photoIds.length ? 'score' : 'capture';
+  const stage = isEdit || draft.photoIds.length ? 'score' : !workflow ? 'choose' : workflow === 'takeaway' && !venueLocked ? 'location' : 'capture';
   const dirty = reviewDraftIsDirty(initial, draft, price, reviewDate, isEdit, firstVisit);
   const amount = parseReviewPrice(price);
   const score = useMemo(
@@ -178,6 +185,8 @@ export default function ReviewForm({
     photos,
     recoveryId: recovered?.recoveryId ?? initial.id,
     stage,
+    workflow,
+    venueLocked,
     gpsAttempted: gpsAttempted.current,
   };
   const snapshotRef = useRef(snapshot);
@@ -197,7 +206,7 @@ export default function ReviewForm({
   }, [photoBusy, submitting, recovering, onPhotoBusyChange]);
   useEffect(() => {
     onDraftSnapshot(snapshotRef.current);
-  }, [draft, price, photos, firstVisit, gpsBusy, gpsError, onDraftSnapshot]);
+  }, [draft, price, photos, firstVisit, gpsBusy, gpsError, workflow, venueLocked, onDraftSnapshot]);
   useEffect(() => {
     if (!dirty || photoBusy || busy || submitting || recovering || saving.current) return;
     const timer = setTimeout(() => {
@@ -207,7 +216,7 @@ export default function ReviewForm({
         );
     }, 200);
     return () => clearTimeout(timer);
-  }, [draft, price, photos, firstVisit, dirty, photoBusy, busy, submitting, recovering]);
+  }, [draft, price, photos, firstVisit, workflow, venueLocked, dirty, photoBusy, busy, submitting, recovering]);
   useEffect(() => {
     const persist = () => {
       if (
@@ -228,7 +237,7 @@ export default function ReviewForm({
     setGpsError('');
     const pending = (async () => {
       try {
-        const p = await getCurrentPosition();
+        const p = await getCurrentPosition(true);
         if (!alive.current) return p;
         if (!manualPin.current)
           updateDraft((r) => ({
@@ -253,8 +262,9 @@ export default function ReviewForm({
     return pending;
   };
   useEffect(() => {
-    if (!isEdit && stage === 'score' && !gpsAttempted.current && !recovering) void locate();
-  }, [stage, isEdit, recovering]);
+    if (!isEdit && !recovering && !gpsAttempted.current &&
+      (stage === 'location' || stage === 'score' && workflow === 'dinein')) void locate();
+  }, [stage, isEdit, recovering, workflow]);
   const attach = (photo: PhotoData) => {
     setPhotos([photo]);
     updateDraft((r) => ({ ...r, photoIds: [photo.id] }));
@@ -282,7 +292,12 @@ export default function ReviewForm({
   const capture = async () => {
     if (photoOperation.current || recovering) return;
     if (!isNativeApp) {
-      captureInput.current?.click();
+      setPhotoBusy(true);
+      try {
+        await saveCaptureDraft(snapshotRef.current);
+        await importPhoto(await openWebCamera());
+      } catch (e) { setPhotoError((e as Error).message); }
+      finally { setPhotoBusy(false); }
       return;
     }
     photoOperation.current = true;
@@ -303,20 +318,16 @@ export default function ReviewForm({
     }
   };
   useEffect(() => {
-    if (isEdit || recovered || autoOpened.current) return;
+    if (isEdit || autoOpened.current || stage !== 'capture' || !(workflow === 'dinein' && !recovered || captureOnOpen)) return;
     autoOpened.current = true;
-    if (isNativeApp) void capture();
-    else if (entryPhotos)
-      void entryPhotos.then((files) => {
-        if (alive.current) void importPhoto(files);
-      });
-  }, []);
+    void capture();
+  }, [stage, workflow, captureOnOpen]);
   const change = <K extends keyof ReviewItem>(key: K, value: ReviewItem[K]) =>
     updateDraft((r) => ({ ...r, [key]: value }));
   const submit = async () => {
     if (locked || saving.current) return;
     setError('');
-    if (!isEdit && !draft.photoIds.length) {
+    if (!draft.photoIds.length && (!isEdit || initial.photoIds.length > 0)) {
       setPhotoError('Cần có ảnh để lưu.');
       return;
     }
@@ -350,6 +361,7 @@ export default function ReviewForm({
     }
   };
   const food = draft.category === 'food',
+    portion = Math.max(0, VOLUME_OPTIONS.findIndex(v => v.key === (draft.portionKey ?? 'medium'))),
     volume = Math.max(
       0,
       VOLUME_OPTIONS.findIndex((v) => v.key === draft.volumeKey),
@@ -410,8 +422,8 @@ export default function ReviewForm({
         >
           <ArrowLeft />
         </button>
-        {stage === 'capture' ? (
-          <h1>Chụp ảnh</h1>
+        {stage !== 'score' ? (
+          <h1>{stage === 'choose' ? 'Đánh giá' : stage === 'location' ? 'Ghim quán' : 'Chụp ảnh'}</h1>
         ) : (
           <>
             <h1 className="sr-only">{isEdit ? 'Sửa đánh giá' : 'Chấm điểm'}</h1>
@@ -445,7 +457,32 @@ export default function ReviewForm({
           {photoError}
         </p>
       )}
-      {stage === 'capture' ? (
+      {stage === 'choose' ? (
+        <section className="experience-choice" aria-label="Bắt đầu đánh giá">
+          <button type="button" className="experience-option" onClick={() => { change('mode', 'takeaway'); setWorkflow('takeaway'); }}>
+            <ShoppingBag /><strong>Mang về</strong><span>Ghim quán</span>
+          </button>
+          <button type="button" className="experience-option" onClick={() => { change('mode', 'dinein'); setWorkflow('dinein'); }}>
+            <Utensils /><strong>Tại quán</strong><span>Chụp ảnh</span>
+          </button>
+        </section>
+      ) : stage === 'location' ? (
+        <section className="takeaway-location stack">
+          <label className="field"><span>Tên quán</span><Input aria-label="Tên quán mang về" placeholder="Tên quán" value={draft.name} maxLength={160} onChange={e => change('name', e.target.value)} /></label>
+          <CaptureLocation theme={theme}
+            pin={draft.lat !== null && draft.lng !== null ? { lat: draft.lat, lng: draft.lng, accuracyM: draft.accuracyM } : null}
+            gps={null} busy={gpsBusy} error={gpsError}
+            onLocate={() => { manualPin.current = false; void locate(); }}
+            onPin={p => { manualPin.current = true; setGpsError(''); updateDraft(r => ({ ...r, ...p, accuracyM: undefined, locationStatus: 'confirmed', locationSource: 'manual', placeResolution: undefined })); }}
+            onConfirm={() => {
+              manualPin.current = true; gpsAttempted.current = true; setVenueLocked(true);
+              updateDraft(r => ({ ...r, locationStatus: 'confirmed' }));
+              const pending = { ...snapshotRef.current, draft: draftRef.current, stage: 'capture' as const, venueLocked: true, gpsAttempted: true };
+              snapshotRef.current = pending; onDraftSnapshot(pending);
+              void saveCaptureDraft(pending).then(onCancel).catch(() => setError('Chưa giữ được vị trí. Hãy thử lại.'));
+            }} />
+        </section>
+      ) : stage === 'capture' ? (
         <section className="capture-stage stack">
           <div className="capture-cover">
             <Camera size={48} />
@@ -466,6 +503,8 @@ export default function ReviewForm({
             Chụp ảnh
           </button>
           {library('Thư viện')}
+          {venueLocked && <button type="button" className="text-button" onClick={() => setPinPicker(true)}><MapPin size={16} />Vị trí quán đã giữ</button>}
+          <button type="button" className="text-button danger-text" onClick={onDiscard}>Bỏ bản nháp</button>
         </section>
       ) : (
         <>
@@ -502,6 +541,8 @@ export default function ReviewForm({
               >
                 <Camera size={18} />
               </button>
+              {!!draft.photoIds.length && <button type="button" className="icon-button remove-photo" aria-label="Xóa ảnh" disabled={locked}
+                onClick={() => { setPhotos([]); change('photoIds', []); }}><Trash2 size={18} /></button>}
               {(photoBusy || recovering) && (
                 <span className="quick-photo-busy" role="status" aria-label="Đang xử lý ảnh">
                   <LoaderCircle className="photo-spinner" />
@@ -561,7 +602,7 @@ export default function ReviewForm({
             aria-label="Loại quán"
             value={draft.category}
             onValueChange={(v) => {
-              if (v === 'drink' || v === 'food') change('category', v);
+              if (v === 'drink' || v === 'food') updateDraft(r => ({ ...r, category: v, ...(v === 'food' && !isEdit ? { portionKey: r.portionKey ?? 'medium' } : {}) }));
             }}
             disabled={locked}
           >
@@ -579,25 +620,18 @@ export default function ReviewForm({
             type="single"
             className="segmented quick-mode"
             aria-label="Hình thức"
-            value={food ? draft.foodType : draft.mode}
+            value={draft.mode}
             onValueChange={(v) => {
               if (v) {
-                if (food) change('foodType', v as FoodVenueType);
-                else change('mode', v as DrinkMode);
+                change('mode', v as DrinkMode);
               }
             }}
             disabled={locked}
           >
-            {(food
-              ? [
-                  ['streetfood', 'Bình dân'],
-                  ['restaurant', 'Quán ngồi'],
-                ]
-              : [
+            {([
                   ['takeaway', 'Mang đi'],
                   ['dinein', 'Ngồi lại'],
-                ]
-            ).map(([value, label]) => (
+                ]).map(([value, label]) => (
               <ToggleGroup.Item key={value} value={value}>
                 {label}
               </ToggleGroup.Item>
@@ -624,6 +658,9 @@ export default function ReviewForm({
                   value={draft.cleanliness}
                   onChange={(v) => change('cleanliness', v)}
                 />
+                <ScoreSlider disabled={locked} label="Khẩu phần" min={0} max={4} step={1} value={portion}
+                  display={draft.portionKey ? `${VOLUME_OPTIONS[portion].label} · ${VOLUME_OPTIONS[portion].score}` : 'Chưa chấm'}
+                  onChange={v => change('portionKey', VOLUME_OPTIONS[v].key)} />
               </>
             ) : (
               <>
@@ -645,7 +682,7 @@ export default function ReviewForm({
                 />
               </>
             )}
-            {(food || draft.mode === 'dinein') && (
+            {draft.mode === 'dinein' && !food && (
               <ScoreSlider
                 disabled={locked}
                 label="Không gian"
@@ -657,6 +694,10 @@ export default function ReviewForm({
           <details className="quick-more disclosure">
             <summary>Thông tin thêm</summary>
             <div className="stack">
+              {food && <>
+                <label className="field"><span>Loại quán ăn</span><select value={draft.foodType} onChange={e => change('foodType', e.target.value as FoodVenueType)}><option value="streetfood">Bình dân</option><option value="restaurant">Nhà hàng</option></select></label>
+                {draft.mode === 'dinein' && <ScoreSlider disabled={locked} label="Không gian" value={draft.space} onChange={v => change('space', v)} />}
+              </>}
               <label className="field">
                 <span>Tên quán</span>
                 <Input

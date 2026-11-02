@@ -114,7 +114,7 @@ function Comparison({ items }: { items: ReviewItem[] }) {
           r.taste,
           r.foodQuality,
           r.cleanliness,
-          r.space,
+          ...(a?.portionKey ? [VOLUME_OPTIONS.find(v => v.key === r.portionKey)?.score ?? 0] : [r.space]),
           getFoodPriceScore(r.priceK, r.foodType).score,
         ]
       : [
@@ -126,7 +126,7 @@ function Comparison({ items }: { items: ReviewItem[] }) {
         ];
   const labels =
     a?.category === 'food'
-      ? ['Độ ngon', 'Chất lượng / khẩu phần', 'Sạch sẽ', 'Không gian', 'Điểm giá']
+      ? ['Độ ngon', 'Chất lượng', 'Sạch sẽ', a.portionKey ? 'Khẩu phần' : 'Không gian', 'Điểm giá']
       : [
           'Hương vị',
           'Lượng đồ uống',

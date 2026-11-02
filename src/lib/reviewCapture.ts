@@ -3,6 +3,8 @@ import { newId } from './models.ts';
 import { clearCaptureDraft, compressPhoto, getCaptureDraft, saveCaptureDraft } from './storage.ts';
 import { isNativeApp } from './platform.ts';
 import { reviewDraftIsDirty } from './reviewDraft.ts';
+import { Capacitor, registerPlugin } from '@capacitor/core';
+const NotCamera = registerPlugin<{ capture(): Promise<{ uri: string }> }>('NotCamera');
 
 export interface CaptureDraft {
   original: ReviewItem;
@@ -13,7 +15,9 @@ export interface CaptureDraft {
   firstVisit: boolean;
   photos: PhotoData[];
   recoveryId: string;
-  stage?: 'capture' | 'location' | 'score';
+  stage?: 'choose' | 'capture' | 'location' | 'score';
+  workflow?: 'takeaway' | 'dinein';
+  venueLocked?: boolean;
   gpsAttempted?: boolean;
   replaceCover?: boolean;
 }
@@ -43,10 +47,11 @@ export function cameraError(error: unknown): string {
 }
 async function attachCameraPhoto(
   snapshot: CaptureDraft,
-  result: { webPath?: string },
+  result: { webPath?: string; uri?: string },
 ): Promise<CaptureDraft> {
-  if (!result.webPath) throw new Error('Camera không trả về ảnh.');
-  const response = await fetch(result.webPath);
+  const path = result.webPath ?? (result.uri ? Capacitor.convertFileSrc(result.uri) : undefined);
+  if (!path) throw new Error('Camera không trả về ảnh.');
+  const response = await fetch(path);
   if (!response.ok) throw new Error('Không đọc được ảnh vừa chụp.');
   const photo = await compressPhoto(
     new File([await response.blob()], 'capture.jpg', { type: 'image/jpeg' }),
@@ -62,20 +67,7 @@ async function attachCameraPhoto(
 export async function takeReviewPhoto(snapshot: CaptureDraft): Promise<CaptureDraft | null> {
   await saveCaptureDraft(snapshot);
   try {
-    const { Camera, CameraSource, CameraResultType } = await import('@capacitor/camera');
-    // v8.2.6's new takePhoto flow does not persist its Activity result state.
-    // getPhoto uses Capacitor's saved-call bridge + appRestoredResult; keep this
-    // adapter until the new API offers equivalent process-death recovery.
-    const result = await Camera.getPhoto({
-      source: CameraSource.Camera,
-      resultType: CameraResultType.Uri,
-      quality: 90,
-      width: 1600,
-      height: 1600,
-      correctOrientation: true,
-      allowEditing: false,
-      saveToGallery: false,
-    });
+    const result = await NotCamera.capture();
     const next = await attachCameraPhoto(snapshot, result);
     await saveCaptureDraft(next);
     return next;
@@ -103,7 +95,8 @@ export async function initializeCaptureRecovery(): Promise<void> {
   if (!isNativeApp) return;
   const { App } = await import('@capacitor/app');
   await App.addListener('appRestoredResult', (event) => {
-    if (event.pluginId !== 'Camera' || event.methodName !== 'getPhoto') return;
+    if (!((event.pluginId === 'NotCamera' && event.methodName === 'capture') ||
+      (event.pluginId === 'Camera' && event.methodName === 'getPhoto'))) return;
     void (async () => {
       const snapshot = (await getCaptureDraft()) ?? pending;
       if (!snapshot) return;
@@ -132,20 +125,7 @@ export async function forgetCaptureRecovery() {
 }
 
 // Browser capture requires a user gesture; call before the lazy form mounts.
-export function openWebCamera(): Promise<File[]> {
-  return new Promise((resolve) => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/jpeg,image/png,image/webp';
-    input.capture = 'environment';
-    input.hidden = true;
-    const finish = (files: File[]) => {
-      input.remove();
-      resolve(files);
-    };
-    input.addEventListener('change', () => finish(Array.from(input.files ?? [])), { once: true });
-    input.addEventListener('cancel', () => finish([]), { once: true });
-    document.body.append(input);
-    input.click();
-  });
+export async function openWebCamera(): Promise<File[]> {
+  const { webSquareCamera } = await import('../components/WebSquareCamera.tsx');
+  return webSquareCamera();
 }
