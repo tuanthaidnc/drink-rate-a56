@@ -486,9 +486,11 @@ Lịch tháng bảy cột dùng ảnh đầu tiên của đánh giá trong ngày
 
 ### Android Chrome
 
-SystemBars gửi kiểu glyph trước; NotDisplay giữ theme hiện hành và áp dụng đồng bộ nền decor/WebView bằng token canvas cùng kiểu icon sáng/tối cho cả status bar và navigation bar. Từ API 29, tắt lớp tương phản navigation tự động của OS để ứng dụng kiểm soát nền và độ tương phản cùng nhau. Trên Android 15 edge-to-edge, nền được đặt qua `Window.setBackgroundDrawable(new ColorDrawable(...))` với drawable mới để hệ thống tính lại navigation appearance suy từ nền.
+SystemBars gửi kiểu glyph trước; NotDisplay giữ theme hiện hành cho status bar và nền decor/WebView theo canvas ứng dụng. Giữ `Window.setBackgroundDrawable(new ColorDrawable(...))` và navigation bar trong suốt làm lớp tương thích; hai thao tác này riêng lẻ chưa bảo đảm navigation glyph dễ đọc.
 
-Đồng bộ lúc startup/đổi theme, áp dụng lại sau resume, đổi cấu hình và cạnh thay đổi hiển thị IME. Observer global-layout theo dõi IME không thay listener inset/keyboard của Capacitor và được gỡ khi destroy. Kiểm tra cả appearance flags thực tế và glyph navigation hiển thị trên ảnh chụp OS, với tương phản tối thiểu (3:1); không suy khả năng đọc chỉ từ màu nền hoặc status bar. Yêu cầu tần số quét cao không phải bảo đảm 120 fps.
+Khi inset `tappableElement` xác định điều hướng ba nút, một drawable không tương tác chỉ phủ vùng system-navigation inset, dùng nền sáng/tối và gợi ý màu glyph theo chế độ ngày/đêm của OS. Đây là thích ứng giới hạn cho thanh điều hướng do hệ thống/launcher sở hữu; status bar vẫn theo theme ứng dụng. Điều hướng cử chỉ tiếp tục canvas ứng dụng. Bảng màu và bề mặt nội dung ứng dụng giữ nguyên; từ API 29, tắt scrim tương phản navigation tự động của OS để lớp bảo vệ này kiểm soát nền.
+
+Đồng bộ lúc startup/đổi theme, áp dụng lại sau resume, đổi cấu hình, hiển thị IME hoặc navigation/tappable insets thay đổi. Observer global-layout không thay listener inset/keyboard của Capacitor; gỡ cả observer và drawable bảo vệ khi destroy. Kiểm tra cả appearance flags và glyph navigation hiển thị trên ảnh OS: đo nền thực rồi chọn cực sáng/tối tương phản nhất, độc lập với theme ứng dụng, giữ ngưỡng tối thiểu (3:1). Không suy khả năng đọc chỉ từ flags hoặc status bar. Yêu cầu tần số quét cao không phải bảo đảm 120 fps.
 
 Phần chưa chuẩn hóa thành hệ: map còn marker quán dùng emoji/ký tự sao và màu riêng từ lớp cũ. Đây là drift hiện có ngoài phạm vi album/capture, không phải mẫu icon hoặc palette để màn hình mới kế thừa; lần ghi tài liệu này không sửa mã ứng dụng.
 
