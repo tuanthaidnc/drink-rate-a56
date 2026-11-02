@@ -4,6 +4,7 @@ import static org.junit.Assert.*;
 import android.webkit.WebView;
 import android.app.Activity;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.view.KeyEvent;
@@ -37,6 +38,7 @@ public class NativeFlowTest {
     private WebView web;
     private final UiDevice device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
     private File proof;
+    private File lastScreenshot;
     private double minimumNavigationContrast = Double.POSITIVE_INFINITY;
 
     private Object js(String expression) throws Exception {
@@ -77,7 +79,10 @@ public class NativeFlowTest {
     }
     private void screenshot(String name) throws Exception {
         Thread.sleep(550);
-        assertTrue(device.takeScreenshot(new File(proof, name + ".png")));
+        lastScreenshot = new File(proof, name + ".png");
+        if (lastScreenshot.exists()) assertTrue(lastScreenshot.delete());
+        device.executeShellCommand("screencap -p " + lastScreenshot.getAbsolutePath());
+        assertTrue("Fresh compositor screenshot", lastScreenshot.isFile() && lastScreenshot.length() > 0);
     }
 
     private void assertSystemBarTheme(boolean dark) throws Exception {
@@ -114,7 +119,7 @@ public class NativeFlowTest {
             if (insets != null) bottom.set(insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom);
         });
         assertTrue("The emulator must expose system navigation for this contrast check", bottom.get() > 0);
-        Bitmap screen = InstrumentationRegistry.getInstrumentation().getUiAutomation().takeScreenshot();
+        Bitmap screen = BitmapFactory.decodeFile(lastScreenshot.getAbsolutePath());
         assertNotNull("Native system navigation screenshot", screen);
         try {
             double background = ColorUtils.calculateLuminance(screen.getPixel(8, screen.getHeight() - 8));
@@ -181,6 +186,13 @@ public class NativeFlowTest {
         InstrumentationRegistry.getInstrumentation().getUiAutomation().grantRuntimePermission("com.tuanthaidnc.notfood", android.Manifest.permission.ACCESS_COARSE_LOCATION);
         InstrumentationRegistry.getInstrumentation().getUiAutomation().grantRuntimePermission("com.tuanthaidnc.notfood", android.Manifest.permission.ACCESS_FINE_LOCATION);
         InstrumentationRegistry.getInstrumentation().getUiAutomation().grantRuntimePermission("com.tuanthaidnc.notfood", android.Manifest.permission.CAMERA);
+        // Refresh SystemUI's first-boot cutout/font layout before the app is
+        // launched. A font configuration change fixes the emulator's clipped
+        // clock row; these settings apply only to the isolated CI device.
+        device.executeShellCommand("settings put system font_scale 1.3");
+        Thread.sleep(900);
+        device.executeShellCommand("settings put system font_scale 1.0");
+        Thread.sleep(900);
         try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
             scenario.onActivity(activity -> web = activity.getBridge().getWebView());
             until("!!document.querySelector('.bottom-dock')");
