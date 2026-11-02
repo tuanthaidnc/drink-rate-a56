@@ -425,7 +425,10 @@ try {
     async () => {
       const { page: p } = await setup({ camera: 'cancel' });
       await nav(p, 'Chấm điểm');
-      await p.waitForFunction(() => !document.querySelector('.capture-processing'));
+      // Wait for the first native cancellation to finish before injecting a
+      // different restored draft; an absent spinner can also mean not started.
+      await p.waitForFunction(() => window.__calls.includes('camera'));
+      await p.locator('.quick-review[data-stage=capture] .shutter-button:not(:disabled)').waitFor();
       const original = createReview();
       const date = new Intl.DateTimeFormat('en-CA', {
         timeZone: 'Asia/Ho_Chi_Minh',
