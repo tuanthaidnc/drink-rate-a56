@@ -5,17 +5,27 @@ const resources = new Map<string, { refs: number; url: Promise<string | undefine
 function retainPhoto(id: string) {
   let entry = resources.get(id);
   if (!entry) {
-    entry = { refs: 0, url: getPhoto(id).then(p => p ? URL.createObjectURL(p.blob) : undefined) };
+    entry = {
+      refs: 0,
+      url: getPhoto(id).then((p) => (p ? URL.createObjectURL(p.blob) : undefined)),
+    };
     resources.set(id, entry);
   }
   entry.refs++;
   const current = entry;
-  return { url: entry.url, release: () => {
-    if (--current.refs === 0) {
-      resources.delete(id);
-      void current.url.then(url => { if (url) URL.revokeObjectURL(url); }).catch(() => {});
-    }
-  } };
+  return {
+    url: entry.url,
+    release: () => {
+      if (--current.refs === 0) {
+        resources.delete(id);
+        void current.url
+          .then((url) => {
+            if (url) URL.revokeObjectURL(url);
+          })
+          .catch(() => {});
+      }
+    },
+  };
 }
 export function Photo({
   id,
@@ -52,7 +62,13 @@ export function Photo({
   }, [id, draft]);
   return url ? (
     !preview ? (
-      <img src={url} alt={alt} loading={eager ? 'eager' : 'lazy'} decoding="async" className="review-photo" />
+      <img
+        src={url}
+        alt={alt}
+        loading={eager ? 'eager' : 'lazy'}
+        decoding="async"
+        className="review-photo"
+      />
     ) : (
       <>
         <button

@@ -114,7 +114,9 @@ function Comparison({ items }: { items: ReviewItem[] }) {
           r.taste,
           r.foodQuality,
           r.cleanliness,
-          ...(a?.portionKey ? [VOLUME_OPTIONS.find(v => v.key === r.portionKey)?.score ?? 0] : [r.space]),
+          ...(a?.portionKey
+            ? [VOLUME_OPTIONS.find((v) => v.key === r.portionKey)?.score ?? 0]
+            : [r.space]),
           getFoodPriceScore(r.priceK, r.foodType).score,
         ]
       : [

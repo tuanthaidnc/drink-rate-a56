@@ -146,8 +146,12 @@ export default function ReviewForm({
     [pinPicker, setPinPicker] = useState(false),
     [location, setLocation] = useState(false);
   const [firstVisit, setFirstVisit] = useState(recovered?.firstVisit ?? false);
-  const [workflow, setWorkflow] = useState<CaptureDraft['workflow']>(recovered?.workflow ?? (isEdit || draft.photoIds.length ? draft.mode : undefined));
-  const [venueLocked, setVenueLocked] = useState(recovered?.venueLocked ?? (isEdit || draft.lat !== null && draft.photoIds.length > 0));
+  const [workflow, setWorkflow] = useState<CaptureDraft['workflow']>(
+    recovered?.workflow ?? (isEdit || draft.photoIds.length ? draft.mode : undefined),
+  );
+  const [venueLocked, setVenueLocked] = useState(
+    recovered?.venueLocked ?? (isEdit || (draft.lat !== null && draft.photoIds.length > 0)),
+  );
   const reviewDate = recovered?.reviewDate ?? inputDate(initial.reviewedAt ?? initial.createdAt);
   const captureInput = useRef<HTMLInputElement>(null),
     photoOperation = useRef(false),
@@ -168,7 +172,14 @@ export default function ReviewForm({
   };
   const quiet = useQuietMotion(),
     locked = busy || photoBusy || submitting || recovering;
-  const stage = isEdit || draft.photoIds.length ? 'score' : !workflow ? 'choose' : workflow === 'takeaway' && !venueLocked ? 'location' : 'capture';
+  const stage =
+    isEdit || draft.photoIds.length
+      ? 'score'
+      : !workflow
+        ? 'choose'
+        : workflow === 'takeaway' && !venueLocked
+          ? 'location'
+          : 'capture';
   const dirty = reviewDraftIsDirty(initial, draft, price, reviewDate, isEdit, firstVisit);
   const amount = parseReviewPrice(price);
   const score = useMemo(
@@ -216,7 +227,19 @@ export default function ReviewForm({
         );
     }, 200);
     return () => clearTimeout(timer);
-  }, [draft, price, photos, firstVisit, workflow, venueLocked, dirty, photoBusy, busy, submitting, recovering]);
+  }, [
+    draft,
+    price,
+    photos,
+    firstVisit,
+    workflow,
+    venueLocked,
+    dirty,
+    photoBusy,
+    busy,
+    submitting,
+    recovering,
+  ]);
   useEffect(() => {
     const persist = () => {
       if (
@@ -262,8 +285,13 @@ export default function ReviewForm({
     return pending;
   };
   useEffect(() => {
-    if (!isEdit && !recovering && !gpsAttempted.current &&
-      (stage === 'location' || stage === 'score' && workflow === 'dinein')) void locate();
+    if (
+      !isEdit &&
+      !recovering &&
+      !gpsAttempted.current &&
+      (stage === 'location' || (stage === 'score' && workflow === 'dinein'))
+    )
+      void locate();
   }, [stage, isEdit, recovering, workflow]);
   const attach = (photo: PhotoData) => {
     setPhotos([photo]);
@@ -296,8 +324,11 @@ export default function ReviewForm({
       try {
         await saveCaptureDraft(snapshotRef.current);
         await importPhoto(await openWebCamera());
-      } catch (e) { setPhotoError((e as Error).message); }
-      finally { setPhotoBusy(false); }
+      } catch (e) {
+        setPhotoError((e as Error).message);
+      } finally {
+        setPhotoBusy(false);
+      }
       return;
     }
     photoOperation.current = true;
@@ -318,7 +349,13 @@ export default function ReviewForm({
     }
   };
   useEffect(() => {
-    if (isEdit || autoOpened.current || stage !== 'capture' || !(workflow === 'dinein' && !recovered || captureOnOpen)) return;
+    if (
+      isEdit ||
+      autoOpened.current ||
+      stage !== 'capture' ||
+      !((workflow === 'dinein' && !recovered) || captureOnOpen)
+    )
+      return;
     autoOpened.current = true;
     void capture();
   }, [stage, workflow, captureOnOpen]);
@@ -361,7 +398,10 @@ export default function ReviewForm({
     }
   };
   const food = draft.category === 'food',
-    portion = Math.max(0, VOLUME_OPTIONS.findIndex(v => v.key === (draft.portionKey ?? 'medium'))),
+    portion = Math.max(
+      0,
+      VOLUME_OPTIONS.findIndex((v) => v.key === (draft.portionKey ?? 'medium')),
+    ),
     volume = Math.max(
       0,
       VOLUME_OPTIONS.findIndex((v) => v.key === draft.volumeKey),
@@ -423,7 +463,9 @@ export default function ReviewForm({
           <ArrowLeft />
         </button>
         {stage !== 'score' ? (
-          <h1>{stage === 'choose' ? 'Đánh giá' : stage === 'location' ? 'Ghim quán' : 'Chụp ảnh'}</h1>
+          <h1>
+            {stage === 'choose' ? 'Đánh giá' : stage === 'location' ? 'Ghim quán' : 'Chụp ảnh'}
+          </h1>
         ) : (
           <>
             <h1 className="sr-only">{isEdit ? 'Sửa đánh giá' : 'Chấm điểm'}</h1>
@@ -459,28 +501,88 @@ export default function ReviewForm({
       )}
       {stage === 'choose' ? (
         <section className="experience-choice" aria-label="Bắt đầu đánh giá">
-          <button type="button" className="experience-option" onClick={() => { change('mode', 'takeaway'); setWorkflow('takeaway'); }}>
-            <ShoppingBag /><strong>Mang về</strong><span>Ghim quán</span>
+          <button
+            type="button"
+            className="experience-option"
+            onClick={() => {
+              change('mode', 'takeaway');
+              setWorkflow('takeaway');
+            }}
+          >
+            <ShoppingBag />
+            <strong>Mang về</strong>
+            <span>Ghim quán</span>
           </button>
-          <button type="button" className="experience-option" onClick={() => { change('mode', 'dinein'); setWorkflow('dinein'); }}>
-            <Utensils /><strong>Tại quán</strong><span>Chụp ảnh</span>
+          <button
+            type="button"
+            className="experience-option"
+            onClick={() => {
+              change('mode', 'dinein');
+              setWorkflow('dinein');
+            }}
+          >
+            <Utensils />
+            <strong>Tại quán</strong>
+            <span>Chụp ảnh</span>
           </button>
         </section>
       ) : stage === 'location' ? (
         <section className="takeaway-location stack">
-          <label className="field"><span>Tên quán</span><Input aria-label="Tên quán mang về" placeholder="Tên quán" value={draft.name} maxLength={160} onChange={e => change('name', e.target.value)} /></label>
-          <CaptureLocation theme={theme}
-            pin={draft.lat !== null && draft.lng !== null ? { lat: draft.lat, lng: draft.lng, accuracyM: draft.accuracyM } : null}
-            gps={null} busy={gpsBusy} error={gpsError}
-            onLocate={() => { manualPin.current = false; void locate(); }}
-            onPin={p => { manualPin.current = true; setGpsError(''); updateDraft(r => ({ ...r, ...p, accuracyM: undefined, locationStatus: 'confirmed', locationSource: 'manual', placeResolution: undefined })); }}
+          <label className="field">
+            <span>Tên quán</span>
+            <Input
+              aria-label="Tên quán mang về"
+              placeholder="Tên quán"
+              value={draft.name}
+              maxLength={160}
+              onChange={(e) => change('name', e.target.value)}
+            />
+          </label>
+          <CaptureLocation
+            theme={theme}
+            pin={
+              draft.lat !== null && draft.lng !== null
+                ? { lat: draft.lat, lng: draft.lng, accuracyM: draft.accuracyM }
+                : null
+            }
+            gps={null}
+            busy={gpsBusy}
+            error={gpsError}
+            onLocate={() => {
+              manualPin.current = false;
+              void locate();
+            }}
+            onPin={(p) => {
+              manualPin.current = true;
+              setGpsError('');
+              updateDraft((r) => ({
+                ...r,
+                ...p,
+                accuracyM: undefined,
+                locationStatus: 'confirmed',
+                locationSource: 'manual',
+                placeResolution: undefined,
+              }));
+            }}
             onConfirm={() => {
-              manualPin.current = true; gpsAttempted.current = true; setVenueLocked(true);
-              updateDraft(r => ({ ...r, locationStatus: 'confirmed' }));
-              const pending = { ...snapshotRef.current, draft: draftRef.current, stage: 'capture' as const, venueLocked: true, gpsAttempted: true };
-              snapshotRef.current = pending; onDraftSnapshot(pending);
-              void saveCaptureDraft(pending).then(onCancel).catch(() => setError('Chưa giữ được vị trí. Hãy thử lại.'));
-            }} />
+              manualPin.current = true;
+              gpsAttempted.current = true;
+              setVenueLocked(true);
+              updateDraft((r) => ({ ...r, locationStatus: 'confirmed' }));
+              const pending = {
+                ...snapshotRef.current,
+                draft: draftRef.current,
+                stage: 'capture' as const,
+                venueLocked: true,
+                gpsAttempted: true,
+              };
+              snapshotRef.current = pending;
+              onDraftSnapshot(pending);
+              void saveCaptureDraft(pending)
+                .then(onCancel)
+                .catch(() => setError('Chưa giữ được vị trí. Hãy thử lại.'));
+            }}
+          />
         </section>
       ) : stage === 'capture' ? (
         <section className="capture-stage stack">
@@ -503,8 +605,15 @@ export default function ReviewForm({
             Chụp ảnh
           </button>
           {library('Thư viện')}
-          {venueLocked && <button type="button" className="text-button" onClick={() => setPinPicker(true)}><MapPin size={16} />Vị trí quán đã giữ</button>}
-          <button type="button" className="text-button danger-text" onClick={onDiscard}>Bỏ bản nháp</button>
+          {venueLocked && (
+            <button type="button" className="text-button" onClick={() => setPinPicker(true)}>
+              <MapPin size={16} />
+              Vị trí quán đã giữ
+            </button>
+          )}
+          <button type="button" className="text-button danger-text" onClick={onDiscard}>
+            Bỏ bản nháp
+          </button>
         </section>
       ) : (
         <>
@@ -541,8 +650,20 @@ export default function ReviewForm({
               >
                 <Camera size={18} />
               </button>
-              {!!draft.photoIds.length && <button type="button" className="icon-button remove-photo" aria-label="Xóa ảnh" disabled={locked}
-                onClick={() => { setPhotos([]); change('photoIds', []); }}><Trash2 size={18} /></button>}
+              {!!draft.photoIds.length && (
+                <button
+                  type="button"
+                  className="icon-button remove-photo"
+                  aria-label="Xóa ảnh"
+                  disabled={locked}
+                  onClick={() => {
+                    setPhotos([]);
+                    change('photoIds', []);
+                  }}
+                >
+                  <Trash2 size={18} />
+                </button>
+              )}
               {(photoBusy || recovering) && (
                 <span className="quick-photo-busy" role="status" aria-label="Đang xử lý ảnh">
                   <LoaderCircle className="photo-spinner" />
@@ -602,7 +723,12 @@ export default function ReviewForm({
             aria-label="Loại quán"
             value={draft.category}
             onValueChange={(v) => {
-              if (v === 'drink' || v === 'food') updateDraft(r => ({ ...r, category: v, ...(v === 'food' && !isEdit ? { portionKey: r.portionKey ?? 'medium' } : {}) }));
+              if (v === 'drink' || v === 'food')
+                updateDraft((r) => ({
+                  ...r,
+                  category: v,
+                  ...(v === 'food' && !isEdit ? { portionKey: r.portionKey ?? 'medium' } : {}),
+                }));
             }}
             disabled={locked}
           >
@@ -628,10 +754,10 @@ export default function ReviewForm({
             }}
             disabled={locked}
           >
-            {([
-                  ['takeaway', 'Mang đi'],
-                  ['dinein', 'Ngồi lại'],
-                ]).map(([value, label]) => (
+            {[
+              ['takeaway', 'Mang đi'],
+              ['dinein', 'Ngồi lại'],
+            ].map(([value, label]) => (
               <ToggleGroup.Item key={value} value={value}>
                 {label}
               </ToggleGroup.Item>
@@ -658,9 +784,20 @@ export default function ReviewForm({
                   value={draft.cleanliness}
                   onChange={(v) => change('cleanliness', v)}
                 />
-                <ScoreSlider disabled={locked} label="Khẩu phần" min={0} max={4} step={1} value={portion}
-                  display={draft.portionKey ? `${VOLUME_OPTIONS[portion].label} · ${VOLUME_OPTIONS[portion].score}` : 'Chưa chấm'}
-                  onChange={v => change('portionKey', VOLUME_OPTIONS[v].key)} />
+                <ScoreSlider
+                  disabled={locked}
+                  label="Khẩu phần"
+                  min={0}
+                  max={4}
+                  step={1}
+                  value={portion}
+                  display={
+                    draft.portionKey
+                      ? `${VOLUME_OPTIONS[portion].label} · ${VOLUME_OPTIONS[portion].score}`
+                      : 'Chưa chấm'
+                  }
+                  onChange={(v) => change('portionKey', VOLUME_OPTIONS[v].key)}
+                />
               </>
             ) : (
               <>
@@ -694,10 +831,28 @@ export default function ReviewForm({
           <details className="quick-more disclosure">
             <summary>Thông tin thêm</summary>
             <div className="stack">
-              {food && <>
-                <label className="field"><span>Loại quán ăn</span><select value={draft.foodType} onChange={e => change('foodType', e.target.value as FoodVenueType)}><option value="streetfood">Bình dân</option><option value="restaurant">Nhà hàng</option></select></label>
-                {draft.mode === 'dinein' && <ScoreSlider disabled={locked} label="Không gian" value={draft.space} onChange={v => change('space', v)} />}
-              </>}
+              {food && (
+                <>
+                  <label className="field">
+                    <span>Loại quán ăn</span>
+                    <select
+                      value={draft.foodType}
+                      onChange={(e) => change('foodType', e.target.value as FoodVenueType)}
+                    >
+                      <option value="streetfood">Bình dân</option>
+                      <option value="restaurant">Nhà hàng</option>
+                    </select>
+                  </label>
+                  {draft.mode === 'dinein' && (
+                    <ScoreSlider
+                      disabled={locked}
+                      label="Không gian"
+                      value={draft.space}
+                      onChange={(v) => change('space', v)}
+                    />
+                  )}
+                </>
+              )}
               <label className="field">
                 <span>Tên quán</span>
                 <Input

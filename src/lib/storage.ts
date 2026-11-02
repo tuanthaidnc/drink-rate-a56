@@ -142,8 +142,13 @@ export async function loadDocument(): Promise<ReviewDocument> {
     // A real file as well as the transaction snapshot protects the owner's
     // photos and original criteria before the explicitly requested migration.
     const { Filesystem, Directory, Encoding } = await import('@capacitor/filesystem');
-    await Filesystem.writeFile({ path: 'backups/before-v18.json', directory: Directory.External,
-      encoding: Encoding.UTF8, recursive: true, data: JSON.stringify(await makeBackup(existing)) });
+    await Filesystem.writeFile({
+      path: 'backups/before-v18.json',
+      directory: Directory.External,
+      encoding: Encoding.UTF8,
+      recursive: true,
+      data: JSON.stringify(await makeBackup(existing)),
+    });
   }
   if (existing)
     return needsPlaceCorrections(existing) || needsFoodPortionMigration(existing)

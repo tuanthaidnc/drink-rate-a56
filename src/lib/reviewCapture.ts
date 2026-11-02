@@ -95,8 +95,11 @@ export async function initializeCaptureRecovery(): Promise<void> {
   if (!isNativeApp) return;
   const { App } = await import('@capacitor/app');
   await App.addListener('appRestoredResult', (event) => {
-    if (!((event.pluginId === 'NotCamera' && event.methodName === 'capture') ||
-      (event.pluginId === 'Camera' && event.methodName === 'getPhoto'))) return;
+    if (!(
+      (event.pluginId === 'NotCamera' && event.methodName === 'capture') ||
+      (event.pluginId === 'Camera' && event.methodName === 'getPhoto')
+    ))
+      return;
     void (async () => {
       const snapshot = (await getCaptureDraft()) ?? pending;
       if (!snapshot) return;

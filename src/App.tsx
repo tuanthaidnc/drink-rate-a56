@@ -150,7 +150,10 @@ export default function App() {
     main.current?.scrollTo({ top: 0 });
   }, []);
   const add = (p?: Position) => {
-    if (draft && dirty && !editing) { navigate('review'); return; }
+    if (draft && dirty && !editing) {
+      navigate('review');
+      return;
+    }
     setDetailId(null);
     setEntryPhotos(undefined);
     setCaptureOnOpen(false);
@@ -705,9 +708,40 @@ export default function App() {
                             <div className="workspace-view">
                               <div className="places-column stack">
                                 {heading}
-                                {captureDraft && !captureDraft.isEdit && dirty && <button className="pending-experience" onClick={() => { setCaptureOnOpen(!captureDraft.draft.photoIds.length && captureDraft.venueLocked === true); navigate('review'); }}>
-                                  <span className="pending-dot" /><span><strong>{captureDraft.draft.name || 'Đang trải nghiệm'}</strong><small>{captureDraft.draft.photoIds.length ? 'Bản đang chấm' : captureDraft.venueLocked ? 'Đã giữ vị trí quán' : 'Bản nháp'}</small></span><span>{captureDraft.draft.photoIds.length ? 'Tiếp tục' : captureDraft.venueLocked ? 'Chụp ảnh' : 'Mở'}<ChevronRight size={18} /></span>
-                                </button>}
+                                {captureDraft && !captureDraft.isEdit && dirty && (
+                                  <button
+                                    className="pending-experience"
+                                    onClick={() => {
+                                      setCaptureOnOpen(
+                                        !captureDraft.draft.photoIds.length &&
+                                          captureDraft.venueLocked === true,
+                                      );
+                                      navigate('review');
+                                    }}
+                                  >
+                                    <span className="pending-dot" />
+                                    <span>
+                                      <strong>
+                                        {captureDraft.draft.name || 'Đang trải nghiệm'}
+                                      </strong>
+                                      <small>
+                                        {captureDraft.draft.photoIds.length
+                                          ? 'Bản đang chấm'
+                                          : captureDraft.venueLocked
+                                            ? 'Đã giữ vị trí quán'
+                                            : 'Bản nháp'}
+                                      </small>
+                                    </span>
+                                    <span>
+                                      {captureDraft.draft.photoIds.length
+                                        ? 'Tiếp tục'
+                                        : captureDraft.venueLocked
+                                          ? 'Chụp ảnh'
+                                          : 'Mở'}
+                                      <ChevronRight size={18} />
+                                    </span>
+                                  </button>
+                                )}
                                 {controls}
                                 <div className="split list-heading">
                                   <label className="sort-field">
@@ -885,7 +919,13 @@ export default function App() {
                               }}
                             />
                           ) : null,
-                          tab === 'journal' ? <ReviewJournal items={personal} now={now} onSelect={r => setDetailId(r.id)} /> : null,
+                          tab === 'journal' ? (
+                            <ReviewJournal
+                              items={personal}
+                              now={now}
+                              onSelect={(r) => setDetailId(r.id)}
+                            />
+                          ) : null,
                           tab === 'insights' ? (
                             <div className="insights-page stack">
                               {heading}

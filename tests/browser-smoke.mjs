@@ -167,7 +167,13 @@ async function setup({
                 window.__gpsResolve = () =>
                   r({ coords: { latitude: 16.06528, longitude: 108.2083, accuracy: 12 } });
               });
-            return { coords: { latitude: 16.06528, longitude: 108.2083, accuracy: 12 } };
+            return {
+              coords: {
+                latitude: window.__gpsMode === 'home' ? 10.76 : 16.06528,
+                longitude: window.__gpsMode === 'home' ? 106.66 : 108.2083,
+                accuracy: 12,
+              },
+            };
           }
           return {};
         },
@@ -183,7 +189,7 @@ async function setup({
   await page.getByRole('heading', { name: /Quán xá/ }).waitFor();
   return { page, context, errors };
 }
-async function nav(p, label) {
+async function nav(p, label, chooseDineIn = true) {
   await p
     .getByRole('navigation', {
       name: (await p.viewportSize()).width >= 1100 ? 'Điều hướng máy tính' : 'Điều hướng chính',
@@ -191,9 +197,10 @@ async function nav(p, label) {
     })
     .getByRole('button', { name: label, exact: true })
     .click();
-  if (label === 'Chấm điểm') {
+  if (label === 'Chấm điểm' && chooseDineIn) {
     await p.locator('.review-form').waitFor();
-    if (await p.locator('.experience-choice').count()) await p.getByRole('button', { name: 'Tại quán Chụp ảnh', exact:true }).click();
+    if (await p.locator('.experience-choice').count())
+      await p.getByRole('button', { name: 'Tại quán Chụp ảnh', exact: true }).click();
   }
 }
 const readDoc = (p) =>
@@ -460,7 +467,7 @@ try {
         },
         { original, date },
       );
-      await p.getByRole('heading', { name: 'Chụp ảnh', exact: true }).waitFor();
+      await p.locator('.quick-review[data-stage=choose]').waitFor();
       await nav(p, 'Thống kê');
       await p.locator('.stat-grid').waitFor();
       assert.equal(await p.getByRole('dialog').count(), 0);
@@ -468,7 +475,7 @@ try {
     },
   );
   await scenario(
-    'one photo, price only, three sliders and automatic timestamp finish a review',
+    'one photo, price only, four dine-in sliders and automatic timestamp finish a review',
     async () => {
       const { page: p, errors } = await setup();
       await begin(p);
@@ -494,6 +501,10 @@ try {
       const photo = await store(p, 'photos', r.photoIds[0]);
       assert.ok(photo.blob.size <= 300000);
       assert.equal(photo.blob.type, 'image/webp');
+      const size = await p
+        .locator('.album-cover img')
+        .evaluate((img) => ({ w: img.naturalWidth, h: img.naturalHeight }));
+      assert.equal(size.w, size.h);
       assert.equal(await store(p, 'capture-drafts', 'pending'), undefined);
       await p.reload();
       await p.locator('.album-cover img').waitFor();
@@ -917,21 +928,18 @@ try {
       assert.deepEqual(errors, []);
     },
   );
-  await scenario(
-    'web camera is square and close returns directly to an unsaved form',
-    async () => {
-      const { page: p } = await setup({ native: false });
-      await nav(p, 'Chấm điểm');
-      await p.getByRole('dialog', { name: 'Camera vuông' }).waitFor();
-      const square = await p.locator('.square-viewfinder').boundingBox();
-      assert.ok(Math.abs(square.width - square.height) < 1);
-      await p.getByRole('button', { name:'Đóng camera', exact:true }).click();
-      await p.getByRole('heading', { name: 'Chụp ảnh', exact: true }).waitFor();
-      await nav(p, 'Quán xá');
-      await p.locator('.review-form').waitFor({ state: 'detached' });
-      assert.equal(await p.getByRole('dialog').count(), 0);
-    },
-  );
+  await scenario('web camera is square and close returns directly to an unsaved form', async () => {
+    const { page: p } = await setup({ native: false });
+    await nav(p, 'Chấm điểm');
+    await p.getByRole('dialog', { name: 'Camera vuông' }).waitFor();
+    const square = await p.locator('.square-viewfinder').boundingBox();
+    assert.ok(Math.abs(square.width - square.height) < 1);
+    await p.getByRole('button', { name: 'Đóng camera', exact: true }).click();
+    await p.getByRole('heading', { name: 'Chụp ảnh', exact: true }).waitFor();
+    await nav(p, 'Quán xá');
+    await p.locator('.review-form').waitFor({ state: 'detached' });
+    assert.equal(await p.getByRole('dialog').count(), 0);
+  });
   await scenario(
     'photo backup round trip survives explicit empty replacement and preserves retained media',
     async () => {
@@ -1051,6 +1059,100 @@ try {
       assert.equal(await p.locator('.map-marker img').count(), 0);
       await noOverflow(p);
       assert.deepEqual(errors, []);
+    },
+  );
+  await scenario(
+    'takeaway pins the venue before photography; restart and home capture cannot replace shop GPS',
+    async () => {
+      const { page: p, errors } = await setup();
+      await nav(p, 'Chấm điểm', false);
+      await p.getByRole('button', { name: 'Mang về Ghim quán', exact: true }).click();
+      await p.locator('.quick-review[data-stage=location]').waitFor();
+      await p.getByRole('button', { name: 'Dùng vị trí này', exact: true }).waitFor();
+      await p.waitForFunction(() => !document.querySelector('.gps-status'));
+      await p.getByLabel('Tên quán mang về').fill('Quán mang về QA');
+      await p.getByRole('button', { name: 'Dùng vị trí này', exact: true }).click();
+      await p.locator('.pending-experience').waitFor();
+      assert.deepEqual(await p.evaluate(() => window.__calls), ['gps']);
+      let pending = await store(p, 'capture-drafts', 'pending');
+      assert.equal(pending.venueLocked, true);
+      assert.equal(pending.draft.lat, 16.06528);
+      assert.equal((await readDoc(p)).reviews.length, 0);
+      await p.reload();
+      await p.locator('.quick-review[data-stage=capture]').waitFor();
+      await p.evaluate(() => {
+        window.__gpsMode = 'home';
+      });
+      await p.getByRole('button', { name: 'Chụp ảnh', exact: true }).click();
+      await p.locator('.quick-review[data-stage=score]').waitFor();
+      assert.deepEqual(await p.evaluate(() => window.__calls), ['camera']);
+      await p.getByRole('radio', { name: 'Ăn', exact: true }).click();
+      assert.equal(await p.locator('.quick-sliders [role=slider]').count(), 4);
+      await p.locator('#review-price').fill('10');
+      await p.getByRole('button', { name: 'Lưu quán', exact: true }).click();
+      await p.locator('.album-tile').waitFor();
+      const r = (await readDoc(p)).reviews[0];
+      assert.equal(r.lat, 16.06528);
+      assert.equal(r.lng, 108.2083);
+      assert.equal(r.mode, 'takeaway');
+      assert.equal(r.portionKey, 'medium');
+      assert.equal(r.name, 'Quán mang về QA');
+      assert.equal(r.photoIds.length, 1);
+      assert.deepEqual(errors, []);
+    },
+  );
+  await scenario(
+    'photo reel visibly travels and lands the reviewed photograph at its selection marker',
+    async () => {
+      const { page: p, errors } = await setup({ motion: 'no-preference' });
+      for (const name of ['Ảnh một', 'Ảnh hai']) {
+        await begin(p);
+        await save(p, name);
+      }
+      const before = await readDoc(p);
+      await p.getByRole('button', { name: 'Ăn gì?', exact: true }).click();
+      await p.locator('.case-reel img').first().waitFor();
+      await p.getByRole('button', { name: 'Mở lựa chọn', exact: true }).click();
+      await p.locator('.case-reel[aria-busy=true]').waitFor();
+      await p.locator('.case-reel[aria-busy=false]').waitFor();
+      const geometry = await p.evaluate(() => {
+        const p = document.querySelector('.case-photo[data-winner=true]').getBoundingClientRect();
+        const m = document.querySelector('.case-marker').getBoundingClientRect();
+        return {
+          delta: Math.abs(p.x + p.width / 2 - m.x),
+          count: document.querySelectorAll('.case-photo').length,
+          name: document.querySelector('.case-photo[data-winner=true] img')?.alt,
+          result: document.querySelector('.case-result h3').textContent,
+        };
+      });
+      assert.ok(geometry.delta < 2);
+      assert.ok(geometry.count <= 40);
+      assert.equal(geometry.name, geometry.result);
+      assert.equal(await p.locator('.case-picker canvas').count(), 0);
+      assert.deepEqual(await readDoc(p), before);
+      assert.deepEqual(errors, []);
+      await p.screenshot({ path: resolve(output, 'case-reel-result.png') });
+    },
+  );
+  await scenario(
+    'journal shows existing review photos by Vietnam day without writing a new visit',
+    async () => {
+      const { page: p, errors } = await setup();
+      await begin(p);
+      await save(p, 'Nhật ký ảnh');
+      const before = await readDoc(p);
+      await nav(p, 'Nhật ký');
+      await p.locator('.journal-photo img').waitFor();
+      assert.equal(await p.locator('.journal-photo-entry').count(), 1);
+      await p.getByRole('button', { name: 'Tháng trước', exact: true }).click();
+      await p.locator('.journal-empty').waitFor();
+      await p.getByRole('button', { name: 'Tháng sau', exact: true }).click();
+      await p.locator('.journal-photo-entry').click();
+      await p.locator('.review-inspector').waitFor();
+      assert.deepEqual(await readDoc(p), before);
+      assert.deepEqual(errors, []);
+      await p.keyboard.press('Escape');
+      await p.screenshot({ path: resolve(output, 'journal.png') });
     },
   );
 } finally {

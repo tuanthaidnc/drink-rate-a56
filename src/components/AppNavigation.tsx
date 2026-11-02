@@ -89,7 +89,9 @@ export default function AppNavigation({
                 <Icon />
               </motion.span>
             </span>
-            <BottomNavigationLabel className="nav-label">{id === 'review' ? 'Chấm' : label}</BottomNavigationLabel>
+            <BottomNavigationLabel className="nav-label">
+              {id === 'review' ? 'Chấm' : label}
+            </BottomNavigationLabel>
           </button>
         </BottomNavigationItem>
       ))}

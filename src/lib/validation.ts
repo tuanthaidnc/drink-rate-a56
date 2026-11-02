@@ -214,9 +214,20 @@ export function validateReview(
     dish: optionalText(x.dish, 'Món nên gọi', 300),
     cuisine: optionalText(x.cuisine, 'Loại món', 100),
     isDemo: x.isDemo === true || (legacy && isUntouchedDemo(x)),
-    portionKey: x.portionKey === undefined ? undefined : choice(x.portionKey, ['very_low', 'low', 'medium', 'high', 'overflow'] as const, 'Khẩu phần'),
-    scoringVersion: x.category === 'food' && x.portionKey !== undefined ? SCORING_VERSION :
-      typeof x.scoringVersion === 'string' ? text(x.scoringVersion, 'Phiên bản điểm', 80, true) : LEGACY_SCORING_VERSION,
+    portionKey:
+      x.portionKey === undefined
+        ? undefined
+        : choice(
+            x.portionKey,
+            ['very_low', 'low', 'medium', 'high', 'overflow'] as const,
+            'Khẩu phần',
+          ),
+    scoringVersion:
+      x.category === 'food' && x.portionKey !== undefined
+        ? SCORING_VERSION
+        : typeof x.scoringVersion === 'string'
+          ? text(x.scoringVersion, 'Phiên bản điểm', 80, true)
+          : LEGACY_SCORING_VERSION,
     ratingHistory: ratingHistory.map((v) => {
       const r = object(v, 'Lịch sử đánh giá');
       return {

@@ -154,12 +154,20 @@ export function calculateFoodScore(params: {
   );
 
   if (params.portionKey) {
-    const portionScore = VOLUME_OPTIONS.find(v => v.key === params.portionKey)!.score;
-    const total = params.mode === 'dinein'
-      ? params.taste * .3 + params.foodQuality * .2 + params.cleanliness * .1 +
-        params.space * .1 + priceScore * .1 + portionScore * .2
-      : params.taste * .35 + params.foodQuality * .2 + params.cleanliness * .1 +
-        priceScore * .15 + portionScore * .2;
+    const portionScore = VOLUME_OPTIONS.find((v) => v.key === params.portionKey)!.score;
+    const total =
+      params.mode === 'dinein'
+        ? params.taste * 0.3 +
+          params.foodQuality * 0.2 +
+          params.cleanliness * 0.1 +
+          params.space * 0.1 +
+          priceScore * 0.1 +
+          portionScore * 0.2
+        : params.taste * 0.35 +
+          params.foodQuality * 0.2 +
+          params.cleanliness * 0.1 +
+          priceScore * 0.15 +
+          portionScore * 0.2;
     return { total: Math.round(total * 100) / 100, priceScore, priceBracket, portionScore };
   }
   // Completed legacy reviews retain their original formula until a portion is rated.
